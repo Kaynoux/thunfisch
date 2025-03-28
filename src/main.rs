@@ -1,4 +1,11 @@
-#[derive(Clone, Copy)]
+use log::{error, info, warn};
+use std::{
+    future::poll_fn,
+    io::{self, BufRead},
+    ptr::copy,
+};
+
+#[derive(Clone, Copy, Debug)]
 enum Piece {
     Empty,
     Pawn,
@@ -31,61 +38,69 @@ impl std::fmt::Display for Field {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 enum Color {
     Black,
     White,
     None,
 }
 
-#[derive(Clone, Copy)]
+impl Color {
+    fn opposite(self) -> Color {
+        match self {
+            Color::Black => Color::White,
+            Color::White => Color::Black,
+            Color::None => Color::None,
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
 struct Field {
     piece: Piece,
     color: Color,
     position: Position,
-    is_occupied: bool,
 }
 
 impl Position {
     fn is_within_bounds(&self) -> bool {
-        self.x < 8 && self.y < 8
+        self.x >= 0 && self.x <= 7 && self.y >= 0 && self.y <= 7
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 struct Position {
-    x: usize,
-    y: usize,
+    x: i32,
+    y: i32,
+}
+
+#[derive(Copy, Clone, Debug)]
+struct Move {
+    x: i32,
+    y: i32,
+}
+
+impl std::ops::Add<Move> for Position {
+    type Output = Position;
+    fn add(self, offset: Move) -> Self {
+        Self {
+            x: self.x + offset.x,
+            y: self.y + offset.y,
+        }
+    }
 }
 
 fn main() {
     let start_pos = [
         "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR",
         "r1bk3r/p2pBpNp/n4n2/1p1NP2P/6P1/3P4/P1P1K3/q5b1",
+        "rnbqkbnr/p1pppppp/8/8/8/1p6/PPPPPPPP/RNBQKBNR",
     ];
-    let mut board: [[Field; 8]; 8] = parse_fen(start_pos[1]);
+    let mut board: [[Field; 8]; 8] = parse_fen(start_pos[2]);
     print_board(board);
-
-    // let stdin = io::stdin();
-    // for line in stdin.lock().lines() {
-    //     let input = line.unwrap();
-    //     match input.as_str() {
-    //         "uci" => {
-    //             println!("id name rusty-chess-bot");
-    //             println!("id author Lukas");
-    //             println!("uciok");
-    //         }
-    //         "isready" => {
-    //             println!("readyok");
-    //         }
-    //         "quit" => {
-    //             break;
-    //         }
-    //         _ => {
-    //             println!("Error")
-    //         }
-    //     }
-    //}
+    println!("{:?}", Position { x: 8, y: 0 }.is_within_bounds());
+    println!("{:?}", get_field(board, Position { x: 1, y: 2 }));
+    print_all_legal_moves(board);
 }
 
 /// Converts a FEN to a Board
@@ -96,10 +111,18 @@ fn parse_fen(fen: &str) -> [[Field; 8]; 8] {
         piece: Piece::Empty,
         color: Color::None,
         position: Position { x: 0, y: 0 },
-        is_occupied: false,
     }; 8]; 8];
     let mut current_x = 0;
     let mut current_y: usize = 7;
+
+    for y in 0..8 {
+        for x in 0..8 {
+            board[x][y].position = Position {
+                x: x as i32,
+                y: y as i32,
+            };
+        }
+    }
 
     for c in fen.chars() {
         match c {
@@ -113,10 +136,9 @@ fn parse_fen(fen: &str) -> [[Field; 8]; 8] {
                     piece: Piece::Pawn,
                     color: Color::Black,
                     position: Position {
-                        x: current_x,
-                        y: current_y,
+                        x: current_x as i32,
+                        y: current_y as i32,
                     },
-                    is_occupied: true,
                 };
                 current_x += 1;
             }
@@ -125,10 +147,9 @@ fn parse_fen(fen: &str) -> [[Field; 8]; 8] {
                     piece: Piece::Knight,
                     color: Color::Black,
                     position: Position {
-                        x: current_x,
-                        y: current_y,
+                        x: current_x as i32,
+                        y: current_y as i32,
                     },
-                    is_occupied: true,
                 };
                 current_x += 1;
             }
@@ -137,10 +158,9 @@ fn parse_fen(fen: &str) -> [[Field; 8]; 8] {
                     piece: Piece::Rook,
                     color: Color::Black,
                     position: Position {
-                        x: current_x,
-                        y: current_y,
+                        x: current_x as i32,
+                        y: current_y as i32,
                     },
-                    is_occupied: true,
                 };
                 current_x += 1;
             }
@@ -149,10 +169,9 @@ fn parse_fen(fen: &str) -> [[Field; 8]; 8] {
                     piece: Piece::Bishop,
                     color: Color::Black,
                     position: Position {
-                        x: current_x,
-                        y: current_y,
+                        x: current_x as i32,
+                        y: current_y as i32,
                     },
-                    is_occupied: true,
                 };
                 current_x += 1;
             }
@@ -161,10 +180,9 @@ fn parse_fen(fen: &str) -> [[Field; 8]; 8] {
                     piece: Piece::Queen,
                     color: Color::Black,
                     position: Position {
-                        x: current_x,
-                        y: current_y,
+                        x: current_x as i32,
+                        y: current_y as i32,
                     },
-                    is_occupied: true,
                 };
                 current_x += 1;
             }
@@ -173,10 +191,9 @@ fn parse_fen(fen: &str) -> [[Field; 8]; 8] {
                     piece: Piece::King,
                     color: Color::Black,
                     position: Position {
-                        x: current_x,
-                        y: current_y,
+                        x: current_x as i32,
+                        y: current_y as i32,
                     },
-                    is_occupied: true,
                 };
                 current_x += 1;
             }
@@ -185,10 +202,9 @@ fn parse_fen(fen: &str) -> [[Field; 8]; 8] {
                     piece: Piece::Pawn,
                     color: Color::White,
                     position: Position {
-                        x: current_x,
-                        y: current_y,
+                        x: current_x as i32,
+                        y: current_y as i32,
                     },
-                    is_occupied: true,
                 };
                 current_x += 1;
             }
@@ -197,10 +213,9 @@ fn parse_fen(fen: &str) -> [[Field; 8]; 8] {
                     piece: Piece::Knight,
                     color: Color::White,
                     position: Position {
-                        x: current_x,
-                        y: current_y,
+                        x: current_x as i32,
+                        y: current_y as i32,
                     },
-                    is_occupied: true,
                 };
                 current_x += 1;
             }
@@ -209,10 +224,9 @@ fn parse_fen(fen: &str) -> [[Field; 8]; 8] {
                     piece: Piece::Rook,
                     color: Color::White,
                     position: Position {
-                        x: current_x,
-                        y: current_y,
+                        x: current_x as i32,
+                        y: current_y as i32,
                     },
-                    is_occupied: true,
                 };
                 current_x += 1;
             }
@@ -221,10 +235,9 @@ fn parse_fen(fen: &str) -> [[Field; 8]; 8] {
                     piece: Piece::Bishop,
                     color: Color::White,
                     position: Position {
-                        x: current_x,
-                        y: current_y,
+                        x: current_x as i32,
+                        y: current_y as i32,
                     },
-                    is_occupied: true,
                 };
                 current_x += 1;
             }
@@ -233,10 +246,9 @@ fn parse_fen(fen: &str) -> [[Field; 8]; 8] {
                     piece: Piece::Queen,
                     color: Color::White,
                     position: Position {
-                        x: current_x,
-                        y: current_y,
+                        x: current_x as i32,
+                        y: current_y as i32,
                     },
-                    is_occupied: true,
                 };
                 current_x += 1;
             }
@@ -245,15 +257,14 @@ fn parse_fen(fen: &str) -> [[Field; 8]; 8] {
                     piece: Piece::King,
                     color: Color::White,
                     position: Position {
-                        x: current_x,
-                        y: current_y,
+                        x: current_x as i32,
+                        y: current_y as i32,
                     },
-                    is_occupied: true,
                 };
                 current_x += 1;
             }
             _ => {
-                println!("Invalid Character")
+                error!("Invalid Character")
             }
         }
     }
@@ -283,11 +294,159 @@ fn print_board(board: [[Field; 8]; 8]) {
     }
 }
 
-fn generate_legal_pawn_moves(board: [[Field; 8]; 8], field: Field) {
-    let mut legal_moves: Vec<Position> = Vec::new();
+fn generate_pseudo_legal_pawn_moves(board: [[Field; 8]; 8], field: Field) -> Vec<Position> {
+    let mut pseudo_legal_positions: Vec<Position> = Vec::new();
+    let mut potential_positions_1: Vec<Position> = Vec::new();
+    let mut potential_positions_2: Vec<Position> = Vec::new();
+    let move_direction = match field.color {
+        Color::Black => -1,
+        Color::White => 1,
+        Color::None => panic!("Pawn provided is not valid"),
+    };
 
-    let forward_field: Field = board[field.position.x][field.position.y];
-    if !forward_field.is_occupied {
-        legal_moves.push(forward_field.position);
+    //Adds potential positions
+    match (field.position, field.color) {
+        (Position { x: _, y: 1 }, Color::White) => {
+            potential_positions_1.push(Position {
+                x: field.position.x,
+                y: field.position.y + move_direction,
+            });
+            potential_positions_2.push(Position {
+                x: field.position.x,
+                y: field.position.y + (move_direction * 2),
+            })
+        }
+        (Position { x: _, y: 6 }, Color::Black) => {
+            potential_positions_1.push(Position {
+                x: field.position.x,
+                y: field.position.y + move_direction,
+            });
+            potential_positions_2.push(Position {
+                x: field.position.x,
+                y: field.position.y + (move_direction * 2),
+            })
+        }
+
+        (_, _) => potential_positions_1.push(Position {
+            x: field.position.x,
+            y: field.position.y + move_direction,
+        }),
+    };
+
+    // Adds psedo leglal position when moved by one field
+    for potential_position in potential_positions_1.iter() {
+        // Skip if out of bounds
+        if !potential_position.is_within_bounds() {
+            continue;
+        }
+
+        // Skip if target field is not empty
+        let forward_field: Field = get_field(board, *potential_position);
+        if forward_field.color != Color::None {
+            continue;
+        }
+
+        pseudo_legal_positions.push(*potential_position);
     }
+
+    // Adds psedo leglal position when moved by two field
+    for potential_position in potential_positions_2.iter() {
+        // Skip if out of bounds
+        if !potential_position.is_within_bounds() {
+            continue;
+        }
+
+        // Skip if target field is not empty
+        let forward_field: Field = get_field(board, *potential_position);
+        if forward_field.color != Color::None {
+            continue;
+        }
+
+        // Skip if field in between is not free
+        if get_field(
+            board,
+            Position {
+                x: potential_position.x,
+                y: potential_position.y - move_direction,
+            },
+        )
+        .color
+            != Color::None
+        {
+            continue;
+        }
+
+        pseudo_legal_positions.push(*potential_position);
+    }
+
+    // Adds possible strikes
+    let potential_strike_moves: [Move; 2] = [Move { x: 1, y: 1 }, Move { x: -1, y: 1 }];
+    for potential_strike_move in potential_strike_moves.iter() {
+        let target_pos = field.position
+            + Move {
+                x: potential_strike_move.x,
+                y: potential_strike_move.y * move_direction,
+            };
+
+        if !target_pos.is_within_bounds() {
+            continue;
+        }
+
+        let target_color = get_field(board, target_pos).color;
+        if target_color != field.color.opposite() {
+            continue;
+        }
+
+        pseudo_legal_positions.push(target_pos);
+    }
+
+    pseudo_legal_positions
+}
+
+fn print_moves(field: Field, moves: Vec<Position>) {
+    println!("Field: {:?}", field);
+    for move_pos in moves.iter() {
+        println!("  Move: {:?}", move_pos);
+    }
+}
+
+fn handle_uci_communication() {
+    let stdin = io::stdin();
+    for line in stdin.lock().lines() {
+        let input = line.unwrap();
+        match input.as_str() {
+            "uci" => {
+                println!("id name rusty-chess-bot");
+                println!("id author Lukas");
+                println!("uciok");
+            }
+            "isready" => {
+                println!("readyok");
+            }
+            "quit" => {
+                break;
+            }
+            _ => {
+                println!("Error")
+            }
+        }
+    }
+}
+
+fn print_all_legal_moves(board: [[Field; 8]; 8]) {
+    for y in 0..8 {
+        for x in 0..8 {
+            match board[x][y].piece {
+                Piece::Pawn => print_moves(
+                    board[x][y],
+                    generate_pseudo_legal_pawn_moves(board, board[x][y]),
+                ),
+                _ => {}
+            }
+        }
+    }
+}
+
+fn get_field(board: [[Field; 8]; 8], position: Position) -> Field {
+    board[position.x as usize][position.y as usize]
 }
