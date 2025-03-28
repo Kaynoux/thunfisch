@@ -19,12 +19,12 @@ impl std::fmt::Display for Field {
             (Piece::Bishop, Color::Black) => "b",
             (Piece::Queen, Color::Black) => "q",
             (Piece::King, Color::Black) => "k",
-            (Piece::Pawn, Color::White) => "p",
-            (Piece::Knight, Color::White) => "n",
-            (Piece::Rook, Color::White) => "r",
-            (Piece::Bishop, Color::White) => "b",
-            (Piece::Queen, Color::White) => "q",
-            (Piece::King, Color::White) => "k",
+            (Piece::Pawn, Color::White) => "P",
+            (Piece::Knight, Color::White) => "N",
+            (Piece::Rook, Color::White) => "R",
+            (Piece::Bishop, Color::White) => "B",
+            (Piece::Queen, Color::White) => "Q",
+            (Piece::King, Color::White) => "K",
             (_, _) => "E",
         };
         write!(f, "{}", field_symbol)
@@ -42,9 +42,28 @@ enum Color {
 struct Field {
     piece: Piece,
     color: Color,
+    position: Position,
+    is_occupied: bool,
 }
+
+impl Position {
+    fn is_within_bounds(&self) -> bool {
+        self.x < 8 && self.y < 8
+    }
+}
+
+#[derive(Copy, Clone)]
+struct Position {
+    x: usize,
+    y: usize,
+}
+
 fn main() {
-    let mut board: [[Field; 8]; 8] = parse_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR");
+    let start_pos = [
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR",
+        "r1bk3r/p2pBpNp/n4n2/1p1NP2P/6P1/3P4/P1P1K3/q5b1",
+    ];
+    let mut board: [[Field; 8]; 8] = parse_fen(start_pos[1]);
     print_board(board);
 
     // let stdin = io::stdin();
@@ -69,104 +88,169 @@ fn main() {
     //}
 }
 
+/// Converts a FEN to a Board
+/// FEN describes the position of all pieces on the board
+/// lowercase = black and uppercase = white
 fn parse_fen(fen: &str) -> [[Field; 8]; 8] {
     let mut board: [[Field; 8]; 8] = [[Field {
         piece: Piece::Empty,
         color: Color::None,
+        position: Position { x: 0, y: 0 },
+        is_occupied: false,
     }; 8]; 8];
-    let mut current_row: usize = 7;
-    let mut current_col = 0;
+    let mut current_x = 0;
+    let mut current_y: usize = 7;
 
     for c in fen.chars() {
         match c {
             '/' => {
-                current_col = 0;
-                current_row -= 1;
+                current_x = 0;
+                current_y -= 1;
             }
-            '1'..='8' => current_col += c.to_digit(10).unwrap_or(0) as usize,
+            '1'..='8' => current_x += c.to_digit(10).unwrap_or(0) as usize,
             'p' => {
-                board[current_col][current_row] = Field {
+                board[current_x][current_y] = Field {
                     piece: Piece::Pawn,
                     color: Color::Black,
+                    position: Position {
+                        x: current_x,
+                        y: current_y,
+                    },
+                    is_occupied: true,
                 };
-                current_col += 1;
+                current_x += 1;
             }
             'n' => {
-                board[current_col][current_row] = Field {
+                board[current_x][current_y] = Field {
                     piece: Piece::Knight,
                     color: Color::Black,
+                    position: Position {
+                        x: current_x,
+                        y: current_y,
+                    },
+                    is_occupied: true,
                 };
-                current_col += 1;
+                current_x += 1;
             }
             'r' => {
-                board[current_col][current_row] = Field {
+                board[current_x][current_y] = Field {
                     piece: Piece::Rook,
                     color: Color::Black,
+                    position: Position {
+                        x: current_x,
+                        y: current_y,
+                    },
+                    is_occupied: true,
                 };
-                current_col += 1;
+                current_x += 1;
             }
             'b' => {
-                board[current_col][current_row] = Field {
+                board[current_x][current_y] = Field {
                     piece: Piece::Bishop,
                     color: Color::Black,
+                    position: Position {
+                        x: current_x,
+                        y: current_y,
+                    },
+                    is_occupied: true,
                 };
-                current_col += 1;
+                current_x += 1;
             }
             'q' => {
-                board[current_col][current_row] = Field {
+                board[current_x][current_y] = Field {
                     piece: Piece::Queen,
                     color: Color::Black,
+                    position: Position {
+                        x: current_x,
+                        y: current_y,
+                    },
+                    is_occupied: true,
                 };
-                current_col += 1;
+                current_x += 1;
             }
             'k' => {
-                board[current_col][current_row] = Field {
+                board[current_x][current_y] = Field {
                     piece: Piece::King,
                     color: Color::Black,
+                    position: Position {
+                        x: current_x,
+                        y: current_y,
+                    },
+                    is_occupied: true,
                 };
-                current_col += 1;
+                current_x += 1;
             }
             'P' => {
-                board[current_col][current_row] = Field {
+                board[current_x][current_y] = Field {
                     piece: Piece::Pawn,
                     color: Color::White,
+                    position: Position {
+                        x: current_x,
+                        y: current_y,
+                    },
+                    is_occupied: true,
                 };
-                current_col += 1;
+                current_x += 1;
             }
             'N' => {
-                board[current_col][current_row] = Field {
+                board[current_x][current_y] = Field {
                     piece: Piece::Knight,
                     color: Color::White,
+                    position: Position {
+                        x: current_x,
+                        y: current_y,
+                    },
+                    is_occupied: true,
                 };
-                current_col += 1;
+                current_x += 1;
             }
             'R' => {
-                board[current_col][current_row] = Field {
+                board[current_x][current_y] = Field {
                     piece: Piece::Rook,
                     color: Color::White,
+                    position: Position {
+                        x: current_x,
+                        y: current_y,
+                    },
+                    is_occupied: true,
                 };
-                current_col += 1;
+                current_x += 1;
             }
             'B' => {
-                board[current_col][current_row] = Field {
+                board[current_x][current_y] = Field {
                     piece: Piece::Bishop,
                     color: Color::White,
+                    position: Position {
+                        x: current_x,
+                        y: current_y,
+                    },
+                    is_occupied: true,
                 };
-                current_col += 1;
+                current_x += 1;
             }
             'Q' => {
-                board[current_col][current_row] = Field {
+                board[current_x][current_y] = Field {
                     piece: Piece::Queen,
                     color: Color::White,
+                    position: Position {
+                        x: current_x,
+                        y: current_y,
+                    },
+                    is_occupied: true,
                 };
-                current_col += 1;
+                current_x += 1;
             }
             'K' => {
-                board[current_col][current_row] = Field {
+                board[current_x][current_y] = Field {
                     piece: Piece::King,
                     color: Color::White,
+                    position: Position {
+                        x: current_x,
+                        y: current_y,
+                    },
+                    is_occupied: true,
                 };
-                current_col += 1;
+                current_x += 1;
             }
             _ => {
                 println!("Invalid Character")
@@ -176,6 +260,8 @@ fn parse_fen(fen: &str) -> [[Field; 8]; 8] {
     board
 }
 
+/// Prints the current board formatted
+/// lowercase letters = black and uppercase letters = white    
 fn print_board(board: [[Field; 8]; 8]) {
     let mut column_idx: i32 = 0;
     let mut row_idx: i32 = 7;
@@ -194,5 +280,14 @@ fn print_board(board: [[Field; 8]; 8]) {
         row_idx -= 1;
 
         println!();
+    }
+}
+
+fn generate_legal_pawn_moves(board: [[Field; 8]; 8], field: Field) {
+    let mut legal_moves: Vec<Position> = Vec::new();
+
+    let forward_field: Field = board[field.position.x][field.position.y];
+    if !forward_field.is_occupied {
+        legal_moves.push(forward_field.position);
     }
 }
