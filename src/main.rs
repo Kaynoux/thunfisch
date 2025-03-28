@@ -68,7 +68,7 @@ impl Position {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 struct Position {
     x: i32,
     y: i32,
@@ -92,14 +92,14 @@ impl std::ops::Add<Move> for Position {
 
 fn main() {
     let start_pos = [
-        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR",
-        "r1bk3r/p2pBpNp/n4n2/1p1NP2P/6P1/3P4/P1P1K3/q5b1",
-        "rnbqkbnr/p1pppppp/8/8/8/1p6/PPPPPPPP/RNBQKBNR",
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", // default
+        "r1bk3r/p2pBpNp/n4n2/1p1NP2P/6P1/3P4/P1P1K3/q5b1", // random
+        "rnbqkbnr/p1pppppp/8/8/8/1p6/PPPPPPPP/RNBQKBNR", // test pawn
+        "rnbq1bnr/pppppppp/8/8/8/3k4/PPPPPPPP/RNBQKBNR", // test king
+        "rnbqkbnr/p4ppp/8/2N5/8/8/PPPPPPPP/RNBQKB1R",  // test knight
     ];
-    let mut board: [[Field; 8]; 8] = parse_fen(start_pos[2]);
-    print_board(board);
-    println!("{:?}", Position { x: 8, y: 0 }.is_within_bounds());
-    println!("{:?}", get_field(board, Position { x: 1, y: 2 }));
+    let mut board: [[Field; 8]; 8] = parse_fen(start_pos[4]);
+    print_board_as_board(board);
     print_all_legal_moves(board);
 }
 
@@ -273,9 +273,11 @@ fn parse_fen(fen: &str) -> [[Field; 8]; 8] {
 
 /// Prints the current board formatted
 /// lowercase letters = black and uppercase letters = white    
-fn print_board(board: [[Field; 8]; 8]) {
+fn print_board_as_board(board: [[Field; 8]; 8]) {
     let mut column_idx: i32 = 0;
     let mut row_idx: i32 = 7;
+    println!();
+    println!("Current Board");
     println!("    0   1   2   3   4   5   6   7");
     while row_idx >= 0 {
         println!("  ---------------------------------");
@@ -294,10 +296,36 @@ fn print_board(board: [[Field; 8]; 8]) {
     }
 }
 
+/// Prints moves on board formatted
+fn print_moves_as_board(board: [[Field; 8]; 8], field: Field, moves: Vec<Position>) {
+    let mut y: i32 = 7;
+    let mut x: i32 = 0;
+    println!();
+    println!("Potential Moves for {}", field);
+    println!("    0   1   2   3   4   5   6   7");
+    while y >= 0 {
+        println!("  ---------------------------------");
+        print!("{} |", y);
+        while x <= 7 {
+            let text = if moves.contains(&Position { x: x, y: y }) {
+                "X".to_string()
+            } else {
+                board[x as usize][y as usize].to_string()
+            };
+            print!(" {} |", text);
+            x += 1;
+        }
+        x = 0;
+        y -= 1;
+
+        println!();
+    }
+}
+
 fn generate_pseudo_legal_pawn_moves(board: [[Field; 8]; 8], field: Field) -> Vec<Position> {
     let mut pseudo_legal_positions: Vec<Position> = Vec::new();
-    let mut potential_positions_1: Vec<Position> = Vec::new();
-    let mut potential_positions_2: Vec<Position> = Vec::new();
+    let mut target_positions_1: Vec<Position> = Vec::new();
+    let mut target_positions_2: Vec<Position> = Vec::new();
     let move_direction = match field.color {
         Color::Black => -1,
         Color::White => 1,
@@ -307,57 +335,57 @@ fn generate_pseudo_legal_pawn_moves(board: [[Field; 8]; 8], field: Field) -> Vec
     //Adds potential positions
     match (field.position, field.color) {
         (Position { x: _, y: 1 }, Color::White) => {
-            potential_positions_1.push(Position {
+            target_positions_1.push(Position {
                 x: field.position.x,
                 y: field.position.y + move_direction,
             });
-            potential_positions_2.push(Position {
+            target_positions_2.push(Position {
                 x: field.position.x,
                 y: field.position.y + (move_direction * 2),
             })
         }
         (Position { x: _, y: 6 }, Color::Black) => {
-            potential_positions_1.push(Position {
+            target_positions_1.push(Position {
                 x: field.position.x,
                 y: field.position.y + move_direction,
             });
-            potential_positions_2.push(Position {
+            target_positions_2.push(Position {
                 x: field.position.x,
                 y: field.position.y + (move_direction * 2),
             })
         }
 
-        (_, _) => potential_positions_1.push(Position {
+        (_, _) => target_positions_1.push(Position {
             x: field.position.x,
             y: field.position.y + move_direction,
         }),
     };
 
     // Adds psedo leglal position when moved by one field
-    for potential_position in potential_positions_1.iter() {
+    for target_pos in target_positions_1.iter() {
         // Skip if out of bounds
-        if !potential_position.is_within_bounds() {
+        if !target_pos.is_within_bounds() {
             continue;
         }
 
         // Skip if target field is not empty
-        let forward_field: Field = get_field(board, *potential_position);
+        let forward_field: Field = get_field(board, *target_pos);
         if forward_field.color != Color::None {
             continue;
         }
 
-        pseudo_legal_positions.push(*potential_position);
+        pseudo_legal_positions.push(*target_pos);
     }
 
     // Adds psedo leglal position when moved by two field
-    for potential_position in potential_positions_2.iter() {
+    for target_pos in target_positions_2.iter() {
         // Skip if out of bounds
-        if !potential_position.is_within_bounds() {
+        if !target_pos.is_within_bounds() {
             continue;
         }
 
         // Skip if target field is not empty
-        let forward_field: Field = get_field(board, *potential_position);
+        let forward_field: Field = get_field(board, *target_pos);
         if forward_field.color != Color::None {
             continue;
         }
@@ -366,8 +394,8 @@ fn generate_pseudo_legal_pawn_moves(board: [[Field; 8]; 8], field: Field) -> Vec
         if get_field(
             board,
             Position {
-                x: potential_position.x,
-                y: potential_position.y - move_direction,
+                x: target_pos.x,
+                y: target_pos.y - move_direction,
             },
         )
         .color
@@ -376,7 +404,7 @@ fn generate_pseudo_legal_pawn_moves(board: [[Field; 8]; 8], field: Field) -> Vec
             continue;
         }
 
-        pseudo_legal_positions.push(*potential_position);
+        pseudo_legal_positions.push(*target_pos);
     }
 
     // Adds possible strikes
@@ -403,10 +431,66 @@ fn generate_pseudo_legal_pawn_moves(board: [[Field; 8]; 8], field: Field) -> Vec
     pseudo_legal_positions
 }
 
+fn generate_pseudo_legal_king_moves(board: [[Field; 8]; 8], field: Field) -> Vec<Position> {
+    let potential_moves: [Move; 8] = [
+        Move { x: -1, y: -1 },
+        Move { x: -1, y: 0 },
+        Move { x: -1, y: 1 },
+        Move { x: 0, y: -1 },
+        Move { x: 0, y: 1 },
+        Move { x: 1, y: -1 },
+        Move { x: 1, y: 0 },
+        Move { x: 1, y: 1 },
+    ];
+    generate_pseudo_legal_king_or_knight_moves(board, field, potential_moves)
+}
+
+fn generate_pseudo_legal_knight_moves(board: [[Field; 8]; 8], field: Field) -> Vec<Position> {
+    let potential_moves: [Move; 8] = [
+        Move { x: -2, y: -1 },
+        Move { x: -2, y: 1 },
+        Move { x: -1, y: -2 },
+        Move { x: -1, y: 2 },
+        Move { x: 1, y: -2 },
+        Move { x: 1, y: 2 },
+        Move { x: 2, y: -1 },
+        Move { x: 2, y: 1 },
+    ];
+    generate_pseudo_legal_king_or_knight_moves(board, field, potential_moves)
+}
+
+fn generate_pseudo_legal_king_or_knight_moves(
+    board: [[Field; 8]; 8],
+    field: Field,
+    potential_moves: [Move; 8],
+) -> Vec<Position> {
+    let mut pseudo_legal_positions: Vec<Position> = Vec::new();
+
+    for potenial_move in potential_moves.iter() {
+        let target_pos = field.position + *potenial_move;
+
+        // Check if target out of bounds
+        if !target_pos.is_within_bounds() {
+            continue;
+        }
+
+        // Skip if target field is friendly
+        let forward_field: Field = get_field(board, target_pos);
+        if forward_field.color == field.color {
+            continue;
+        }
+
+        pseudo_legal_positions.push(target_pos);
+    }
+
+    pseudo_legal_positions
+}
+
 fn print_moves(field: Field, moves: Vec<Position>) {
-    println!("Field: {:?}", field);
+    println!();
+    println!("Potential Moves for: {}", field);
     for move_pos in moves.iter() {
-        println!("  Move: {:?}", move_pos);
+        println!("  {} {}", move_pos.x, move_pos.y);
     }
 }
 
@@ -436,11 +520,23 @@ fn handle_uci_communication() {
 fn print_all_legal_moves(board: [[Field; 8]; 8]) {
     for y in 0..8 {
         for x in 0..8 {
-            match board[x][y].piece {
-                Piece::Pawn => print_moves(
-                    board[x][y],
-                    generate_pseudo_legal_pawn_moves(board, board[x][y]),
-                ),
+            let field = get_field(board, Position { x: x, y: y });
+            match field.piece {
+                // Piece::Pawn => {
+                //     let moves = generate_pseudo_legal_pawn_moves(board, field);
+                //     print_moves(field, moves.clone());
+                //     print_moves_as_board(board, field, moves);
+                // }
+                // Piece::King => {
+                //     let moves = generate_pseudo_legal_king_moves(board, field);
+                //     print_moves(field, moves.clone());
+                //     print_moves_as_board(board, field, moves);
+                // }
+                Piece::Knight => {
+                    let moves = generate_pseudo_legal_knight_moves(board, field);
+                    //print_moves(field, moves.clone());
+                    print_moves_as_board(board, field, moves);
+                }
                 _ => {}
             }
         }
