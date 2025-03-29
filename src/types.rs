@@ -1,3 +1,27 @@
+pub type Bitboard = u64;
+pub type Bit = u64;
+
+/// Each type gets its own 64bits where the bit position represents the board index
+/// Counting begins bottom left
+pub struct Board {
+    pub white_pieces: Bitboard,
+    pub black_pieces: Bitboard,
+    pub empty_pieces: Bitboard,
+    pub white_pawns: Bitboard,
+    pub white_knights: Bitboard,
+    pub white_rooks: Bitboard,
+    pub white_bishops: Bitboard,
+    pub white_queen: Bitboard,
+    pub white_king: Bitboard,
+    pub black_pawns: Bitboard,
+    pub black_knights: Bitboard,
+    pub black_rooks: Bitboard,
+    pub black_bishops: Bitboard,
+    pub black_queen: Bitboard,
+    pub black_king: Bitboard,
+}
+
+// Enums get compiled to Integers so they have no performance overhead
 #[derive(Clone, Copy, Debug)]
 pub enum Piece {
     Empty,
@@ -24,61 +48,4 @@ impl Color {
             Color::None => Color::None,
         }
     }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct Field {
-    pub piece: Piece,
-    pub color: Color,
-    pub position: Position,
-}
-
-impl std::fmt::Display for Field {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let field_symbol = match (self.piece, self.color) {
-            (Piece::Empty, Color::None) => " ",
-            (Piece::Pawn, Color::Black) => "p",
-            (Piece::Knight, Color::Black) => "n",
-            (Piece::Rook, Color::Black) => "r",
-            (Piece::Bishop, Color::Black) => "b",
-            (Piece::Queen, Color::Black) => "q",
-            (Piece::King, Color::Black) => "k",
-            (Piece::Pawn, Color::White) => "P",
-            (Piece::Knight, Color::White) => "N",
-            (Piece::Rook, Color::White) => "R",
-            (Piece::Bishop, Color::White) => "B",
-            (Piece::Queen, Color::White) => "Q",
-            (Piece::King, Color::White) => "K",
-            (_, _) => "E",
-        };
-        write!(f, "{}", field_symbol)
-    }
-}
-
-#[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Position {
-    pub x: i32,
-    pub y: i32,
-}
-
-impl Position {
-    pub fn is_within_bounds(&self) -> bool {
-        self.x >= 0 && self.x <= 7 && self.y >= 0 && self.y <= 7
-    }
-}
-
-impl std::ops::Add<Move> for Position {
-    type Output = Position;
-    fn add(self, offset: Move) -> Self {
-        Self {
-            x: self.x + offset.x,
-            y: self.y + offset.y,
-        }
-    }
-}
-
-#[derive(Copy, Clone, Debug)]
-pub struct Move {
-    pub x: i32,
-    pub y: i32,
 }

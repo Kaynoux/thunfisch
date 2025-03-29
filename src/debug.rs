@@ -1,83 +1,82 @@
-use crate::move_generation::generate_pseudo_legal_knight_moves;
-use crate::types::{Field, Piece, Position};
-use crate::utils::get_field;
+use crate::communication::get_fin_symbol;
+use crate::move_generation::{get_pseudo_legal_king_moves, get_pseudo_legal_knight_moves};
+use crate::types::{Bit, Bitboard, Board, Color, Piece};
+use crate::utils::{bit_from_idx, color_and_piece_by_pos, x_y_list_from_bitboard};
 
-pub fn print_all_legal_moves(board: [[Field; 8]; 8]) {
-    for y in 0..8 {
-        for x in 0..8 {
-            let field = get_field(board, Position { x: x, y: y });
-            match field.piece {
-                // Piece::Pawn => {
-                //     let moves = generate_pseudo_legal_pawn_moves(board, field);
-                //     print_moves(field, moves.clone());
-                //     print_moves_as_board(board, field, moves);
-                // }
-                // Piece::King => {
-                //     let moves = generate_pseudo_legal_king_moves(board, field);
-                //     print_moves(field, moves.clone());
-                //     print_moves_as_board(board, field, moves);
-                // }
-                Piece::Knight => {
-                    let moves = generate_pseudo_legal_knight_moves(board, field);
-                    //print_moves(field, moves.clone());
-                    print_moves_as_board(board, field, moves);
-                }
-                _ => {}
+pub fn print_all_legal_moves(board: &Board) {
+    for pos_idx in 0..64 {
+        let pos_bit: Bit = bit_from_idx(pos_idx);
+
+        let (color, piece) = color_and_piece_by_pos(board, pos_bit);
+        match piece {
+            // Piece::Pawn => {
+            //     let moves = generate_pseudo_legal_pawn_moves(board, field);
+            //     print_moves(field, moves.clone());
+            //     print_moves_as_board(board, field, moves);
+            // }
+            Piece::King => {
+                let moves = get_pseudo_legal_king_moves(board, pos_idx, color);
+                print_moves_as_row(color, piece, moves);
+                print_moves_as_board(board, color, piece, moves);
             }
+            Piece::Knight => {
+                let moves = get_pseudo_legal_knight_moves(board, pos_idx, color);
+                print_moves_as_row(color, piece, moves);
+                print_moves_as_board(board, color, piece, moves);
+            }
+            _ => {}
         }
-    }
-}
-
-pub fn print_moves(field: Field, moves: Vec<Position>) {
-    println!();
-    println!("Potential Moves for: {}", field);
-    for move_pos in moves.iter() {
-        println!("  {} {}", move_pos.x, move_pos.y);
     }
 }
 
 /// Prints the current board formatted
 /// lowercase letters = black and uppercase letters = white    
-pub fn print_board_as_board(board: [[Field; 8]; 8]) {
-    let mut column_idx: i32 = 0;
-    let mut row_idx: i32 = 7;
-    println!();
-    println!("Current Board");
-    println!("    0   1   2   3   4   5   6   7");
-    while row_idx >= 0 {
-        println!("  ---------------------------------");
-        print!("{} |", row_idx);
-        while column_idx <= 7 {
-            print!(
-                " {} |",
-                board[column_idx as usize][row_idx as usize].to_string()
-            );
-            column_idx += 1;
-        }
-        column_idx = 0;
-        row_idx -= 1;
-
-        println!();
+pub fn print_board_as_board(board: &Board) {
+    let mut char_board: [char; 64] = [' '; 64];
+    for idx in 0..64 {
+        let curr_pos: Bit = bit_from_idx(idx);
+        let (color, piece) = color_and_piece_by_pos(board, curr_pos);
+        char_board[idx] = get_fin_symbol(piece, color);
     }
 }
 
 /// Prints moves on board formatted
-pub fn print_moves_as_board(board: [[Field; 8]; 8], field: Field, moves: Vec<Position>) {
+pub fn print_moves_as_board(board: &Board, color: Color, piece: Piece, moves: Bitboard) {
+    let mut char_board: [char; 64] = [' '; 64];
+    for idx in 0..64 {
+        let curr_pos = bit_from_idx(idx);
+        if moves & curr_pos != 0 {
+            char_board[idx] = 'X';
+        } else {
+            let (color, piece) = color_and_piece_by_pos(board, curr_pos);
+            char_board[idx] = get_fin_symbol(piece, color);
+        };
+    }
+
+    print_board(
+        &format!(
+            "Potential Moves from: {}  Amount: {} ",
+            get_fin_symbol(piece, color),
+            moves.count_ones()
+        ),
+        char_board,
+    );
+}
+
+fn print_board(title: &str, char_board: [char; 64]) {
     let mut y: i32 = 7;
     let mut x: i32 = 0;
+
     println!();
-    println!("Potential Moves for {}", field);
+    println!("{}", title);
     println!("    0   1   2   3   4   5   6   7");
+
     while y >= 0 {
         println!("  ---------------------------------");
         print!("{} |", y);
         while x <= 7 {
-            let text = if moves.contains(&Position { x: x, y: y }) {
-                "X".to_string()
-            } else {
-                board[x as usize][y as usize].to_string()
-            };
-            print!(" {} |", text);
+            print!(" {} |", char_board[(y * 8 + x) as usize]);
+
             x += 1;
         }
         x = 0;
@@ -85,4 +84,15 @@ pub fn print_moves_as_board(board: [[Field; 8]; 8], field: Field, moves: Vec<Pos
 
         println!();
     }
+}
+
+pub fn print_moves_as_row(color: Color, piece: Piece, moves: Bitboard) {
+    println!(
+        "Potential Moves from: {}  Amount: {} ",
+        get_fin_symbol(piece, color),
+        moves.count_ones()
+    );
+
+    let moves_list = x_y_list_from_bitboard(moves);
+    println!("{:?}", moves_list);
 }
