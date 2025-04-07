@@ -15,6 +15,7 @@ fn main() {
         "rnbqkbnr/p1pppppp/8/8/8/1p6/PPPPPPPP/RNBQKBNR", // test pawn
         "rnbq1bnr/pppppppp/8/8/8/3k4/PPPPPPPP/RNBQKBNR", // test king
         "rnbqkbnr/p4ppp/8/2N5/8/8/PPPPPPPP/RNBQKB1R",  // test knight
+        "8/8/8/8/3q4/8/8/8",                           // one queen middle
     ];
     let mut board: Board = Board {
         white_pieces: 0,
@@ -33,7 +34,7 @@ fn main() {
         black_queen: 0,
         black_king: 0,
     };
-    parse_fen(start_pos[4], &mut board);
+    parse_fen(start_pos[5], &mut board);
     print_board_as_board(&board);
     print_all_legal_moves(&board);
 }

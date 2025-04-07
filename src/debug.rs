@@ -1,29 +1,47 @@
 use crate::communication::get_fin_symbol;
-use crate::move_generation::{get_pseudo_legal_king_moves, get_pseudo_legal_knight_moves};
+use crate::move_generation::{
+    get_pseudo_legal_bishop_moves, get_pseudo_legal_king_moves, get_pseudo_legal_knight_moves,
+    get_pseudo_legal_queen_moves, get_pseudo_legal_rook_moves,
+};
 use crate::types::{Bit, Bitboard, Board, Color, Piece};
-use crate::utils::{bit_from_idx, color_and_piece_by_pos, x_y_list_from_bitboard};
+use crate::utils::{bitboard_to_xy_list, idx_to_bit, pos_to_color_and_piece};
 
 pub fn print_all_legal_moves(board: &Board) {
     for pos_idx in 0..64 {
-        let pos_bit: Bit = bit_from_idx(pos_idx);
+        let pos_bit: Bit = idx_to_bit(pos_idx);
 
-        let (color, piece) = color_and_piece_by_pos(board, pos_bit);
+        let (color, piece) = pos_to_color_and_piece(board, pos_bit);
         match piece {
             // Piece::Pawn => {
-            //     let moves = generate_pseudo_legal_pawn_moves(board, field);
-            //     print_moves(field, moves.clone());
-            //     print_moves_as_board(board, field, moves);
+            //     let moves = get_pseudo_legal_pawn_moves(board, pos_idx, color);
+            //     print_moves_as_row(color, piece, moves);
+            //     print_moves_as_board(board, color, piece, moves);
             // }
-            Piece::King => {
-                let moves = get_pseudo_legal_king_moves(board, pos_idx, color);
+            // Piece::Knight => {
+            //     let moves = get_pseudo_legal_knight_moves(board, pos_idx, color);
+            //     print_moves_as_row(color, piece, moves);
+            //     print_moves_as_board(board, color, piece, moves);
+            // }
+            // Piece::Bishop => {
+            //     let moves = get_pseudo_legal_bishop_moves(board, pos_idx, color);
+            //     print_moves_as_row(color, piece, moves);
+            //     print_moves_as_board(board, color, piece, moves);
+            // }
+            // Piece::Rook => {
+            //     let moves = get_pseudo_legal_rook_moves(board, pos_idx, color);
+            //     print_moves_as_row(color, piece, moves);
+            //     print_moves_as_board(board, color, piece, moves);
+            // }
+            Piece::Queen => {
+                let moves = get_pseudo_legal_queen_moves(board, pos_idx, color);
                 print_moves_as_row(color, piece, moves);
                 print_moves_as_board(board, color, piece, moves);
             }
-            Piece::Knight => {
-                let moves = get_pseudo_legal_knight_moves(board, pos_idx, color);
-                print_moves_as_row(color, piece, moves);
-                print_moves_as_board(board, color, piece, moves);
-            }
+            // Piece::King => {
+            //     let moves = get_pseudo_legal_king_moves(board, pos_idx, color);
+            //     print_moves_as_row(color, piece, moves);
+            //     print_moves_as_board(board, color, piece, moves);
+            // }
             _ => {}
         }
     }
@@ -34,8 +52,8 @@ pub fn print_all_legal_moves(board: &Board) {
 pub fn print_board_as_board(board: &Board) {
     let mut char_board: [char; 64] = [' '; 64];
     for idx in 0..64 {
-        let curr_pos: Bit = bit_from_idx(idx);
-        let (color, piece) = color_and_piece_by_pos(board, curr_pos);
+        let curr_pos: Bit = idx_to_bit(idx);
+        let (color, piece) = pos_to_color_and_piece(board, curr_pos);
         char_board[idx] = get_fin_symbol(piece, color);
     }
 }
@@ -44,11 +62,11 @@ pub fn print_board_as_board(board: &Board) {
 pub fn print_moves_as_board(board: &Board, color: Color, piece: Piece, moves: Bitboard) {
     let mut char_board: [char; 64] = [' '; 64];
     for idx in 0..64 {
-        let curr_pos = bit_from_idx(idx);
+        let curr_pos = idx_to_bit(idx);
         if moves & curr_pos != 0 {
             char_board[idx] = 'X';
         } else {
-            let (color, piece) = color_and_piece_by_pos(board, curr_pos);
+            let (color, piece) = pos_to_color_and_piece(board, curr_pos);
             char_board[idx] = get_fin_symbol(piece, color);
         };
     }
@@ -93,6 +111,6 @@ pub fn print_moves_as_row(color: Color, piece: Piece, moves: Bitboard) {
         moves.count_ones()
     );
 
-    let moves_list = x_y_list_from_bitboard(moves);
+    let moves_list = bitboard_to_xy_list(moves);
     println!("{:?}", moves_list);
 }
