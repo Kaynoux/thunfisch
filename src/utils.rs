@@ -14,7 +14,7 @@ where
     pos >= T::from(0) && pos < T::from(64)
 }
 
-pub fn is_next_pos_in_bounce(pos: usize, dir: Direction) -> bool {
+pub fn is_next_pos_in_bounce(pos: usize, dir: Direction ) -> bool {
     match dir {
         Direction::Up => (pos + 8) <= 63,
         Direction::Down => (pos - 8) >= 0,

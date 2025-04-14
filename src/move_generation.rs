@@ -1,7 +1,7 @@
 use crate::types::{Bit, Bitboard, Board, Color, Direction};
 use crate::utils::{
-    idx_to_bit, is_axis_in_bounds, is_bit_set, is_next_pos_in_bounce, is_pos_empty,
-    is_pos_enemy, is_pos_friendly, is_pos_in_bounds, xy_to_bit,
+    idx_to_bit, is_axis_in_bounds, is_bit_set, is_next_pos_in_bounce, is_pos_empty, is_pos_enemy,
+    is_pos_friendly, is_pos_in_bounds, xy_to_bit,
 };
 
 pub fn generate_pseudo_legal_pawn_moves(board: &Board, pos: usize, color: Color) -> Bitboard {
@@ -12,88 +12,35 @@ pub fn generate_pseudo_legal_pawn_moves(board: &Board, pos: usize, color: Color)
         Color::None => panic!("Pawn provided is not valid"),
     };
 
-    
-
-    if !is_next_pos_in_bounce(pos, move_direction)
-    {
+    // Stop if move forward is out of bounds
+    if !is_next_pos_in_bounce(pos, move_direction) {
         pseudo_legal_positions
     }
 
-    let forwar_by_one_pos  = pos + move_direction as i32;
+    let forward_by_one_pos = pos + move_direction as i32;
 
-}
+    // Add the move forward to possible options if empty
+    if is_pos_empty(board, forward_by_one_pos, color) {
+        pseudo_legal_positions |= forward_by_one_pos
     }
 
-    // Checks potential positions
-    match (pos, color) {
-        (/ 8 == 1, Color::White) => {
-            target_positions_1.push(Position {
-                x: field.position.x,
-                y: field.position.y + move_mul,
-            });
-            target_positions_2.push(Position {
-                x: field.position.x,
-                y: field.position.y + (move_mul * 2),
-            })
-        }
-        (Position { x: _, y: 6 }, Color::Black) => {
-            target_positions_1.push(Position {
-                x: field.position.x,
-                y: field.position.y + move_mul,
-            });
-            target_positions_2.push(Position {
-                x: field.position.x,
-                y: field.position.y + (move_mul * 2),
-            })
-        }
+    // Handle strike to the left
+    let forward_left_pos = forward_by_one_pos + Direction::Left as i32;
+    if is_next_pos_in_bounce(forward_by_one_pos, Direction::Left)
+        && is_pos_enemy(board, forward_left_pos, color)
+    {
+        pseudo_legal_positions |= forward_left_pos
+    }
 
-        (_, _) => target_positions_1.push(Position {
-            x: field.position.x,
-            y: field.position.y + move_mul,
-        }),
-    };
-
-    // Adds possible strikes
-    let potential_strike_moves: [Move; 2] = [Move { x: 1, y: 1 }, Move { x: -1, y: 1 }];
-    for potential_strike_move in potential_strike_moves.iter() {
-        let target_pos = field.position
-            + Move {
-                x: potential_strike_move.x,
-                y: potential_strike_move.y * move_mul,
-            };
-
-        if !target_pos.is_within_bounds() {
-            continue;
-        }
-
-        let target_color = get_field(board, target_pos).color;
-        if target_color != field.color.opposite() {
-            continue;
-        }
-
-        pseudo_legal_positions.push(target_pos);
+    // Handle strike to the right
+    let forward_right_pos = forward_by_one_pos + Direction::Right as i32;
+    if is_next_pos_in_bounce(forward_by_one_pos, Direction::Right)
+        && is_pos_enemy(board, forward_right_pos, color)
+    {
+        pseudo_legal_positions |= forward_right_pos
     }
 
     pseudo_legal_positions
-}
-
-// Check if a move by 2 is valid
-fn is_pawn_move_2_valid(target_pos: usize) -> bool {
-    // Adds psedo leglal position when moved by one field
-    for target_pos in target_positions_1.iter() {
-        // Skip if out of bounds
-        if !target_pos.is_within_bounds() {
-            continue;
-        }
-
-        // Skip if target field is not empty
-        let forward_field: Field = get_field(board, *target_pos);
-        if forward_field.color != Color::None {
-            continue;
-        }
-
-        pseudo_legal_positions.push(*target_pos);
-    }
 }
 
 // Check if a move by 2 is valid
