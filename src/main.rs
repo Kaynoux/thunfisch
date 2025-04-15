@@ -3,7 +3,8 @@ mod debug;
 mod move_generation;
 mod types;
 mod utils;
-use types::Board;
+use std::ops::Shl;
+use types::position;
 
 use crate::communication::parse_fen;
 use crate::debug::{print_all_legal_moves, print_board_as_board};
@@ -36,5 +37,5 @@ fn main() {
     };
     parse_fen(start_pos[5], &mut board);
     print_board_as_board(&board);
-    print_all_legal_moves(&board);
+    //print_all_legal_moves(&board);
 }

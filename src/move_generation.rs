@@ -4,7 +4,7 @@ use crate::utils::{
     is_pos_friendly, is_pos_in_bounds, xy_to_bit,
 };
 
-pub fn generate_pseudo_legal_pawn_moves(board: &Board, pos: usize, color: Color) -> Bitboard {
+/*pub fn generate_pseudo_legal_pawn_moves(board: &Board, pos: usize, color: Color) -> Bitboard {
     let mut pseudo_legal_positions: Bitboard = 0;
     let move_direction = match color {
         Color::Black => Direction::Down,
@@ -72,7 +72,7 @@ fn is_pawn_move_2_valid(target_pos: usize) -> bool {
 
     true
 }
-
+*/
 fn get_offset_moves(
     board: &Board,
     pos: usize,
@@ -142,7 +142,7 @@ pub fn get_sliding_moves(board: &Board, pos: usize, color: Color, dir: Direction
             break;
         }
         // So this will only trigger if the move was not out of bounds
-        next_pos_idx_i += dir as isize;
+        next_pos_idx_i += dir as isize as usize;
         println!("{:?}", next_pos_idx_i);
 
         // Cannot be negative now

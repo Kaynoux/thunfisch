@@ -3,7 +3,11 @@ use crate::move_generation::{
     get_pseudo_legal_bishop_moves, get_pseudo_legal_king_moves, get_pseudo_legal_knight_moves,
     get_pseudo_legal_queen_moves, get_pseudo_legal_rook_moves,
 };
-use crate::types::{Bit, Bitboard, Board, Color, Piece};
+use crate::types::bitboard::Bitboard
+use crate::types::position::Position
+use crate::types::board::Board
+use crate::types::bitboard::Bitboard
+
 use crate::utils::{bitboard_to_xy_list, idx_to_bit, pos_to_color_and_piece};
 
 pub fn print_all_legal_moves(board: &Board) {
