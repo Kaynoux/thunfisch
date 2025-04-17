@@ -1,5 +1,4 @@
-use crate::types::bitboard::Bitboard;
-use crate::types::position::Position;
+use crate::prelude::*;
 /// Each piece type gets its own 64bits where
 pub struct Board {
     pub white_pieces: Bitboard,
@@ -9,21 +8,21 @@ pub struct Board {
     pub white_knights: Bitboard,
     pub white_rooks: Bitboard,
     pub white_bishops: Bitboard,
-    pub white_queen: Bitboard,
-    pub white_king: Bitboard,
+    pub white_queen: Position,
+    pub white_king: Position,
     pub black_pawns: Bitboard,
     pub black_knights: Bitboard,
     pub black_rooks: Bitboard,
     pub black_bishops: Bitboard,
-    pub black_queen: Bitboard,
-    pub black_king: Bitboard,
+    pub black_queen: Position,
+    pub black_king: Position,
 }
 
 impl Board {
     /// Converts a FEN to a Board
     /// FEN describes the position of all pieces on the board
     /// lowercase = black and uppercase = white
-    pub fn new(fen: Option<&str>) -> Self {
+    pub fn new(fen: &str) -> Self {
         let mut board: Board = Board {
             white_pieces: Bitboard(0),
             black_pieces: Bitboard(0),
@@ -32,22 +31,19 @@ impl Board {
             white_knights: Bitboard(0),
             white_rooks: Bitboard(0),
             white_bishops: Bitboard(0),
-            white_queen: Bitboard(0),
-            white_king: Bitboard(0),
+            white_queen: Position(0),
+            white_king: Position(0),
             black_pawns: Bitboard(0),
             black_knights: Bitboard(0),
             black_rooks: Bitboard(0),
             black_bishops: Bitboard(0),
-            black_queen: Bitboard(0),
-            black_king: Bitboard(0),
+            black_queen: Position(0),
+            black_king: Position(0),
         };
-        if let None = fen {
-            return board;
-        }
-        let fen_str = fen.unwrap();
+
         let mut index: usize = 0;
 
-        for c in fen_str.chars() {
+        for c in fen.chars() {
             // Shift 1 as u64 by index amount of bits to the left
             let current_bit: Position = Position(1u64 << index);
             // Sets the current_bit in the bitmap of the corresponding field
@@ -71,11 +67,11 @@ impl Board {
                     index += 1
                 }
                 'q' => {
-                    board.black_queen |= current_bit;
+                    board.black_queen = current_bit;
                     index += 1
                 }
                 'k' => {
-                    board.black_king |= current_bit;
+                    board.black_king = current_bit;
                     index += 1
                 }
                 'P' => {
@@ -95,11 +91,11 @@ impl Board {
                     index += 1
                 }
                 'Q' => {
-                    board.white_queen |= current_bit;
+                    board.white_queen = current_bit;
                     index += 1
                 }
                 'K' => {
-                    board.white_king |= current_bit;
+                    board.white_king = current_bit;
                     index += 1
                 }
 
@@ -125,5 +121,73 @@ impl Board {
 
         board.empty_pieces = !(board.white_pieces | board.black_pieces);
         board
+    }
+
+    pub fn get_friendly_pieces(&self, color: Color) -> Bitboard {
+        match color {
+            Color::Black => return self.black_pieces,
+            Color::White => return self.white_pieces,
+        }
+    }
+
+    pub fn get_enemy_pieces(&self, color: Color) -> Bitboard {
+        match color {
+            Color::Black => return self.white_pieces,
+            Color::White => return self.black_pieces,
+        }
+    }
+
+    pub fn get_non_friendly_pieces(&self, color: Color) -> Bitboard {
+        match color {
+            Color::Black => return !self.black_pieces,
+            Color::White => return !self.white_pieces,
+        }
+    }
+
+    pub fn get_empty_pieces(&self) -> Bitboard {
+        self.empty_pieces
+    }
+
+    pub fn get_piece_and_color_at_position(&self, pos: Position) -> (Piece, Color) {
+        if self.white_pawns.is_position_set(pos) {
+            return (Piece::Pawn, Color::White);
+        }
+        if self.white_knights.is_position_set(pos) {
+            return (Piece::Knight, Color::White);
+        }
+        if self.white_bishops.is_position_set(pos) {
+            return (Piece::Bishop, Color::White);
+        }
+        if self.white_rooks.is_position_set(pos) {
+            return (Piece::Rook, Color::White);
+        }
+        if pos == self.white_queen {
+            return (Piece::Queen, Color::White);
+        }
+        if pos == self.white_king {
+            return (Piece::King, Color::White);
+        }
+
+        if self.black_pawns.is_position_set(pos) {
+            return (Piece::Pawn, Color::Black);
+        }
+        if self.black_knights.is_position_set(pos) {
+            return (Piece::Knight, Color::Black);
+        }
+        if self.black_bishops.is_position_set(pos) {
+            return (Piece::Bishop, Color::Black);
+        }
+        if self.black_rooks.is_position_set(pos) {
+            return (Piece::Rook, Color::Black);
+        }
+        if pos == self.black_queen {
+            return (Piece::Queen, Color::Black);
+        }
+        if pos == self.black_king {
+            return (Piece::King, Color::Black);
+        }
+
+        // Color does not matter for empty
+        (Piece::Empty, Color::White)
     }
 }

@@ -1,198 +1,233 @@
-use crate::types::{Bit, Bitboard, Board, Color, Direction};
-use crate::utils::{
-    idx_to_bit, is_axis_in_bounds, is_bit_set, is_next_pos_in_bounce, is_pos_empty, is_pos_enemy,
-    is_pos_friendly, is_pos_in_bounds, xy_to_bit,
-};
+use crate::prelude::*;
 
-/*pub fn generate_pseudo_legal_pawn_moves(board: &Board, pos: usize, color: Color) -> Bitboard {
-    let mut pseudo_legal_positions: Bitboard = 0;
-    let move_direction = match color {
-        Color::Black => Direction::Down,
-        Color::White => Direction::Up,
-        Color::None => panic!("Pawn provided is not valid"),
+pub fn get_all_black_moves(board: &Board) -> Vec<ChessMove> {
+    let mut moves = Vec::new();
+    moves.extend(get_all_moves_for_one_piece_type_not_unique(
+        board,
+        board.black_pawns,
+        Color::Black,
+        get_pawn_moves,
+    ));
+    moves.extend(get_all_moves_for_one_piece_type_not_unique(
+        board,
+        board.black_knights,
+        Color::Black,
+        get_knight_moves,
+    ));
+    moves.extend(get_all_moves_for_one_piece_type_not_unique(
+        board,
+        board.black_bishops,
+        Color::Black,
+        get_bishop_moves,
+    ));
+    moves.extend(get_all_moves_for_one_piece_type_not_unique(
+        board,
+        board.black_rooks,
+        Color::Black,
+        get_rook_moves,
+    ));
+    moves.extend(get_all_moves_for_one_piece_type_unique(
+        board,
+        board.black_queen,
+        Color::Black,
+        get_queen_moves,
+    ));
+    moves.extend(get_all_moves_for_one_piece_type_unique(
+        board,
+        board.black_king,
+        Color::Black,
+        get_king_moves,
+    ));
+
+    moves
+}
+
+pub fn get_all_white_moves(board: &Board) -> Vec<ChessMove> {
+    let mut moves = Vec::new();
+    moves.extend(get_all_moves_for_one_piece_type_not_unique(
+        board,
+        board.white_pawns,
+        Color::White,
+        get_pawn_moves,
+    ));
+    moves.extend(get_all_moves_for_one_piece_type_not_unique(
+        board,
+        board.white_knights,
+        Color::White,
+        get_knight_moves,
+    ));
+    moves.extend(get_all_moves_for_one_piece_type_not_unique(
+        board,
+        board.white_bishops,
+        Color::White,
+        get_bishop_moves,
+    ));
+    moves.extend(get_all_moves_for_one_piece_type_not_unique(
+        board,
+        board.white_rooks,
+        Color::White,
+        get_rook_moves,
+    ));
+    moves.extend(get_all_moves_for_one_piece_type_unique(
+        board,
+        board.white_queen,
+        Color::White,
+        get_queen_moves,
+    ));
+    moves.extend(get_all_moves_for_one_piece_type_unique(
+        board,
+        board.white_king,
+        Color::White,
+        get_king_moves,
+    ));
+
+    moves
+}
+
+pub fn get_all_moves_for_one_piece_type_not_unique(
+    board: &Board,
+    mut piece_positions: Bitboard,
+    color: Color,
+    f: fn(board: &Board, pos: Position, color: Color) -> Bitboard,
+) -> Vec<ChessMove> {
+    let mut moves = Vec::new();
+    while piece_positions != Bitboard(0) {
+        let current_pos = piece_positions.pop_lsb_position();
+
+        let mut target_positions = f(board, current_pos, color);
+
+        while target_positions != Bitboard(0) {
+            let target_pos = target_positions.pop_lsb_position();
+            moves.push(ChessMove(current_pos, target_pos))
+        }
+    }
+    moves
+}
+
+pub fn get_all_moves_for_one_piece_type_unique(
+    board: &Board,
+    current_pos: Position,
+    color: Color,
+    f: fn(board: &Board, pos: Position, color: Color) -> Bitboard,
+) -> Vec<ChessMove> {
+    let mut moves = Vec::new();
+    let mut target_positions = f(board, current_pos, color);
+    while target_positions != Bitboard(0) {
+        let target_pos = target_positions.pop_lsb_position();
+        moves.push(ChessMove(current_pos, target_pos))
+    }
+    moves
+}
+
+pub fn get_pawn_moves(board: &Board, pos: Position, color: Color) -> Bitboard {
+    let mut moves_to_empty = Bitboard(0);
+    let mut moves_to_enemy = Bitboard(0);
+    let move_direction_y = match color {
+        Color::Black => -1,
+        Color::White => 1,
     };
 
-    // Stop if move forward is out of bounds
-    if !is_next_pos_in_bounce(pos, move_direction) {
-        pseudo_legal_positions
+    // Add possible move by 2 when pawn has not moved in the match
+    match (color, pos.to_index_i() / 8) {
+        (Color::Black, 6) => {
+            moves_to_empty |= pos.get_offset_pos(0, -1) | pos.get_offset_pos(0, -2)
+        }
+        (Color::White, 1) => moves_to_empty |= pos.get_offset_pos(0, 1) | pos.get_offset_pos(0, 2),
+        (_, _) => {}
     }
 
-    let forward_by_one_pos = pos + move_direction as i32;
+    moves_to_empty |= pos.get_offset_pos(0, move_direction_y);
+    // Positions need to be empty to be valid
+    moves_to_empty & board.empty_pieces;
 
-    // Add the move forward to possible options if empty
-    if is_pos_empty(board, forward_by_one_pos, color) {
-        pseudo_legal_positions |= forward_by_one_pos
-    }
+    // Add the to possible Strike moves
+    moves_to_enemy |= pos.get_offset_pos(-1, move_direction_y);
+    moves_to_enemy |= pos.get_offset_pos(1, move_direction_y);
 
-    // Handle strike to the left
-    let forward_left_pos = forward_by_one_pos + Direction::Left as i32;
-    if is_next_pos_in_bounce(forward_by_one_pos, Direction::Left)
-        && is_pos_enemy(board, forward_left_pos, color)
-    {
-        pseudo_legal_positions |= forward_left_pos
-    }
+    // Positions need to be enemy to be valid
+    moves_to_enemy & board.get_enemy_pieces(color);
 
-    // Handle strike to the right
-    let forward_right_pos = forward_by_one_pos + Direction::Right as i32;
-    if is_next_pos_in_bounce(forward_by_one_pos, Direction::Right)
-        && is_pos_enemy(board, forward_right_pos, color)
-    {
-        pseudo_legal_positions |= forward_right_pos
-    }
-
-    pseudo_legal_positions
+    // Return combination off possible empty and enemy pos
+    moves_to_empty & moves_to_enemy
 }
 
-// Check if a move by 2 is valid
-fn is_pawn_move_2_valid(target_pos: usize) -> bool {
-    // Skip if out of bounds
-    if !target_pos.is_within_bounds() {
-        false
-    }
-
-    // Skip if target field is not empty
-    let forward_field: Field = get_field(board, *target_pos);
-    if forward_field.color != Color::None {
-        false
-    }
-
-    // Skip if field in between is not free
-    if get_field(
-        board,
-        Position {
-            x: target_pos.x,
-            y: target_pos.y - move_direction,
-        },
-    )
-    .color
-        != Color::None
-    {
-        false
-    }
-
-    true
+pub fn get_king_moves(board: &Board, pos: Position, color: Color) -> Bitboard {
+    let mut moves = Bitboard(0);
+    let non_friendly_pieces = board.get_non_friendly_pieces(color);
+    moves |= pos.get_offset_pos(-1, 1) & non_friendly_pieces;
+    moves |= pos.get_offset_pos(0, 1) & non_friendly_pieces;
+    moves |= pos.get_offset_pos(1, 1) & non_friendly_pieces;
+    moves |= pos.get_offset_pos(-1, 0) & non_friendly_pieces;
+    moves |= pos.get_offset_pos(1, 0) & non_friendly_pieces;
+    moves |= pos.get_offset_pos(-1, -1) & non_friendly_pieces;
+    moves |= pos.get_offset_pos(0, -1) & non_friendly_pieces;
+    moves |= pos.get_offset_pos(1, -1) & non_friendly_pieces;
+    moves
 }
-*/
-fn get_offset_moves(
+
+pub fn get_knight_moves(board: &Board, pos: Position, color: Color) -> Bitboard {
+    let mut moves = Bitboard(0);
+    let non_friendly_pieces = board.get_non_friendly_pieces(color);
+    moves |= pos.get_offset_pos(-2, 1);
+    moves |= pos.get_offset_pos(-1, 2);
+    moves |= pos.get_offset_pos(1, 2);
+    moves |= pos.get_offset_pos(2, 1);
+    moves |= pos.get_offset_pos(-2, -1);
+    moves |= pos.get_offset_pos(-1, -2);
+    moves |= pos.get_offset_pos(1, -2);
+    moves |= pos.get_offset_pos(2, -1);
+    moves & non_friendly_pieces
+}
+
+pub fn get_sliding_moves(
     board: &Board,
-    pos: usize,
+    pos: Position,
     color: Color,
-    move_offsets: &[(i32, i32)],
+    dx: isize,
+    dy: isize,
 ) -> Bitboard {
-    let mut moves: Bitboard = 0u64;
-    let pos_x = (pos % 8) as i32;
-    let pos_y = (pos / 8) as i32;
-
-    for (off_x, off_y) in move_offsets.iter() {
-        let new_x = pos_x + off_x;
-        let new_y = pos_y + off_y;
-
-        // Skip if out of bounds
-        if !is_axis_in_bounds(new_x) || !is_axis_in_bounds(new_y) {
-            continue;
-        }
-
-        // Skip if friendly pice already there
-        let new_pos: Bit = xy_to_bit(new_x, new_y);
-        if is_pos_friendly(board, new_pos, color) {
-            continue;
-        }
-
-        // Add new pos to list of pseudo legal moves
-        moves |= new_pos;
-    }
-    moves
-}
-
-pub fn get_pseudo_legal_king_moves(board: &Board, pos: usize, color: Color) -> Bitboard {
-    static KING_MOVE_OFFSETS: [(i32, i32); 8] = [
-        (-1, -1),
-        (-1, 0),
-        (-1, 1),
-        (0, -1),
-        (0, 1),
-        (1, -1),
-        (1, 0),
-        (1, 1),
-    ];
-    get_offset_moves(board, pos, color, &KING_MOVE_OFFSETS)
-}
-
-pub fn get_pseudo_legal_knight_moves(board: &Board, pos: usize, color: Color) -> Bitboard {
-    static KNIGHT_MOVE_OFFSETS: [(i32, i32); 8] = [
-        (-2, -1),
-        (-2, 1),
-        (-1, -2),
-        (-1, 2),
-        (1, -2),
-        (1, 2),
-        (2, -1),
-        (2, 1),
-    ];
-    get_offset_moves(board, pos, color, &KNIGHT_MOVE_OFFSETS)
-}
-
-pub fn get_sliding_moves(board: &Board, pos: usize, color: Color, dir: Direction) -> Bitboard {
-    let mut moves: Bitboard = 0;
-    // Could be negative at first before bounds check
-    let mut next_pos_idx_i = pos;
+    let mut moves = Bitboard(0);
+    let non_friendly_pieces = board.get_non_friendly_pieces(color);
+    let mut current_dx = 0isize;
+    let mut current_dy = 0isize;
     loop {
-        // This takes the current position and checks if the next one will be valid
-        if !is_next_pos_in_bounce(next_pos_idx_i, dir) {
+        current_dx += dx;
+        current_dy += dy;
+        if pos.get_offset_pos(current_dx, current_dy) == Position(0) {
             break;
         }
-        // So this will only trigger if the move was not out of bounds
-        next_pos_idx_i += dir as isize as usize;
-        println!("{:?}", next_pos_idx_i);
-
-        // Cannot be negative now
-        let next_pos_idx = next_pos_idx_i as usize;
-
-        let next_pos_bit: Bit = idx_to_bit(next_pos_idx);
-
-        if is_pos_empty(board, next_pos_bit, color) {
-            // Hit an empty or enemy piece and continue
-            moves |= next_pos_bit;
-            continue;
-        } else if is_pos_enemy(board, next_pos_bit, color) {
-            // Hit a enemy piece and stop searching because it blocks
-            moves |= next_pos_bit;
-            break;
-        } else {
-            // Hit a friendly piece stop searching but it is not a valid target
-            break;
-        }
+        moves |= pos.get_offset_pos(current_dx, current_dy);
     }
+    moves & non_friendly_pieces
+}
 
+pub fn get_queen_moves(board: &Board, pos: Position, color: Color) -> Bitboard {
+    let mut moves = Bitboard(0);
+    moves |= get_sliding_moves(board, pos, color, 1, -1);
+    moves |= get_sliding_moves(board, pos, color, 1, 0);
+    moves |= get_sliding_moves(board, pos, color, 1, 1);
+    moves |= get_sliding_moves(board, pos, color, 0, -1);
+    moves |= get_sliding_moves(board, pos, color, 0, 1);
+    moves |= get_sliding_moves(board, pos, color, -1, -1);
+    moves |= get_sliding_moves(board, pos, color, -1, 0);
+    moves |= get_sliding_moves(board, pos, color, -1, 1);
     moves
 }
 
-pub fn get_pseudo_legal_queen_moves(board: &Board, pos: usize, color: Color) -> Bitboard {
-    let mut moves = get_sliding_moves(board, pos, color, Direction::Up);
-    moves |= get_sliding_moves(board, pos, color, Direction::Down);
-    moves |= get_sliding_moves(board, pos, color, Direction::Left);
-    moves |= get_sliding_moves(board, pos, color, Direction::Right);
-    moves |= get_sliding_moves(board, pos, color, Direction::UpLeft);
-    moves |= get_sliding_moves(board, pos, color, Direction::UpRight);
-    moves |= get_sliding_moves(board, pos, color, Direction::UpLeft);
-    moves |= get_sliding_moves(board, pos, color, Direction::DownLeft);
-    moves |= get_sliding_moves(board, pos, color, Direction::DownRight);
+pub fn get_bishop_moves(board: &Board, pos: Position, color: Color) -> Bitboard {
+    let mut moves = Bitboard(0);
+    moves |= get_sliding_moves(board, pos, color, 1, -1);
+    moves |= get_sliding_moves(board, pos, color, 1, -1);
+    moves |= get_sliding_moves(board, pos, color, -1, -1);
+    moves |= get_sliding_moves(board, pos, color, -1, 1);
     moves
 }
 
-pub fn get_pseudo_legal_rook_moves(board: &Board, pos: usize, color: Color) -> Bitboard {
-    let mut moves = get_sliding_moves(board, pos, color, Direction::Up);
-    moves |= get_sliding_moves(board, pos, color, Direction::Down);
-    moves |= get_sliding_moves(board, pos, color, Direction::Left);
-    moves |= get_sliding_moves(board, pos, color, Direction::Right);
-    moves
-}
-
-pub fn get_pseudo_legal_bishop_moves(board: &Board, pos: usize, color: Color) -> Bitboard {
-    let mut moves = get_sliding_moves(board, pos, color, Direction::UpLeft);
-    moves |= get_sliding_moves(board, pos, color, Direction::UpRight);
-    moves |= get_sliding_moves(board, pos, color, Direction::UpLeft);
-    moves |= get_sliding_moves(board, pos, color, Direction::DownLeft);
-    moves |= get_sliding_moves(board, pos, color, Direction::DownRight);
+pub fn get_rook_moves(board: &Board, pos: Position, color: Color) -> Bitboard {
+    let mut moves = Bitboard(0);
+    moves |= get_sliding_moves(board, pos, color, 1, 0);
+    moves |= get_sliding_moves(board, pos, color, 0, -1);
+    moves |= get_sliding_moves(board, pos, color, 0, 1);
+    moves |= get_sliding_moves(board, pos, color, -1, 0);
     moves
 }

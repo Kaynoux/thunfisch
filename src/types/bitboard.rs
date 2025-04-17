@@ -1,22 +1,21 @@
-use super::position::Position;
+use crate::prelude::*;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not};
 
 /// the bits the are set represent a position on the board with the bit being the index of the chess position
 /// Counting begins bottom left
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct Bitboard(pub u64);
 
 impl Bitboard {
     #[inline(always)]
     pub fn is_position_set(self, position: Position) -> bool {
-        (self & position) != 0
+        (self & position) != Bitboard(0)
     }
-}
 
-impl PartialEq<u64> for Bitboard {
-    #[inline(always)]
-    fn eq(&self, other: &u64) -> bool {
-        self.0 == *other
+    pub fn pop_lsb_position(&mut self) -> Position {
+        let pos = Position(self.0 & self.0.wrapping_neg());
+        self.0 &= self.0 - 1;
+        pos
     }
 }
 
