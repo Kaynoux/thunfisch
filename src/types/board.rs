@@ -41,66 +41,40 @@ impl Board {
             black_king: Position(0),
         };
 
-        let mut index: usize = 0;
+        // fen begins top left
+        let mut index: usize = 56;
 
         for c in fen.chars() {
-            // Shift 1 as u64 by index amount of bits to the left
-            let current_bit: Position = Position(1u64 << index);
-            // Sets the current_bit in the bitmap of the corresponding field
             match c {
-                '/' => index = (index + 7) / 8 * 8,
-                '1'..'9' => index += c.to_digit(10).unwrap_or(0) as usize,
-                'p' => {
-                    board.black_pawns |= current_bit;
-                    index += 1
-                }
-                'n' => {
-                    board.black_knights |= current_bit;
-                    index += 1
-                }
-                'b' => {
-                    board.black_bishops |= current_bit;
-                    index += 1
-                }
-                'r' => {
-                    board.black_rooks |= current_bit;
-                    index += 1
-                }
-                'q' => {
-                    board.black_queen = current_bit;
-                    index += 1
-                }
-                'k' => {
-                    board.black_king = current_bit;
-                    index += 1
-                }
-                'P' => {
-                    board.white_pawns |= current_bit;
-                    index += 1
-                }
-                'N' => {
-                    board.white_knights |= current_bit;
-                    index += 1
-                }
-                'B' => {
-                    board.white_bishops |= current_bit;
-                    index += 1
-                }
-                'R' => {
-                    board.white_rooks |= current_bit;
-                    index += 1
-                }
-                'Q' => {
-                    board.white_queen = current_bit;
-                    index += 1
-                }
-                'K' => {
-                    board.white_king = current_bit;
-                    index += 1
+                '/' => {
+                    index = index.saturating_sub(16);
                 }
 
-                _ => {
-                    println!("Invalid Character");
+                '1'..='8' => {
+                    let skip = c.to_digit(10).unwrap() as usize;
+                    index += skip;
+                }
+
+                ch => {
+                    let bit = Position(1u64 << index as u64);
+                    match ch {
+                        'p' => board.black_pawns |= bit,
+                        'n' => board.black_knights |= bit,
+                        'b' => board.black_bishops |= bit,
+                        'r' => board.black_rooks |= bit,
+                        'q' => board.black_queen = bit,
+                        'k' => board.black_king = bit,
+
+                        'P' => board.white_pawns |= bit,
+                        'N' => board.white_knights |= bit,
+                        'B' => board.white_bishops |= bit,
+                        'R' => board.white_rooks |= bit,
+                        'Q' => board.white_queen = bit,
+                        'K' => board.white_king = bit,
+
+                        _ => {}
+                    }
+                    index += 1;
                 }
             }
         }
@@ -125,22 +99,22 @@ impl Board {
 
     pub fn get_friendly_pieces(&self, color: Color) -> Bitboard {
         match color {
-            Color::Black => return self.black_pieces,
-            Color::White => return self.white_pieces,
+            Color::Black => self.black_pieces,
+            Color::White => self.white_pieces,
         }
     }
 
     pub fn get_enemy_pieces(&self, color: Color) -> Bitboard {
         match color {
-            Color::Black => return self.white_pieces,
-            Color::White => return self.black_pieces,
+            Color::Black => self.white_pieces,
+            Color::White => self.black_pieces,
         }
     }
 
     pub fn get_non_friendly_pieces(&self, color: Color) -> Bitboard {
         match color {
-            Color::Black => return !self.black_pieces,
-            Color::White => return !self.white_pieces,
+            Color::Black => !self.black_pieces,
+            Color::White => !self.white_pieces,
         }
     }
 

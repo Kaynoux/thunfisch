@@ -30,4 +30,22 @@ impl Piece {
             (Piece::King, Color::Black) => 'k',
         }
     }
+
+    pub fn get_unicode_symbol(self, color: Color) -> char {
+        match (self, color) {
+            (Piece::Empty, _) => '.',
+            (Piece::Pawn, Color::Black) => '♙',
+            (Piece::Pawn, Color::White) => '♟',
+            (Piece::Knight, Color::Black) => '♘',
+            (Piece::Knight, Color::White) => '♞',
+            (Piece::Bishop, Color::Black) => '♗',
+            (Piece::Bishop, Color::White) => '♝',
+            (Piece::Rook, Color::Black) => '♖',
+            (Piece::Rook, Color::White) => '♜',
+            (Piece::Queen, Color::Black) => '♕',
+            (Piece::Queen, Color::White) => '♛',
+            (Piece::King, Color::Black) => '♔',
+            (Piece::King, Color::White) => '♚',
+        }
+    }
 }

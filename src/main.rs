@@ -16,16 +16,25 @@ fn main() {
         "8/8/8/8/3q4/8/8/8",                           // one queen middle
     ];
 
-    let mut board = Board::new(start_pos[5]);
-    debug::print_board(
+    let mut board = Board::new("8/8/8/4r3/3N4/8/8/8");
+
+    let moves = move_generation::get_all_moves_for_one_piece_type_not_unique(
         &board,
-        "Test black queen",
-        move_generation::get_all_moves_for_one_piece_type_unique(
-            &board,
-            board.black_queen,
-            Color::Black,
-            move_generation::get_queen_moves,
-        ),
+        board.white_knights,
+        Color::White,
+        move_generation::get_knight_moves,
     );
-    //print_all_legal_moves(&board);
+    debug::print_moves(moves.clone());
+    debug::print_board(&board, "Test", moves);
+
+    // debug::print_board(
+    //     &board,
+    //     "Test black queen",
+    //     move_generation::get_all_moves_for_one_piece_type_unique(
+    //         &board,
+    //         board.black_queen,
+    //         Color::Black,
+    //         move_generation::get_queen_moves,
+    //     ),
+    // );
 }

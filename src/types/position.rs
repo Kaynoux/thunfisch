@@ -5,8 +5,15 @@ use std::ops::{BitAnd, BitOr, Shl};
 pub struct Position(pub u64);
 
 impl Position {
-    pub fn to_index_i(&self) -> isize {
+    pub fn to_index(self) -> isize {
         self.0.trailing_zeros() as isize
+    }
+
+    pub fn to_xy(self) -> (isize, isize) {
+        let idx = self.to_index();
+        let x = idx % 8;
+        let y = idx / 8;
+        (x, y)
     }
 
     pub fn is_position_empty(self, board: &Board) -> bool {
@@ -18,8 +25,13 @@ impl Position {
             || (color == Color::White && board.white_pieces.is_position_set(self))
     }
 
+    pub fn is_enemy(self, board: &Board, color: Color) -> bool {
+        (color == Color::White && board.black_pieces.is_position_set(self))
+            || (color == Color::Black && board.white_pieces.is_position_set(self))
+    }
+
     pub fn get_offset_pos(self, dx: isize, dy: isize) -> Position {
-        let pos_idx = self.to_index_i() as isize;
+        let pos_idx = self.to_index() as isize;
         let new_x: isize = pos_idx % 8 + dx;
         let new_y: isize = pos_idx / 8 + dy;
         if new_x >= 0 && new_x <= 7 && new_y >= 0 && new_y <= 7 {

@@ -98,7 +98,7 @@ pub fn get_all_moves_for_one_piece_type_not_unique(
 
         while target_positions != Bitboard(0) {
             let target_pos = target_positions.pop_lsb_position();
-            moves.push(ChessMove(current_pos, target_pos))
+            moves.push(ChessMove(current_pos, target_pos));
         }
     }
     moves
@@ -128,7 +128,7 @@ pub fn get_pawn_moves(board: &Board, pos: Position, color: Color) -> Bitboard {
     };
 
     // Add possible move by 2 when pawn has not moved in the match
-    match (color, pos.to_index_i() / 8) {
+    match (color, pos.to_index() / 8) {
         (Color::Black, 6) => {
             moves_to_empty |= pos.get_offset_pos(0, -1) | pos.get_offset_pos(0, -2)
         }
@@ -138,17 +138,17 @@ pub fn get_pawn_moves(board: &Board, pos: Position, color: Color) -> Bitboard {
 
     moves_to_empty |= pos.get_offset_pos(0, move_direction_y);
     // Positions need to be empty to be valid
-    moves_to_empty & board.empty_pieces;
+    moves_to_empty &= board.empty_pieces;
 
     // Add the to possible Strike moves
     moves_to_enemy |= pos.get_offset_pos(-1, move_direction_y);
     moves_to_enemy |= pos.get_offset_pos(1, move_direction_y);
 
     // Positions need to be enemy to be valid
-    moves_to_enemy & board.get_enemy_pieces(color);
+    moves_to_enemy &= board.get_enemy_pieces(color);
 
     // Return combination off possible empty and enemy pos
-    moves_to_empty & moves_to_enemy
+    moves_to_empty | moves_to_enemy
 }
 
 pub fn get_king_moves(board: &Board, pos: Position, color: Color) -> Bitboard {
@@ -193,10 +193,20 @@ pub fn get_sliding_moves(
     loop {
         current_dx += dx;
         current_dy += dy;
-        if pos.get_offset_pos(current_dx, current_dy) == Position(0) {
+        let current_pos = pos.get_offset_pos(current_dx, current_dy);
+        if current_pos == Position(0) {
             break;
         }
-        moves |= pos.get_offset_pos(current_dx, current_dy);
+
+        if current_pos.is_friendly(board, color) {
+            break;
+        }
+
+        moves |= current_pos;
+
+        if current_pos.is_enemy(board, color) {
+            break;
+        }
     }
     moves & non_friendly_pieces
 }

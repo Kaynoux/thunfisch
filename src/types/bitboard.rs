@@ -53,7 +53,7 @@ impl BitAnd<Position> for Bitboard {
 impl BitAndAssign<Position> for Bitboard {
     #[inline(always)]
     fn bitand_assign(&mut self, rhs: Position) {
-        self.0 & rhs.0;
+        self.0 &= rhs.0;
     }
 }
 
@@ -72,10 +72,10 @@ impl BitOrAssign<Bitboard> for Bitboard {
     }
 }
 
-impl BitAnd<Bitboard> for Bitboard {
+impl BitAnd for Bitboard {
     type Output = Self;
     #[inline(always)]
-    fn bitand(self, rhs: Bitboard) -> Self::Output {
+    fn bitand(self, rhs: Self) -> Self::Output {
         Bitboard(self.0 & rhs.0)
     }
 }
@@ -83,6 +83,6 @@ impl BitAnd<Bitboard> for Bitboard {
 impl BitAndAssign<Bitboard> for Bitboard {
     #[inline(always)]
     fn bitand_assign(&mut self, rhs: Bitboard) {
-        self.0 & rhs.0;
+        self.0 &= rhs.0;
     }
 }
