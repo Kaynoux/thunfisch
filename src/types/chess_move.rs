@@ -1,20 +1,23 @@
 use crate::prelude::Position;
 use std::fmt;
 
+use super::piece::Piece;
+
 #[derive(Copy, Clone)]
-pub struct ChessMove(pub Position, pub Position);
+pub struct ChessMove {
+    pub from: Position,
+    pub to: Position,
+    pub is_capture: bool,
+    pub is_double_move: bool,
+    pub is_promotion: bool,
+    pub is_en_passant: bool,
+    pub is_castle: bool,
+    pub promotion: Piece,
+    pub captured: Piece,
+}
 
 impl fmt::Debug for ChessMove {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{:?}->{:?}", self.0, self.1)
+        write!(f, "{:?}->{:?}", self.from, self.to)
     }
 }
-
-// impl ChessMove {
-//     pub fn encode(
-//         from: u8,
-//         to: u8
-//         is_capture: bool,
-
-//     )
-// }

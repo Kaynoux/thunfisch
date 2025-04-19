@@ -1,5 +1,4 @@
 use crate::prelude::*;
-use crate::utils;
 use colored;
 use colored::Colorize;
 
@@ -34,14 +33,14 @@ fn get_char_board(board: &Board, moves: &[ChessMove]) -> [(char, &'static str); 
     for y in 0usize..=7usize {
         for x in 0usize..=7usize {
             let idx = y * 8 + x;
-            let pos = utils::idx_to_position(idx as isize);
+            let pos = Position::from_idx(idx as isize);
 
             let (piece, color) = board.get_piece_and_color_at_position(pos);
             let mut text_color = "white";
-            if moves.iter().any(|chess_move| chess_move.0 == pos) {
+            if moves.iter().any(|chess_move| chess_move.from == pos) {
                 text_color = "green";
             }
-            if moves.iter().any(|chess_move| chess_move.1 == pos) {
+            if moves.iter().any(|chess_move| chess_move.to == pos) {
                 text_color = "red";
             }
             char_board[idx] = (Piece::get_unicode_symbol(piece, color), text_color);
@@ -52,16 +51,19 @@ fn get_char_board(board: &Board, moves: &[ChessMove]) -> [(char, &'static str); 
 
 pub fn print_moves(board: &Board, moves: &Vec<ChessMove>) {
     println!("Potential Moves:");
-    let mut prev_pos = Position(0);
+    let (mut prev_pos, mut prev_is_castle) = (Position(0), false);
     for mv in moves {
-        let current_pos = mv.0;
+        let (current_pos, current_is_castle) = (mv.from, mv.is_castle);
         let (current_color, current_piece) = board.get_piece_and_color_at_position(current_pos);
-        if current_pos != prev_pos {
+        if current_pos != prev_pos || current_is_castle != prev_is_castle {
             println!();
-            print!("{:?} {:?} {:?} -> ", current_color, current_piece, mv.0);
-            prev_pos = current_pos;
+            if current_is_castle {
+                print!("Castle: ")
+            }
+            print!("{:?} {:?} {:?} -> ", current_color, current_piece, mv.from);
+            (prev_pos, prev_is_castle) = (current_pos, current_is_castle);
         }
-        print!(" {:?},", mv.1);
+        print!(" {:?},", mv.to);
     }
     println!()
 }

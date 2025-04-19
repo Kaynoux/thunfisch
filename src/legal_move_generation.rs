@@ -2,10 +2,7 @@ use crate::prelude::*;
 use crate::pseudo_legal_move_generation;
 
 pub fn generate_legal_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) {
-    let moves_bitboard = match color {
-        Color::Black => pseudo_legal_move_generation::get_all_black_moves(board, moves),
-        Color::White => pseudo_legal_move_generation::get_all_white_moves(board, moves),
-    };
+    pseudo_legal_move_generation::get_all_moves(board, color, moves);
 
     // only retain moves where king is not in check
     moves.retain(|mv| {
@@ -14,14 +11,8 @@ pub fn generate_legal_moves(board: &Board, color: Color, moves: &mut Vec<ChessMo
 
         // generate counter moves
         let mut counter_moves: Vec<ChessMove> = Vec::new();
-        let counter_positions = match color {
-            Color::Black => {
-                pseudo_legal_move_generation::get_all_white_moves(&bc, &mut counter_moves)
-            }
-            Color::White => {
-                pseudo_legal_move_generation::get_all_black_moves(&bc, &mut counter_moves)
-            }
-        };
+        let counter_positions =
+            pseudo_legal_move_generation::get_all_moves(&bc, !color, &mut counter_moves);
 
         // where is king?
         let king_pos = match color {

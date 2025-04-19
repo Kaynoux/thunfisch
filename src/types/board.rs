@@ -17,6 +17,12 @@ pub struct Board {
     pub black_bishops: Bitboard,
     pub black_queens: Bitboard,
     pub black_king: Position,
+    pub black_castle_left: bool,
+    pub black_castle_right: bool,
+    pub white_castle_left: bool,
+    pub white_castle_right: bool,
+    pub en_passant_target: Option<Position>,
+    pub current_color: Color,
 }
 
 impl Board {
@@ -40,6 +46,13 @@ impl Board {
             black_bishops: Bitboard(0),
             black_queens: Bitboard(0),
             black_king: Position(0),
+            black_castle_left: true,
+            black_castle_right: true,
+            white_castle_left: true,
+            white_castle_right: true,
+            en_passant_target: None,
+
+            current_color: Color::Black,
         };
 
         // fen begins top left
@@ -167,8 +180,9 @@ impl Board {
     }
 
     pub fn make_move(&mut self, chess_move: &ChessMove) {
-        let start_pos = chess_move.0;
-        let target_pos = chess_move.1;
+        /// !!NEED TO ALSO MOVE ROOK ON CASTLE
+        let start_pos = chess_move.from;
+        let target_pos = chess_move.to;
 
         let (start_piece, start_color) = self.get_piece_and_color_at_position(start_pos);
         let (target_piece, target_color) = self.get_piece_and_color_at_position(target_pos);
@@ -347,6 +361,36 @@ impl Board {
                     self.white_king |= target_pos;
                 }
             },
+        }
+    }
+
+    pub fn get_positions_by_piece_color(&self, color: Color, piece: Piece) -> Bitboard {
+        match color {
+            Color::Black => match piece {
+                Piece::Empty => self.empty_pieces,
+                Piece::Pawn => self.black_pawns,
+                Piece::Knight => self.black_knights,
+                Piece::Bishop => self.black_bishops,
+                Piece::Rook => self.black_rooks,
+                Piece::Queen => self.black_queens,
+                Piece::King => Bitboard(self.black_king.0),
+            },
+            Color::White => match piece {
+                Piece::Empty => self.empty_pieces,
+                Piece::Pawn => self.white_pawns,
+                Piece::Knight => self.white_knights,
+                Piece::Bishop => self.white_bishops,
+                Piece::Rook => self.white_rooks,
+                Piece::Queen => self.white_queens,
+                Piece::King => Bitboard(self.white_king.0),
+            },
+        }
+    }
+
+    pub fn get_king_pos(&self, color: Color) -> Position {
+        match color {
+            Color::Black => self.black_king,
+            Color::White => self.white_king,
         }
     }
 }
