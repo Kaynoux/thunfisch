@@ -1,5 +1,6 @@
 use crate::prelude::*;
 /// Each piece type gets its own 64bits where
+#[derive(Clone, Copy, Debug)]
 pub struct Board {
     pub white_pieces: Bitboard,
     pub black_pieces: Bitboard,
@@ -8,13 +9,13 @@ pub struct Board {
     pub white_knights: Bitboard,
     pub white_rooks: Bitboard,
     pub white_bishops: Bitboard,
-    pub white_queen: Position,
+    pub white_queens: Bitboard,
     pub white_king: Position,
     pub black_pawns: Bitboard,
     pub black_knights: Bitboard,
     pub black_rooks: Bitboard,
     pub black_bishops: Bitboard,
-    pub black_queen: Position,
+    pub black_queens: Bitboard,
     pub black_king: Position,
 }
 
@@ -31,13 +32,13 @@ impl Board {
             white_knights: Bitboard(0),
             white_rooks: Bitboard(0),
             white_bishops: Bitboard(0),
-            white_queen: Position(0),
+            white_queens: Bitboard(0),
             white_king: Position(0),
             black_pawns: Bitboard(0),
             black_knights: Bitboard(0),
             black_rooks: Bitboard(0),
             black_bishops: Bitboard(0),
-            black_queen: Position(0),
+            black_queens: Bitboard(0),
             black_king: Position(0),
         };
 
@@ -62,14 +63,14 @@ impl Board {
                         'n' => board.black_knights |= bit,
                         'b' => board.black_bishops |= bit,
                         'r' => board.black_rooks |= bit,
-                        'q' => board.black_queen = bit,
+                        'q' => board.black_queens |= bit,
                         'k' => board.black_king = bit,
 
                         'P' => board.white_pawns |= bit,
                         'N' => board.white_knights |= bit,
                         'B' => board.white_bishops |= bit,
                         'R' => board.white_rooks |= bit,
-                        'Q' => board.white_queen = bit,
+                        'Q' => board.white_queens |= bit,
                         'K' => board.white_king = bit,
 
                         _ => {}
@@ -83,14 +84,14 @@ impl Board {
             | board.white_knights
             | board.white_bishops
             | board.white_rooks
-            | board.white_queen
+            | board.white_queens
             | board.white_king;
 
         board.black_pieces = board.black_pawns
             | board.black_knights
             | board.black_bishops
             | board.black_rooks
-            | board.black_queen
+            | board.black_queens
             | board.black_king;
 
         board.empty_pieces = !(board.white_pieces | board.black_pieces);
@@ -135,7 +136,7 @@ impl Board {
         if self.white_rooks.is_position_set(pos) {
             return (Piece::Rook, Color::White);
         }
-        if pos == self.white_queen {
+        if self.white_queens.is_position_set(pos) {
             return (Piece::Queen, Color::White);
         }
         if pos == self.white_king {
@@ -154,7 +155,7 @@ impl Board {
         if self.black_rooks.is_position_set(pos) {
             return (Piece::Rook, Color::Black);
         }
-        if pos == self.black_queen {
+        if self.black_queens.is_position_set(pos) {
             return (Piece::Queen, Color::Black);
         }
         if pos == self.black_king {
@@ -163,5 +164,189 @@ impl Board {
 
         // Color does not matter for empty
         (Piece::Empty, Color::White)
+    }
+
+    pub fn make_move(&mut self, chess_move: &ChessMove) {
+        let start_pos = chess_move.0;
+        let target_pos = chess_move.1;
+
+        let (start_piece, start_color) = self.get_piece_and_color_at_position(start_pos);
+        let (target_piece, target_color) = self.get_piece_and_color_at_position(target_pos);
+
+        // Remove start piece from bitboard
+        let start_mask = !start_pos;
+        match start_color {
+            Color::Black => match start_piece {
+                Piece::Empty => self.empty_pieces &= start_mask,
+                Piece::Pawn => {
+                    self.black_pieces &= start_mask;
+                    self.black_pawns &= start_mask;
+                }
+                Piece::Knight => {
+                    self.black_pieces &= start_mask;
+                    self.black_knights &= start_mask;
+                }
+                Piece::Bishop => {
+                    self.black_pieces &= start_mask;
+                    self.black_bishops &= start_mask;
+                }
+                Piece::Rook => {
+                    self.black_pieces &= start_mask;
+                    self.black_rooks &= start_mask;
+                }
+                Piece::Queen => {
+                    self.black_pieces &= start_mask;
+                    self.black_queens &= start_mask;
+                }
+                Piece::King => {
+                    self.black_pieces &= start_mask;
+                    self.black_king &= start_mask;
+                }
+            },
+            Color::White => match start_piece {
+                Piece::Empty => self.empty_pieces &= start_mask,
+                Piece::Pawn => {
+                    self.white_pieces &= start_mask;
+                    self.white_pawns &= start_mask;
+                }
+                Piece::Knight => {
+                    self.white_pieces &= start_mask;
+                    self.white_knights &= start_mask;
+                }
+                Piece::Bishop => {
+                    self.white_pieces &= start_mask;
+                    self.white_bishops &= start_mask;
+                }
+                Piece::Rook => {
+                    self.white_pieces &= start_mask;
+                    self.white_rooks &= start_mask;
+                }
+                Piece::Queen => {
+                    self.white_pieces &= start_mask;
+                    self.white_queens &= start_mask;
+                }
+                Piece::King => {
+                    self.white_pieces &= start_mask;
+                    self.white_king &= start_mask;
+                }
+            },
+        }
+
+        // Remove target piece from bitboard
+        let target_mask = !target_pos;
+        match target_color {
+            Color::Black => match target_piece {
+                Piece::Empty => self.empty_pieces &= target_mask,
+                Piece::Pawn => {
+                    self.black_pieces &= target_mask;
+                    self.black_pawns &= target_mask;
+                }
+                Piece::Knight => {
+                    self.black_pieces &= target_mask;
+                    self.black_knights &= target_mask;
+                }
+                Piece::Bishop => {
+                    self.black_pieces &= target_mask;
+                    self.black_bishops &= target_mask;
+                }
+                Piece::Rook => {
+                    self.black_pieces &= target_mask;
+                    self.black_rooks &= target_mask;
+                }
+                Piece::Queen => {
+                    self.black_pieces &= target_mask;
+                    self.black_king &= target_mask;
+                }
+                Piece::King => {
+                    self.black_pieces &= target_mask;
+                    self.black_king &= target_mask;
+                }
+            },
+            Color::White => match target_piece {
+                Piece::Empty => self.empty_pieces &= target_mask,
+                Piece::Pawn => {
+                    self.white_pieces &= target_mask;
+                    self.white_pawns &= target_mask;
+                }
+                Piece::Knight => {
+                    self.white_pieces &= target_mask;
+                    self.white_knights &= target_mask;
+                }
+                Piece::Bishop => {
+                    self.white_pieces &= target_mask;
+                    self.white_bishops &= target_mask;
+                }
+                Piece::Rook => {
+                    self.white_pieces &= target_mask;
+                    self.white_rooks &= target_mask;
+                }
+                Piece::Queen => {
+                    self.white_pieces &= target_mask;
+                    self.white_king &= target_mask;
+                }
+                Piece::King => {
+                    self.white_pieces &= target_mask;
+                    self.white_king &= target_mask;
+                }
+            },
+        }
+
+        // Add the start piece to the target position
+        match start_color {
+            Color::Black => match start_piece {
+                Piece::Empty => {}
+                Piece::Pawn => {
+                    self.black_pieces |= target_pos;
+                    self.black_pawns |= target_pos;
+                }
+                Piece::Knight => {
+                    self.black_pieces |= target_pos;
+                    self.black_knights |= target_pos;
+                }
+                Piece::Bishop => {
+                    self.black_pieces |= target_pos;
+                    self.black_bishops |= target_pos;
+                }
+                Piece::Rook => {
+                    self.black_pieces |= target_pos;
+                    self.black_rooks |= target_pos;
+                }
+                Piece::Queen => {
+                    self.black_pieces |= target_pos;
+                    self.black_king |= target_pos;
+                }
+                Piece::King => {
+                    self.black_pieces |= target_pos;
+                    self.black_king |= target_pos;
+                }
+            },
+            Color::White => match start_piece {
+                Piece::Empty => {}
+                Piece::Pawn => {
+                    self.white_pieces |= target_pos;
+                    self.white_pawns |= target_pos;
+                }
+                Piece::Knight => {
+                    self.white_pieces |= target_pos;
+                    self.white_knights |= target_pos;
+                }
+                Piece::Bishop => {
+                    self.white_pieces |= target_pos;
+                    self.white_bishops |= target_pos;
+                }
+                Piece::Rook => {
+                    self.white_pieces |= target_pos;
+                    self.white_rooks |= target_pos;
+                }
+                Piece::Queen => {
+                    self.white_pieces |= target_pos;
+                    self.white_king |= target_pos;
+                }
+                Piece::King => {
+                    self.white_pieces |= target_pos;
+                    self.white_king |= target_pos;
+                }
+            },
+        }
     }
 }

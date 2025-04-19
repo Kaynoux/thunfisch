@@ -1,8 +1,16 @@
 use crate::prelude::*;
-use std::ops::{BitAnd, BitOr, Shl};
+use std::fmt;
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not, Shl};
 
-#[derive(Debug, Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct Position(pub u64);
+
+impl fmt::Debug for Position {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let (x, y) = self.to_xy();
+        write!(f, "[{},{}]", x, y)
+    }
+}
 
 impl Position {
     pub fn to_index(self) -> isize {
@@ -67,5 +75,27 @@ impl BitOr<Position> for Position {
     #[inline(always)]
     fn bitor(self, rhs: Position) -> Self::Output {
         Position(self.0 | rhs.0)
+    }
+}
+
+impl Not for Position {
+    type Output = Self;
+    #[inline(always)]
+    fn not(self) -> Self::Output {
+        Position(!self.0)
+    }
+}
+
+impl BitAndAssign<Position> for Position {
+    #[inline(always)]
+    fn bitand_assign(&mut self, rhs: Position) {
+        self.0 &= rhs.0;
+    }
+}
+
+impl BitOrAssign<Position> for Position {
+    #[inline(always)]
+    fn bitor_assign(&mut self, rhs: Position) {
+        self.0 |= rhs.0;
     }
 }

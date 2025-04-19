@@ -1,7 +1,8 @@
 mod communication;
 mod debug;
-mod move_generation;
+mod legal_move_generation;
 mod prelude;
+mod pseudo_legal_move_generation;
 mod types;
 mod utils;
 use crate::prelude::*;
@@ -14,18 +15,22 @@ fn main() {
         "rnbq1bnr/pppppppp/8/8/8/3k4/PPPPPPPP/RNBQKBNR", // test king
         "rnbqkbnr/p4ppp/8/2N5/8/8/PPPPPPPP/RNBQKB1R",  // test knight
         "8/8/8/8/3q4/8/8/8",                           // one queen middle
+        "8/8/8/4p3/8/3N4/8/8",
+        "R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1", // 218 moves
     ];
 
-    let mut board = Board::new("8/8/8/4r3/3N4/8/8/8");
+    let mut board = Board::new(start_pos[7]);
 
-    let moves = move_generation::get_all_moves_for_one_piece_type_not_unique(
-        &board,
-        board.white_knights,
-        Color::White,
-        move_generation::get_knight_moves,
-    );
-    debug::print_moves(moves.clone());
-    debug::print_board(&board, "Test", moves);
+    let mut moves: Vec<ChessMove> = Vec::new();
+    legal_move_generation::generate_legal_moves(&board, Color::White, &mut moves);
+    // for mv in &moves {
+    //     let mut bc = board.clone();
+    //     bc.make_move(&mv);
+    //     debug::print_board(&bc, "Test", None);
+    // }
+    debug::print_moves(&board, &moves);
+    debug::print_board(&board, "Test", None);
+    debug::print_board(&board, "Test", Some(&moves[..]));
 
     // debug::print_board(
     //     &board,

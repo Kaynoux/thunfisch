@@ -3,13 +3,14 @@ use crate::utils;
 use colored;
 use colored::Colorize;
 
-pub fn print_board(board: &Board, title: &str, moves: Vec<ChessMove>) {
-    let char_board: [(char, &str); 64] = get_char_board(board, moves.clone());
+pub fn print_board(board: &Board, title: &str, moves: Option<&[ChessMove]>) {
+    let moves_slice = moves.unwrap_or(&[]);
+    let char_board: [(char, &str); 64] = get_char_board(board, moves_slice);
     let mut y: i32 = 7;
     let mut x: i32 = 0;
 
     println!("{}", title);
-    println!("Amount of moves: {}", moves.len());
+    println!("Amount of moves: {}", moves_slice.len());
 
     while y >= 0 {
         print!("{} | ", y);
@@ -28,7 +29,7 @@ pub fn print_board(board: &Board, title: &str, moves: Vec<ChessMove>) {
     println!("-------------------");
 }
 
-fn get_char_board(board: &Board, moves: Vec<ChessMove>) -> [(char, &str); 64] {
+fn get_char_board(board: &Board, moves: &[ChessMove]) -> [(char, &'static str); 64] {
     let mut char_board = [(' ', "white"); 64];
     for y in 0usize..=7usize {
         for x in 0usize..=7usize {
@@ -49,11 +50,18 @@ fn get_char_board(board: &Board, moves: Vec<ChessMove>) -> [(char, &str); 64] {
     char_board
 }
 
-pub fn print_moves(moves: Vec<ChessMove>) {
+pub fn print_moves(board: &Board, moves: &Vec<ChessMove>) {
     println!("Potential Moves:");
-    for chess_move in moves.iter() {
-        let (x1, y1) = chess_move.0.to_xy();
-        let (x2, y2) = chess_move.1.to_xy();
-        println!("{}{} {}{}", x1, y1, x2, y2);
+    let mut prev_pos = Position(0);
+    for mv in moves {
+        let current_pos = mv.0;
+        let (current_color, current_piece) = board.get_piece_and_color_at_position(current_pos);
+        if current_pos != prev_pos {
+            println!();
+            print!("{:?} {:?} {:?} -> ", current_color, current_piece, mv.0);
+            prev_pos = current_pos;
+        }
+        print!(" {:?},", mv.1);
     }
+    println!()
 }
