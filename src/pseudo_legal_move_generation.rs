@@ -150,7 +150,7 @@ pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>)
     match color {
         Color::White => {
             let mask_white_left = Bitboard(1u64 << 1 | 1u64 << 2 | 1u64 << 3);
-            if board.black_castle_left && board.empty_pieces & mask_white_left == mask_white_left {
+            if board.white_castle_left && board.empty_pieces & mask_white_left == mask_white_left {
                 let mv = ChessMove {
                     from: Position::from_idx(4),
                     to: Position::from_idx(2),

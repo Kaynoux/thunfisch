@@ -1,6 +1,7 @@
 mod communication;
 mod debug;
 mod legal_move_generation;
+mod make_move;
 mod position_generation;
 mod prelude;
 mod pseudo_legal_move_generation;
