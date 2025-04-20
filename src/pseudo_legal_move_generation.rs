@@ -1,3 +1,4 @@
+use crate::position_generation::*;
 use crate::prelude::*;
 pub fn get_all_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) -> Bitboard {
     let mut moves_bitboard = Bitboard(0);
@@ -62,14 +63,14 @@ pub fn get_all_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) ->
     moves_bitboard |= get_moves_for_piece_type(
         board,
         board.black_pawns,
-        Color::Black,
+        color,
         moves,
         true,
         get_pawn_double_positions,
     );
 
-    get_castle_moves(board, Color::Black, moves);
-    //get_promotions_moves();
+    get_castle_moves(board, color, moves);
+    get_promotions_moves(board, color, moves);
     //get_en_passant_moves();
     moves_bitboard
 }
@@ -145,151 +146,11 @@ pub fn get_king_moves(
     target_positions
 }
 
-pub fn get_pawn_double_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
-    let mut moves = Bitboard(0);
-
-    // Add possible move by 2 when pawn has not moved in the match and position in front is empty
-    match (color, pos.to_index() / 8) {
-        (Color::Black, 6) => {
-            if board
-                .empty_pieces
-                .is_position_set(pos.get_offset_pos(0, -1))
-            {
-                moves |= pos.get_offset_pos(0, -2)
-            }
-        }
-        (Color::White, 1) => {
-            if board.empty_pieces.is_position_set(pos.get_offset_pos(0, 1)) {
-                moves |= pos.get_offset_pos(0, 2)
-            }
-        }
-        (_, _) => {}
-    }
-
-    // Target Pos also needs to be empty
-    moves &= board.empty_pieces;
-    moves
-}
-
-pub fn get_pawn_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
-    let mut moves_to_empty = Bitboard(0);
-    let mut moves_to_enemy = Bitboard(0);
-    let move_direction_y = match color {
-        Color::Black => -1,
-        Color::White => 1,
-    };
-
-    moves_to_empty |= pos.get_offset_pos(0, move_direction_y);
-    // Positions need to be empty to be valid
-    moves_to_empty &= board.empty_pieces;
-
-    // Add the to possible Strike moves
-    moves_to_enemy |= pos.get_offset_pos(-1, move_direction_y);
-    moves_to_enemy |= pos.get_offset_pos(1, move_direction_y);
-
-    // Positions need to be enemy to be valid
-    moves_to_enemy &= board.get_enemy_pieces(color);
-
-    // Return combination off possible empty and enemy pos
-    moves_to_empty | moves_to_enemy
-}
-
-pub fn get_king_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
-    let mut moves = Bitboard(0);
-    let non_friendly_pieces = board.get_non_friendly_pieces(color);
-    moves |= pos.get_offset_pos(-1, 1);
-    moves |= pos.get_offset_pos(0, 1);
-    moves |= pos.get_offset_pos(1, 1);
-    moves |= pos.get_offset_pos(-1, 0);
-    moves |= pos.get_offset_pos(1, 0);
-    moves |= pos.get_offset_pos(-1, -1);
-    moves |= pos.get_offset_pos(0, -1);
-    moves |= pos.get_offset_pos(1, -1);
-    moves & non_friendly_pieces
-}
-
-pub fn get_knight_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
-    let mut moves = Bitboard(0);
-    let non_friendly_pieces = board.get_non_friendly_pieces(color);
-    moves |= pos.get_offset_pos(-2, 1);
-    moves |= pos.get_offset_pos(-1, 2);
-    moves |= pos.get_offset_pos(1, 2);
-    moves |= pos.get_offset_pos(2, 1);
-    moves |= pos.get_offset_pos(-2, -1);
-    moves |= pos.get_offset_pos(-1, -2);
-    moves |= pos.get_offset_pos(1, -2);
-    moves |= pos.get_offset_pos(2, -1);
-    moves & non_friendly_pieces
-}
-
-pub fn get_sliding_positions(
-    board: &Board,
-    pos: Position,
-    color: Color,
-    dx: isize,
-    dy: isize,
-) -> Bitboard {
-    let mut moves = Bitboard(0);
-    let non_friendly_pieces = board.get_non_friendly_pieces(color);
-    let mut current_dx = 0isize;
-    let mut current_dy = 0isize;
-    loop {
-        current_dx += dx;
-        current_dy += dy;
-        let current_pos = pos.get_offset_pos(current_dx, current_dy);
-        if current_pos == Position(0) {
-            break;
-        }
-
-        if current_pos.is_friendly(board, color) {
-            break;
-        }
-
-        moves |= current_pos;
-
-        if current_pos.is_enemy(board, color) {
-            break;
-        }
-    }
-    moves & non_friendly_pieces
-}
-
-pub fn get_queen_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
-    let mut moves = Bitboard(0);
-    moves |= get_sliding_positions(board, pos, color, 1, -1);
-    moves |= get_sliding_positions(board, pos, color, 1, 0);
-    moves |= get_sliding_positions(board, pos, color, 1, 1);
-    moves |= get_sliding_positions(board, pos, color, 0, -1);
-    moves |= get_sliding_positions(board, pos, color, 0, 1);
-    moves |= get_sliding_positions(board, pos, color, -1, -1);
-    moves |= get_sliding_positions(board, pos, color, -1, 0);
-    moves |= get_sliding_positions(board, pos, color, -1, 1);
-    moves
-}
-
-pub fn get_bishop_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
-    let mut moves = Bitboard(0);
-    moves |= get_sliding_positions(board, pos, color, 1, -1);
-    moves |= get_sliding_positions(board, pos, color, 1, 1);
-    moves |= get_sliding_positions(board, pos, color, -1, -1);
-    moves |= get_sliding_positions(board, pos, color, -1, 1);
-    moves
-}
-
-pub fn get_rook_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
-    let mut moves = Bitboard(0);
-    moves |= get_sliding_positions(board, pos, color, 1, 0);
-    moves |= get_sliding_positions(board, pos, color, 0, -1);
-    moves |= get_sliding_positions(board, pos, color, 0, 1);
-    moves |= get_sliding_positions(board, pos, color, -1, 0);
-    moves
-}
-
 pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) {
     match color {
-        Color::Black => {
-            let mask_black_left = Bitboard(1u64 << 1 | 1u64 << 2 | 1u64 << 3);
-            if board.black_castle_left && board.empty_pieces & mask_black_left == mask_black_left {
+        Color::White => {
+            let mask_white_left = Bitboard(1u64 << 1 | 1u64 << 2 | 1u64 << 3);
+            if board.black_castle_left && board.empty_pieces & mask_white_left == mask_white_left {
                 let mv = ChessMove {
                     from: Position::from_idx(4),
                     to: Position::from_idx(2),
@@ -303,8 +164,8 @@ pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>)
                 };
                 moves.push(mv);
             }
-            let mask_black_right = Bitboard(1u64 << 5 | 1u64 << 6);
-            if board.black_castle_right && board.empty_pieces & mask_black_right == mask_black_right
+            let mask_white_right = Bitboard(1u64 << 5 | 1u64 << 6);
+            if board.white_castle_right && board.empty_pieces & mask_white_right == mask_white_right
             {
                 let mv = ChessMove {
                     from: Position::from_idx(4),
@@ -320,9 +181,9 @@ pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>)
                 moves.push(mv);
             }
         }
-        Color::White => {
-            let mask_white_left = Bitboard(1u64 << 57 | 1u64 << 58 | 1u64 << 59);
-            if board.white_castle_left && board.empty_pieces & mask_white_left == mask_white_left {
+        Color::Black => {
+            let mask_black_left = Bitboard(1u64 << 57 | 1u64 << 58 | 1u64 << 59);
+            if board.black_castle_left && board.empty_pieces & mask_black_left == mask_black_left {
                 let mv = ChessMove {
                     from: Position::from_idx(60),
                     to: Position::from_idx(58),
@@ -336,8 +197,8 @@ pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>)
                 };
                 moves.push(mv);
             }
-            let mask_white_right = Bitboard(1u64 << 61 | 1u64 << 62);
-            if board.white_castle_right && board.empty_pieces & mask_white_right == mask_white_right
+            let mask_black_right = Bitboard(1u64 << 61 | 1u64 << 62);
+            if board.black_castle_right && board.empty_pieces & mask_black_right == mask_black_right
             {
                 let mv = ChessMove {
                     from: Position::from_idx(60),
@@ -353,5 +214,32 @@ pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>)
                 moves.push(mv);
             }
         }
+    }
+}
+
+pub fn get_promotions_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) {
+    let (mut piece_positions, y_limit) = match color {
+        Color::Black => (board.black_pawns, 1),
+        Color::White => (board.white_pawns, 6),
+    };
+
+    while piece_positions != Bitboard(0) {
+        let current_pos = piece_positions.pop_lsb_position();
+        // Skip piece if not at y limit
+        if current_pos.to_xy().1 != y_limit {
+            continue;
+        }
+        let mv = ChessMove {
+            from: current_pos,
+            to: current_pos << 8,
+            is_capture: false,
+            is_double_move: false,
+            is_promotion: true,
+            is_en_passant: false,
+            is_castle: false,
+            promotion: Piece::Queen,
+            captured: Piece::Empty,
+        };
+        moves.push(mv);
     }
 }

@@ -17,6 +17,16 @@ impl Bitboard {
         self.0 &= self.0 - 1;
         pos
     }
+
+    pub const fn from_idx<const N: usize>(indexes: [usize; N]) -> Self {
+        let mut bitboard = Bitboard(0);
+        let mut i = 0;
+        while i < N {
+            bitboard = Bitboard(bitboard.0 | (1u64 << indexes[i]));
+            i += 1;
+        }
+        bitboard
+    }
 }
 
 impl Not for Bitboard {
@@ -39,6 +49,13 @@ impl BitOrAssign<Position> for Bitboard {
     #[inline(always)]
     fn bitor_assign(&mut self, rhs: Position) {
         self.0 |= rhs.0;
+    }
+}
+
+impl BitOrAssign<u64> for Bitboard {
+    #[inline(always)]
+    fn bitor_assign(&mut self, rhs: u64) {
+        self.0 |= rhs;
     }
 }
 

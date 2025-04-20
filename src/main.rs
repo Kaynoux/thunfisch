@@ -1,6 +1,7 @@
 mod communication;
 mod debug;
 mod legal_move_generation;
+mod position_generation;
 mod prelude;
 mod pseudo_legal_move_generation;
 mod types;
@@ -17,12 +18,27 @@ fn main() {
         "8/8/8/4p3/8/3N4/8/8",
         "R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1", // 218 moves
         "r3k2r/pppppppp/5bn1/1nbq4/2BQ1BN1/1N6/PPPPPPPP/R3K2R", // test castling all
+        "r3k2r/pp2pp1p/1n2pb2/1b2Q1p1/4Np2/1NB3P1/PPPPPPBP/R3K2R", //castle check test
+        "r3kbnr/pp2pppp/1n2p3/1b2Q1q1/5p2/6P1/PPPPPP1P/RNB1KBNR", //castle without check
+        "8/3P4/8/8/8/8/8/8",                          // test promotion
     ];
 
-    let mut board = Board::new(start_pos[8]);
+    let mut board = Board::new(start_pos[11]);
 
     let mut moves: Vec<ChessMove> = Vec::new();
-    legal_move_generation::generate_legal_moves(&board, Color::Black, &mut moves);
+    // let mut idx = 0;
+    // loop {
+    //     idx += 1;
+    //     if idx % 1000 == 0 {
+    //         println!("{:?}", idx);
+    //     }
+    //     legal_move_generation::generate_legal_moves(
+    //         &board.clone(),
+    //         Color::Black,
+    //         &mut moves.clone(),
+    //     );
+    // }
+    legal_move_generation::generate_legal_moves(&board, Color::White, &mut moves);
     // for mv in &moves {
     //     let mut bc = board.clone();
     //     bc.make_move(&mv);
@@ -31,6 +47,8 @@ fn main() {
     debug::print_moves(&board, &moves);
     debug::print_board(&board, "Test", None);
     debug::print_board(&board, "Test", Some(&moves[..]));
+    board.make_move(&moves[2]);
+    debug::print_board(&board, "Test", None);
 
     // debug::print_board(
     //     &board,

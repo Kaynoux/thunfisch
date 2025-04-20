@@ -49,7 +49,7 @@ impl Position {
         Position(0)
     }
 
-    pub fn from_idx(idx: isize) -> Self {
+    pub const fn from_idx(idx: isize) -> Self {
         Position(1u64 << idx)
     }
 }

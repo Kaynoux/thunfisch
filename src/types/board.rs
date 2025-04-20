@@ -310,8 +310,13 @@ impl Board {
             Color::Black => match start_piece {
                 Piece::Empty => {}
                 Piece::Pawn => {
-                    self.black_pieces |= target_pos;
-                    self.black_pawns |= target_pos;
+                    if chess_move.is_promotion {
+                        self.black_pieces |= target_pos;
+                        self.black_queens |= target_pos;
+                    } else {
+                        self.black_pieces |= target_pos;
+                        self.black_pawns |= target_pos;
+                    }
                 }
                 Piece::Knight => {
                     self.black_pieces |= target_pos;
@@ -337,8 +342,13 @@ impl Board {
             Color::White => match start_piece {
                 Piece::Empty => {}
                 Piece::Pawn => {
-                    self.white_pieces |= target_pos;
-                    self.white_pawns |= target_pos;
+                    if chess_move.is_promotion {
+                        self.white_pieces |= target_pos;
+                        self.white_queens |= target_pos;
+                    } else {
+                        self.white_pieces |= target_pos;
+                        self.white_pawns |= target_pos;
+                    }
                 }
                 Piece::Knight => {
                     self.white_pieces |= target_pos;
