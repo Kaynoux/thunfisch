@@ -16,7 +16,7 @@ impl Board {
         const WHITE_KING_POS: Position = Position::from_idx(4);
         const BLACK_KING_POS: Position = Position::from_idx(60);
 
-        match (start_piece, mv.from) {
+        match (start_piece, start_pos) {
             (Piece::Rook, WHITE_ROOK_LEFT_POS) => self.white_castle_left = false,
             (Piece::Rook, WHITE_ROOK_RIGHT_POS) => self.white_castle_right = false,
             (Piece::Rook, BLACK_ROOK_LEFT_POS) => self.black_castle_left = false,
@@ -30,6 +30,17 @@ impl Board {
                 self.black_castle_right = false;
             }
             (_, _) => {}
+        }
+
+        // Also revoke castle rights if rook is captured
+        if mv.captured == Piece::Rook {
+            match target_pos {
+                WHITE_CASTLE_LEFT_POS => self.white_castle_left = false,
+                WHITE_CASTLE_RIGHT_POS => self.white_castle_right = false,
+                BLACK_CASTLE_LEFT_POS => self.black_castle_left = false,
+                BLACK_CASTLE_RIGHT_POS => self.black_castle_right = false,
+                _ => {}
+            }
         }
 
         // Handling castling
@@ -73,6 +84,32 @@ impl Board {
                 }
                 _ => {}
             }
+        }
+
+        // Remove pawn if En-passant happened
+        if mv.is_en_passant {
+            match start_color {
+                Color::White => {
+                    let pawn_mask = !mv.to.get_offset_pos(0, -1);
+                    self.black_pawns &= pawn_mask;
+                }
+                Color::Black => {
+                    let pawn_mask = !mv.to.get_offset_pos(0, 1);
+                    self.white_pawns &= pawn_mask;
+                }
+            }
+        }
+
+        // Set En-passant target
+
+        if mv.is_double_move {
+            let offset_dir: isize = match start_color {
+                Color::White => -1,
+                Color::Black => 1,
+            };
+            self.en_passant_target = Some(target_pos.get_offset_pos(0, offset_dir));
+        } else {
+            self.en_passant_target = None;
         }
 
         // Remove start piece from bitboard
@@ -260,5 +297,10 @@ impl Board {
                 }
             },
         }
+
+        if start_color == Color::White {
+            self.fullmove_counter += 1
+        }
+        self.current_color = !start_color;
     }
 }

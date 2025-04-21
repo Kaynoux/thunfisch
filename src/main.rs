@@ -1,7 +1,5 @@
 mod communication;
 mod debug;
-mod legal_move_generation;
-mod make_move;
 mod position_generation;
 mod prelude;
 mod pseudo_legal_move_generation;
@@ -10,23 +8,15 @@ use crate::prelude::*;
 
 fn main() {
     let start_pos = [
-        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR", // default
-        "r1bk3r/p2pBpNp/n4n2/1p1NP2P/6P1/3P4/P1P1K3/q5b1", // random
-        "rnbqkbnr/p1pppppp/8/8/8/1p6/PPPPPPPP/RNBQKBNR", // test pawn
-        "rnbq1bnr/pppppppp/8/8/8/3k4/PPPPPPPP/RNBQKBNR", // test king
-        "rnbqkbnr/p4ppp/8/2N5/8/8/PPPPPPPP/RNBQKB1R",  // test knight
-        "8/8/8/8/3q4/8/8/8",                           // one queen middle
-        "8/8/8/4p3/8/3N4/8/8",
-        "R6R/3Q4/1Q4Q1/4Q3/2Q4Q/Q4Q2/pp1Q4/kBNN1KB1", // 218 moves
-        "r3k2r/pppppppp/5bn1/1nbq4/2BQ1BN1/1N6/PPPPPPPP/R3K2R", // test castling all
-        "r3k2r/pp2pp1p/1n2pb2/1b2Q1p1/4Np2/1NB3P1/PPPPPPBP/R3K2R", //castle check test
-        "r3kbnr/pp2pppp/1n2p3/1b2Q1q1/5p2/6P1/PPPPPP1P/RNB1KBNR", //castle without check
-        "8/3P4/8/8/8/8/8/8",                          // test promotion
+        "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", // 0. defautl
+        "rnbqkbnr/pppp2pp/8/3PpP2/8/7P/PPP3P1/RNBQKBNR w KQkq e6 0 2", // 1. test en-passant
+        "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -", // 2. test perft
+        "rnbqkbnr/ppp1p1pp/8/8/3pPp2/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1", // 3. en passant black
+        "8/2p5/8/8/8/2P5/8/8 b - - 0 1",                            // 4. test double move
     ];
 
-    let mut board = Board::new(start_pos[11]);
+    let mut board = Board::from_fen(start_pos[4]);
 
-    let mut moves: Vec<ChessMove> = Vec::new();
     // let mut idx = 0;
     // loop {
     //     idx += 1;
@@ -39,17 +29,27 @@ fn main() {
     //         &mut moves.clone(),
     //     );
     // }
-    legal_move_generation::generate_legal_moves(&board, Color::White, &mut moves);
     // for mv in &moves {
     //     let mut bc = board.clone();
     //     bc.make_move(&mv);
     //     debug::print_board(&bc, "Test", None);
     // }
-    debug::print_moves(&board, &moves);
-    debug::print_board(&board, "Test", None);
-    debug::print_board(&board, "Test", Some(&moves[..]));
-    board.make_move(&moves[2]);
-    debug::print_board(&board, "Test", None);
+
+    //let moves = board.generate_legal_moves();
+    // debug::print_moves(&board, &moves);
+    // debug::print_board(&board, Some(&moves));
+
+    debug::perft_divide(&board, 1);
+    debug::perft_divide(&board, 2);
+    debug::perft_divide(&board, 3);
+
+    // println!("Perft Depth 0 : {:?} Nodes", debug::perft(&board, 0));
+    // println!("Perft Depth 1 : {:?} Nodes", debug::perft(&board, 1));
+    // println!("Perft Depth 2 : {:?} Nodes", debug::perft(&board, 2));
+    // println!("Perft Depth 3 : {:?} Nodes", debug::perft(&board, 3));
+    // println!("Perft Depth 4 : {:?} Nodes", debug::perft(&board, 4));
+    // println!("Perft Depth 5 : {:?} Nodes", debug::perft(&board, 5));
+    // println!("Perft Depth 6 : {:?} Nodes", debug::perft(&board, 6));
 
     // debug::print_board(
     //     &board,

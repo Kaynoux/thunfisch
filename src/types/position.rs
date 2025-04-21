@@ -52,6 +52,54 @@ impl Position {
     pub const fn from_idx(idx: isize) -> Self {
         Position(1u64 << idx)
     }
+
+    pub fn get_first_two_string_chars(s: &str) -> Option<(char, char)> {
+        let mut iter = s.chars();
+        match (iter.next(), iter.next()) {
+            (Some(c1), Some(c2)) => Some((c1, c2)),
+            _ => None,
+        }
+    }
+
+    pub fn from_coords(coords: &str) -> Option<Position> {
+        let (c1, c2) = match Position::get_first_two_string_chars(coords) {
+            Some(c1c2) => c1c2,
+            None => return None,
+        };
+
+        let x: isize = match c1 {
+            'a' => 0,
+            'b' => 1,
+            'c' => 2,
+            'd' => 3,
+            'e' => 4,
+            'f' => 5,
+            'g' => 6,
+            'h' => 7,
+            _ => return None,
+        };
+
+        let y: isize = match c2 {
+            '1' => 0,
+            '2' => 1,
+            '3' => 2,
+            '4' => 3,
+            '5' => 4,
+            '6' => 5,
+            '7' => 6,
+            '8' => 7,
+            _ => return None,
+        };
+
+        Some(Position::from_idx(y * 8 + x))
+    }
+
+    pub fn to_coords(self) -> String {
+        let (x, y) = self.to_xy();
+        let file = (b'a' + x as u8) as char;
+        let rank = (b'1' + y as u8) as char;
+        format!("{}{}", file, rank)
+    }
 }
 
 impl Shl<isize> for Position {

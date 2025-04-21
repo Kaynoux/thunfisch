@@ -2,14 +2,17 @@ use crate::prelude::*;
 use colored;
 use colored::Colorize;
 
-pub fn print_board(board: &Board, title: &str, moves: Option<&[ChessMove]>) {
+pub fn print_board(board: &Board, moves: Option<&[ChessMove]>) {
     let moves_slice = moves.unwrap_or(&[]);
     let char_board: [(char, &str); 64] = get_char_board(board, moves_slice);
     let mut y: i32 = 7;
     let mut x: i32 = 0;
 
-    println!("{}", title);
-    println!("Amount of moves: {}", moves_slice.len());
+    println!(
+        "Current Color: {:?} Halfmove Clock: {} Fullmove Counter: {}",
+        board.current_color, board.halfmove_clock, board.fullmove_counter
+    );
+    println!("Possible amount of moves: {}", moves_slice.len());
 
     while y >= 0 {
         print!("{} | ", y);
@@ -51,19 +54,73 @@ fn get_char_board(board: &Board, moves: &[ChessMove]) -> [(char, &'static str); 
 
 pub fn print_moves(board: &Board, moves: &Vec<ChessMove>) {
     println!("Potential Moves:");
-    let (mut prev_pos, mut prev_is_castle) = (Position(0), false);
+    let (mut prev_pos, mut prev_is_castle, mut prev_is_promotion, mut prev_is_en_passant) =
+        (Position(0), false, false, false);
     for mv in moves {
-        let (current_pos, current_is_castle) = (mv.from, mv.is_castle);
+        let (current_pos, current_is_castle, current_is_promotion, current_is_en_passant) =
+            (mv.from, mv.is_castle, mv.is_promotion, mv.is_en_passant);
         let (current_color, current_piece) = board.get_piece_and_color_at_position(current_pos);
-        if current_pos != prev_pos || current_is_castle != prev_is_castle {
+        if current_pos != prev_pos
+            || current_is_castle != prev_is_castle
+            || current_is_promotion != prev_is_promotion
+            || current_is_en_passant != prev_is_en_passant
+        {
             println!();
             if current_is_castle {
                 print!("Castle: ")
             }
+            if current_is_promotion {
+                print!("Promotion: ")
+            }
+            if current_is_en_passant {
+                print!("En-Passant: ")
+            }
             print!("{:?} {:?} {:?} -> ", current_color, current_piece, mv.from);
-            (prev_pos, prev_is_castle) = (current_pos, current_is_castle);
+            (
+                prev_pos,
+                prev_is_castle,
+                prev_is_promotion,
+                prev_is_en_passant,
+            ) = (
+                current_pos,
+                current_is_castle,
+                current_is_promotion,
+                current_is_en_passant,
+            );
         }
         print!(" {:?},", mv.to);
     }
     println!()
+}
+
+pub fn perft(board: &Board, depth: usize) -> usize {
+    if depth == 0 {
+        return 1;
+    }
+    let mut nodes = 0;
+    let moves = board.generate_legal_moves();
+    for mv in moves {
+        let mut b2 = board.clone();
+        b2.make_move(&mv);
+        nodes += perft(&b2, depth - 1);
+    }
+    nodes
+}
+
+pub fn perft_divide(board: &Board, depth: usize) {
+    if depth == 0 {
+        println!("Perft divide depth {}:", 0);
+        return;
+    }
+    println!("Perft divide depth {}:", depth);
+    let mut total = 0;
+    let moves = board.generate_legal_moves();
+    for mv in moves {
+        let mut b2 = board.clone();
+        b2.make_move(&mv);
+        let cnt = perft(&b2, depth - 1);
+        total += cnt;
+        println!("{}{}: {}", mv.from.to_coords(), mv.to.to_coords(), cnt);
+    }
+    println!("Total: {}", total);
 }

@@ -62,7 +62,7 @@ pub fn get_all_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) ->
     // Double pawn moves
     moves_bitboard |= get_moves_for_piece_type(
         board,
-        board.black_pawns,
+        board.get_positions_by_piece_color(color, Piece::Pawn),
         color,
         moves,
         true,
@@ -71,7 +71,7 @@ pub fn get_all_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) ->
 
     get_castle_moves(board, color, moves);
     get_promotions_moves(board, color, moves);
-    //get_en_passant_moves();
+    get_en_passant_moves(board, color, moves);
     moves_bitboard
 }
 
@@ -218,9 +218,9 @@ pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>)
 }
 
 pub fn get_promotions_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) {
-    let (mut piece_positions, y_limit) = match color {
-        Color::Black => (board.black_pawns, 1),
-        Color::White => (board.white_pawns, 6),
+    let (mut piece_positions, y_limit, move_direction) = match color {
+        Color::Black => (board.black_pawns, 1, -1),
+        Color::White => (board.white_pawns, 6, 1),
     };
 
     while piece_positions != Bitboard(0) {
@@ -231,7 +231,7 @@ pub fn get_promotions_moves(board: &Board, color: Color, moves: &mut Vec<ChessMo
         }
         let mv = ChessMove {
             from: current_pos,
-            to: current_pos << 8,
+            to: current_pos.get_offset_pos(0, move_direction),
             is_capture: false,
             is_double_move: false,
             is_promotion: true,
@@ -241,5 +241,79 @@ pub fn get_promotions_moves(board: &Board, color: Color, moves: &mut Vec<ChessMo
             captured: Piece::Empty,
         };
         moves.push(mv);
+    }
+}
+
+pub fn get_en_passant_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) {
+    let ep_target = match board.en_passant_target {
+        Some(pos) => pos,
+        None => return,
+    };
+
+    match color {
+        Color::White => {
+            let position_left = ep_target.get_offset_pos(-1, -1);
+            let position_right = ep_target.get_offset_pos(1, -1);
+            if board.white_pawns.is_position_set(position_left) {
+                let mv = ChessMove {
+                    from: position_left,
+                    to: ep_target,
+                    is_capture: true,
+                    is_double_move: false,
+                    is_promotion: false,
+                    is_en_passant: true,
+                    is_castle: false,
+                    promotion: Piece::Empty,
+                    captured: Piece::Pawn,
+                };
+                moves.push(mv);
+            }
+            if board.white_pawns.is_position_set(position_right) {
+                let mv = ChessMove {
+                    from: position_right,
+                    to: ep_target,
+                    is_capture: true,
+                    is_double_move: false,
+                    is_promotion: false,
+                    is_en_passant: true,
+                    is_castle: false,
+                    promotion: Piece::Empty,
+                    captured: Piece::Pawn,
+                };
+                moves.push(mv);
+            }
+        }
+        Color::Black => {
+            let position_left = ep_target.get_offset_pos(-1, 1);
+            let position_right = ep_target.get_offset_pos(1, 1);
+            if board.black_pawns.is_position_set(position_left) {
+                let mv = ChessMove {
+                    from: position_left,
+                    to: ep_target,
+                    is_capture: true,
+                    is_double_move: false,
+                    is_promotion: false,
+                    is_en_passant: true,
+                    is_castle: false,
+                    promotion: Piece::Empty,
+                    captured: Piece::Pawn,
+                };
+                moves.push(mv);
+            }
+            if board.black_pawns.is_position_set(position_right) {
+                let mv = ChessMove {
+                    from: position_right,
+                    to: ep_target,
+                    is_capture: true,
+                    is_double_move: false,
+                    is_promotion: false,
+                    is_en_passant: true,
+                    is_castle: false,
+                    promotion: Piece::Empty,
+                    captured: Piece::Pawn,
+                };
+                moves.push(mv);
+            }
+        }
     }
 }

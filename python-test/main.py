@@ -1,4 +1,4 @@
 import chess
 
-board = chess.Board("r1bk3r/p2pBpNp/n4n2/1p1NP2P/6P1/3P4/P1P1K3/q5b1 w KQkq - 0 1")
+board = chess.Board("rnbqkbnr/pppp2pp/8/4pP2/8/7P/PPPP2P1/RNBQKBNR w KQkq e6 0 2")
 print(len(list(board.legal_moves)))
