@@ -11,6 +11,12 @@ impl Board {
         moves.retain(|mv| {
             let mut bc = self.clone();
 
+            let enemy_king_pos = self.get_king_pos(!color);
+            if mv.to == enemy_king_pos {
+                // found winning pos
+                return true;
+            }
+
             if mv.is_castle {
                 let mut counter_moves: Vec<ChessMove> = Vec::new();
                 let counter_positions =

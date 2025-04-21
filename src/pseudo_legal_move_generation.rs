@@ -4,54 +4,23 @@ pub fn get_all_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) ->
     let mut moves_bitboard = Bitboard(0);
 
     // Pawn by 1
-    moves_bitboard |= get_moves_for_piece_type(
-        board,
-        board.get_positions_by_piece_color(color, Piece::Pawn),
-        color,
-        moves,
-        false,
-        get_pawn_positions,
-    );
+    moves_bitboard |= get_pawn_moves(board, color, moves);
 
     // Knight
-    moves_bitboard |= get_moves_for_piece_type(
-        board,
-        board.get_positions_by_piece_color(color, Piece::Knight),
-        color,
-        moves,
-        false,
-        get_knight_positions,
-    );
+    moves_bitboard |=
+        get_moves_for_piece_type(board, Piece::Knight, color, moves, get_knight_positions);
 
     // Bishop
-    moves_bitboard |= get_moves_for_piece_type(
-        board,
-        board.get_positions_by_piece_color(color, Piece::Bishop),
-        color,
-        moves,
-        false,
-        get_bishop_positions,
-    );
+    moves_bitboard |=
+        get_moves_for_piece_type(board, Piece::Bishop, color, moves, get_bishop_positions);
 
     // Rook
-    moves_bitboard |= get_moves_for_piece_type(
-        board,
-        board.get_positions_by_piece_color(color, Piece::Rook),
-        color,
-        moves,
-        false,
-        get_rook_positions,
-    );
+    moves_bitboard |=
+        get_moves_for_piece_type(board, Piece::Rook, color, moves, get_rook_positions);
 
     // Queen
-    moves_bitboard |= get_moves_for_piece_type(
-        board,
-        board.get_positions_by_piece_color(color, Piece::Queen),
-        color,
-        moves,
-        false,
-        get_queen_positions,
-    );
+    moves_bitboard |=
+        get_moves_for_piece_type(board, Piece::Queen, color, moves, get_queen_positions);
 
     // King
     let king_pos = board.get_king_pos(color);
@@ -59,31 +28,20 @@ pub fn get_all_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) ->
         moves_bitboard |= get_king_moves(board, king_pos, color, moves, get_king_positions);
     }
 
-    // Double pawn moves
-    moves_bitboard |= get_moves_for_piece_type(
-        board,
-        board.get_positions_by_piece_color(color, Piece::Pawn),
-        color,
-        moves,
-        true,
-        get_pawn_double_positions,
-    );
-
     get_castle_moves(board, color, moves);
-    get_promotions_moves(board, color, moves);
     get_en_passant_moves(board, color, moves);
     moves_bitboard
 }
 
-/// Calculate all moves for each instance of a piece type exept the king because it is unique
+/// Calculate all moves for each instance of a piece type exept the king because it is unique and pawns because they are
 pub fn get_moves_for_piece_type(
     board: &Board,
-    mut piece_positions: Bitboard,
+    piece: Piece,
     color: Color,
     moves: &mut Vec<ChessMove>,
-    is_double_move: bool,
     f: fn(board: &Board, pos: Position, color: Color) -> Bitboard,
 ) -> Bitboard {
+    let mut piece_positions = board.get_positions_by_piece_color(color, piece);
     let mut target_positions = Bitboard(0);
 
     while piece_positions != Bitboard(0) {
@@ -103,13 +61,100 @@ pub fn get_moves_for_piece_type(
                 from: current_pos,
                 to: target_pos,
                 is_capture: is_capture,
-                is_double_move: is_double_move,
+                is_double_move: false,
                 is_promotion: false,
                 is_en_passant: false,
                 is_castle: false,
                 promotion: Piece::Empty,
                 captured: target_piece,
             });
+        }
+    }
+    target_positions
+}
+
+pub fn get_pawn_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) -> Bitboard {
+    let mut target_positions = Bitboard(0);
+    let mut pawn_positions = board.get_positions_by_piece_color(color, Piece::Pawn);
+    while pawn_positions != Bitboard(0) {
+        let current_pos = pawn_positions.pop_lsb_position();
+
+        let mut target_positions_for_one_piece = get_pawn_positions(board, current_pos, color);
+        target_positions |= target_positions_for_one_piece;
+
+        while target_positions_for_one_piece != Bitboard(0) {
+            let target_pos = target_positions_for_one_piece.pop_lsb_position();
+            let (target_piece, _) = board.get_piece_and_color_at_position(target_pos);
+            let is_capture = match target_piece {
+                Piece::Empty => false,
+                _ => true,
+            };
+
+            let cy = current_pos.to_xy().1;
+            let ty = target_pos.to_xy().1;
+            let is_double_move = if (cy - ty).abs() == 2 { true } else { false };
+
+            if ty == 0 || ty == 7 {
+                let promotion_moves = [
+                    ChessMove {
+                        from: current_pos,
+                        to: target_pos,
+                        is_capture: is_capture,
+                        is_double_move: false,
+                        is_promotion: true,
+                        is_en_passant: false,
+                        is_castle: false,
+                        promotion: Piece::Queen,
+                        captured: target_piece,
+                    },
+                    ChessMove {
+                        from: current_pos,
+                        to: target_pos,
+                        is_capture: is_capture,
+                        is_double_move: false,
+                        is_promotion: true,
+                        is_en_passant: false,
+                        is_castle: false,
+                        promotion: Piece::Rook,
+                        captured: target_piece,
+                    },
+                    ChessMove {
+                        from: current_pos,
+                        to: target_pos,
+                        is_capture: is_capture,
+                        is_double_move: false,
+                        is_promotion: true,
+                        is_en_passant: false,
+                        is_castle: false,
+                        promotion: Piece::Bishop,
+                        captured: target_piece,
+                    },
+                    ChessMove {
+                        from: current_pos,
+                        to: target_pos,
+                        is_capture: is_capture,
+                        is_double_move: false,
+                        is_promotion: true,
+                        is_en_passant: false,
+                        is_castle: false,
+                        promotion: Piece::Knight,
+                        captured: target_piece,
+                    },
+                ];
+                moves.extend_from_slice(&promotion_moves);
+            } else {
+                moves.push(ChessMove {
+                    from: current_pos,
+                    to: target_pos,
+                    is_capture: is_capture,
+                    is_double_move: is_double_move,
+                    is_promotion: false,
+                    is_en_passant: false,
+                    is_castle: false,
+                    promotion: Piece::Empty,
+                    captured: target_piece,
+                });
+            }
         }
     }
     target_positions
@@ -214,33 +259,6 @@ pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>)
                 moves.push(mv);
             }
         }
-    }
-}
-
-pub fn get_promotions_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) {
-    let (mut piece_positions, y_limit, move_direction) = match color {
-        Color::Black => (board.black_pawns, 1, -1),
-        Color::White => (board.white_pawns, 6, 1),
-    };
-
-    while piece_positions != Bitboard(0) {
-        let current_pos = piece_positions.pop_lsb_position();
-        // Skip piece if not at y limit
-        if current_pos.to_xy().1 != y_limit {
-            continue;
-        }
-        let mv = ChessMove {
-            from: current_pos,
-            to: current_pos.get_offset_pos(0, move_direction),
-            is_capture: false,
-            is_double_move: false,
-            is_promotion: true,
-            is_en_passant: false,
-            is_castle: false,
-            promotion: Piece::Queen,
-            captured: Piece::Empty,
-        };
-        moves.push(mv);
     }
 }
 

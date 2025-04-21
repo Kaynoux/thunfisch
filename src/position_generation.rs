@@ -1,41 +1,6 @@
 use crate::prelude::*;
 
-pub fn get_pawn_double_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
-    let mut moves = Bitboard(0);
-
-    // Add possible move by 2 when pawn has not moved in the match and position in front is empty
-    match (color, pos.to_index() / 8) {
-        (Color::Black, 6) => {
-            if board
-                .empty_pieces
-                .is_position_set(pos.get_offset_pos(0, -1))
-            {
-                moves |= pos.get_offset_pos(0, -2)
-            }
-        }
-        (Color::White, 1) => {
-            if board.empty_pieces.is_position_set(pos.get_offset_pos(0, 1)) {
-                moves |= pos.get_offset_pos(0, 2)
-            }
-        }
-        (_, _) => {}
-    }
-
-    // Target Pos also needs to be empty
-    moves &= board.empty_pieces;
-    moves
-}
-
 pub fn get_pawn_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
-    // Dont get positions if pawn is on last row because promotion is mandatory
-    match (color, pos.to_xy().1) {
-        (Color::Black, 1) => {
-            return Bitboard(0);
-        }
-        (Color::White, 6) => return Bitboard(0),
-        (_, _) => {}
-    }
-
     let mut moves_to_empty = Bitboard(0);
     let mut moves_to_enemy = Bitboard(0);
     let move_direction_y = match color {
@@ -44,6 +9,25 @@ pub fn get_pawn_positions(board: &Board, pos: Position, color: Color) -> Bitboar
     };
 
     moves_to_empty |= pos.get_offset_pos(0, move_direction_y);
+
+    // Add possible move by 2 when pawn has not moved in the match and position in front is empty
+    match (color, pos.to_index() / 8) {
+        (Color::Black, 6) => {
+            if board
+                .empty_pieces
+                .is_position_set(pos.get_offset_pos(0, -1))
+            {
+                moves_to_empty |= pos.get_offset_pos(0, -2)
+            }
+        }
+        (Color::White, 1) => {
+            if board.empty_pieces.is_position_set(pos.get_offset_pos(0, 1)) {
+                moves_to_empty |= pos.get_offset_pos(0, 2)
+            }
+        }
+        (_, _) => {}
+    }
+
     // Positions need to be empty to be valid
     moves_to_empty &= board.empty_pieces;
 

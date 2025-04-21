@@ -109,7 +109,58 @@ pub fn perft(board: &Board, depth: usize) -> usize {
     nodes
 }
 
+pub fn detailed_perft(
+    board: &Board,
+    depth: usize,
+    captures: &mut isize,
+    promotions: &mut isize,
+    castles: &mut isize,
+    en_passants: &mut isize,
+    double_moves: &mut isize,
+) -> usize {
+    if depth == 0 {
+        return 1;
+    }
+    let mut nodes = 0;
+    let moves = board.generate_legal_moves();
+    for mv in moves {
+        let mut b2 = board.clone();
+        b2.make_move(&mv);
+        nodes += detailed_perft(
+            &b2,
+            depth - 1,
+            captures,
+            promotions,
+            castles,
+            en_passants,
+            double_moves,
+        );
+
+        if mv.is_capture {
+            *captures += 1;
+        }
+        if mv.is_promotion {
+            *promotions += 1;
+        }
+        if mv.is_castle {
+            *castles += 1;
+        }
+        if mv.is_en_passant {
+            *en_passants += 1;
+        }
+        if mv.is_double_move {
+            *double_moves += 1;
+        }
+    }
+    nodes
+}
+
 pub fn perft_divide(board: &Board, depth: usize) {
+    let mut captures: isize = 0;
+    let mut promotions: isize = 0;
+    let mut castles: isize = 0;
+    let mut en_passants: isize = 0;
+    let mut double_moves: isize = 0;
     if depth == 0 {
         println!("Perft divide depth {}:", 0);
         return;
@@ -118,10 +169,18 @@ pub fn perft_divide(board: &Board, depth: usize) {
     println!("Perft divide depth {}:", depth);
     let mut total = 0;
     let moves = board.generate_legal_moves();
-    for mv in moves {
+    for mv in &moves {
         let mut b2 = board.clone();
         b2.make_move(&mv);
-        let cnt = perft(&b2, depth - 1);
+        let cnt = detailed_perft(
+            &b2,
+            depth - 1,
+            &mut captures,
+            &mut promotions,
+            &mut castles,
+            &mut en_passants,
+            &mut double_moves,
+        );
         total += cnt;
         println!("{}{}: {}", mv.from.to_coords(), mv.to.to_coords(), cnt);
     }
@@ -132,4 +191,27 @@ pub fn perft_divide(board: &Board, depth: usize) {
         elapsed.as_secs_f64(),
         total as f64 / elapsed.as_secs_f64()
     );
+
+    for m in moves {
+        if m.is_capture {
+            captures += 1;
+        }
+        if m.is_promotion {
+            promotions += 1;
+        }
+        if m.is_castle {
+            castles += 1;
+        }
+        if m.is_en_passant {
+            en_passants += 1;
+        }
+        if m.is_double_move {
+            double_moves += 1;
+        }
+    }
+    println!("Captures: {}", captures);
+    println!("En Passants: {}", en_passants);
+    println!("Castles: {}", castles);
+    println!("Promotions: {}", promotions);
+    println!("Double moves: {}", double_moves);
 }

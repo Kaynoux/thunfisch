@@ -125,4 +125,22 @@ impl Board {
             Color::White => self.white_king,
         }
     }
+
+    pub fn recalculate_black_white_empty_pieces(&mut self) {
+        self.white_pieces = self.white_pawns
+            | self.white_knights
+            | self.white_bishops
+            | self.white_rooks
+            | self.white_queens
+            | self.white_king;
+
+        self.black_pieces = self.black_pawns
+            | self.black_knights
+            | self.black_bishops
+            | self.black_rooks
+            | self.black_queens
+            | self.black_king;
+
+        self.empty_pieces = !(self.white_pieces | self.black_pieces);
+    }
 }

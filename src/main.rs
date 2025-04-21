@@ -14,9 +14,13 @@ fn main() {
         "rnbqkbnr/ppp1p1pp/8/8/3pPp2/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1", // 3. en passant black
         "8/2p5/8/8/8/2P5/8/8 b - - 0 1",                            // 4. test double move
         "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq -", // 5. perft pos 2
+        "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1",                // 6: perft pos 3
+        "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1", // 7. perft pos 4
+        "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8", // 8. perft pos 5
+        "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10", // 9. perft 6
     ];
 
-    let mut board = Board::from_fen(start_pos[0]);
+    let mut board = Board::from_fen(start_pos[8]);
 
     // let mut idx = 0;
     // loop {
@@ -43,8 +47,8 @@ fn main() {
     debug::perft_divide(&board, 1);
     debug::perft_divide(&board, 2);
     debug::perft_divide(&board, 3);
-    debug::perft_divide(&board, 4);
-    debug::perft_divide(&board, 5);
+    //debug::perft_divide(&board, 4);
+    //debug::perft_divide(&board, 5);
 
     // println!("Perft Depth 0 : {:?} Nodes", debug::perft(&board, 0));
     // println!("Perft Depth 1 : {:?} Nodes", debug::perft(&board, 1));
