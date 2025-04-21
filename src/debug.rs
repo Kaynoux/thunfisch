@@ -1,6 +1,7 @@
 use crate::prelude::*;
 use colored;
 use colored::Colorize;
+use std::time::Instant;
 
 pub fn print_board(board: &Board, moves: Option<&[ChessMove]>) {
     let moves_slice = moves.unwrap_or(&[]);
@@ -12,6 +13,7 @@ pub fn print_board(board: &Board, moves: Option<&[ChessMove]>) {
         "Current Color: {:?} Halfmove Clock: {} Fullmove Counter: {}",
         board.current_color, board.halfmove_clock, board.fullmove_counter
     );
+    println!("{}", board.generate_fen());
     println!("Possible amount of moves: {}", moves_slice.len());
 
     while y >= 0 {
@@ -112,6 +114,7 @@ pub fn perft_divide(board: &Board, depth: usize) {
         println!("Perft divide depth {}:", 0);
         return;
     }
+    let start = Instant::now();
     println!("Perft divide depth {}:", depth);
     let mut total = 0;
     let moves = board.generate_legal_moves();
@@ -122,5 +125,11 @@ pub fn perft_divide(board: &Board, depth: usize) {
         total += cnt;
         println!("{}{}: {}", mv.from.to_coords(), mv.to.to_coords(), cnt);
     }
+    let elapsed = start.elapsed();
     println!("Total: {}", total);
+    println!(
+        "Time: {:.3}s, Nodes/sec: {:.0}",
+        elapsed.as_secs_f64(),
+        total as f64 / elapsed.as_secs_f64()
+    );
 }

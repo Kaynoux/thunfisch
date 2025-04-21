@@ -100,6 +100,10 @@ impl Position {
         let rank = (b'1' + y as u8) as char;
         format!("{}{}", file, rank)
     }
+
+    pub const fn from_xy(x: isize, y: isize) -> Position {
+        Position::from_idx(x + (y * 8))
+    }
 }
 
 impl Shl<isize> for Position {

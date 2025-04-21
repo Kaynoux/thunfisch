@@ -194,7 +194,7 @@ impl Board {
                 }
                 Piece::Queen => {
                     self.black_pieces &= target_mask;
-                    self.black_king &= target_mask;
+                    self.black_queens &= target_mask;
                 }
                 Piece::King => {
                     self.black_pieces &= target_mask;
@@ -221,7 +221,7 @@ impl Board {
                 }
                 Piece::Queen => {
                     self.white_pieces &= target_mask;
-                    self.white_king &= target_mask;
+                    self.white_queens &= target_mask;
                 }
                 Piece::King => {
                     self.white_pieces &= target_mask;
@@ -257,7 +257,7 @@ impl Board {
                 }
                 Piece::Queen => {
                     self.black_pieces |= target_pos;
-                    self.black_king |= target_pos;
+                    self.black_queens |= target_pos;
                 }
                 Piece::King => {
                     self.black_pieces |= target_pos;
@@ -289,7 +289,7 @@ impl Board {
                 }
                 Piece::Queen => {
                     self.white_pieces |= target_pos;
-                    self.white_king |= target_pos;
+                    self.white_queens |= target_pos;
                 }
                 Piece::King => {
                     self.white_pieces |= target_pos;

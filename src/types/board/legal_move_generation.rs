@@ -7,7 +7,7 @@ impl Board {
         let color = self.current_color;
         pseudo_legal_move_generation::get_all_moves(self, color, &mut moves);
 
-        // only retain moves where king is not in check
+        // only retain moves where king is not in check after being in check and follows all rules when castling
         moves.retain(|mv| {
             let mut bc = self.clone();
 
@@ -53,21 +53,24 @@ impl Board {
                 }
             }
 
+            // This part gets run if the king is currently in check so it needs to be resolved
             bc.make_move(mv);
 
-            // generate counter moves
-            let mut counter_moves: Vec<ChessMove> = Vec::new();
-            let counter_positions =
-                pseudo_legal_move_generation::get_all_moves(&bc, !color, &mut counter_moves);
+            // generate counter moves for this move
+            let mut counter_moves_after_move: Vec<ChessMove> = Vec::new();
+            let counter_positions_after_move = pseudo_legal_move_generation::get_all_moves(
+                &bc,
+                !color,
+                &mut counter_moves_after_move,
+            );
 
-            // where is king?
-            let king_pos = match color {
+            let king_pos_after_move = match color {
                 Color::Black => bc.black_king,
                 Color::White => bc.white_king,
             };
 
-            // only keep position if king is not in counter attack positions
-            counter_positions & king_pos == Bitboard(0)
+            // Keep move if not in check and throw away if it is
+            counter_positions_after_move & king_pos_after_move == Bitboard(0)
         });
 
         moves

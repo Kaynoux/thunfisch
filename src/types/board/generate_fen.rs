@@ -1,0 +1,72 @@
+use crate::prelude::*;
+impl Board {
+    pub fn generate_fen(&self) -> String {
+        let mut fen = String::new();
+        for y in (0..=7).rev() {
+            let mut empty_counter = 0;
+            for x in 0..=7 {
+                let (piece, color) = self.get_piece_and_color_at_position(Position::from_xy(x, y));
+                if piece == Piece::Empty && x == 7 {
+                    empty_counter += 1;
+                    fen.push_str(&empty_counter.to_string());
+                    empty_counter = 0;
+                } else if piece == Piece::Empty {
+                    empty_counter += 1;
+                } else {
+                    if empty_counter != 0 {
+                        fen.push_str(&empty_counter.to_string());
+                        empty_counter = 0;
+                    }
+
+                    let c = piece.get_fin_symbol(color);
+                    fen.push(c);
+                }
+            }
+            fen.push('/');
+        }
+        // Remove last /
+        fen.pop();
+        fen.push(' ');
+        let color_char = match self.current_color {
+            Color::White => 'w',
+            Color::Black => 'b',
+        };
+        fen.push(color_char);
+        fen.push(' ');
+        if self.white_castle_right {
+            fen.push('K');
+        }
+        if self.white_castle_left {
+            fen.push('Q');
+        }
+        if self.black_castle_right {
+            fen.push('k');
+        }
+        if self.black_castle_left {
+            fen.push('q');
+        }
+
+        if !self.black_castle_left
+            && !self.black_castle_right
+            && !self.white_castle_left
+            && !self.white_castle_right
+        {
+            fen.push('-');
+        }
+        fen.push(' ');
+
+        if let Some(ep) = self.en_passant_target {
+            fen.push_str(&ep.to_coords());
+        } else {
+            fen.push('-');
+        };
+        fen.push(' ');
+
+        fen.push_str(&self.halfmove_clock.to_string());
+        fen.push(' ');
+
+        fen.push_str(&self.fullmove_counter.to_string());
+
+        fen
+    }
+}
