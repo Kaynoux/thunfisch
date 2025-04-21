@@ -36,10 +36,24 @@ pub fn get_pawn_positions(board: &Board, pos: Position, color: Color) -> Bitboar
     moves_to_enemy |= pos.get_offset_pos(1, move_direction_y);
 
     // Positions need to be enemy to be valid
-    moves_to_enemy &= board.get_enemy_pieces(color);
+    moves_to_enemy &= board.get_pieces_by_color(!color);
 
-    // Return combination off possible empty and enemy pos
     moves_to_empty | moves_to_enemy
+}
+
+pub fn get_pawn_attack_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
+    let mut moves_to_enemy = Bitboard(0);
+    let non_friendly_pieces = board.get_non_friendly_pieces(color);
+    let move_direction_y = match color {
+        Color::Black => -1,
+        Color::White => 1,
+    };
+    // Add the to possible Strike moves
+    moves_to_enemy |= pos.get_offset_pos(-1, move_direction_y);
+    moves_to_enemy |= pos.get_offset_pos(1, move_direction_y);
+    moves_to_enemy &= non_friendly_pieces;
+
+    moves_to_enemy
 }
 
 pub fn get_king_positions(board: &Board, pos: Position, color: Color) -> Bitboard {

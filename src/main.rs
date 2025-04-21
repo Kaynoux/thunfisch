@@ -4,6 +4,8 @@ mod position_generation;
 mod prelude;
 mod pseudo_legal_move_generation;
 mod types;
+use debug::perft;
+
 use crate::prelude::*;
 
 fn main() {
@@ -20,7 +22,7 @@ fn main() {
         "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10", // 9. perft 6
     ];
 
-    let mut board = Board::from_fen(start_pos[8]);
+    let mut board = Board::from_fen(start_pos[0]);
 
     // let mut idx = 0;
     // loop {
@@ -44,20 +46,15 @@ fn main() {
     debug::print_moves(&board, &moves);
     debug::print_board(&board, Some(&moves));
 
-    debug::perft_divide(&board, 1);
-    debug::perft_divide(&board, 2);
-    debug::perft_divide(&board, 3);
-    debug::perft_divide(&board, 4);
-    //debug::perft_divide(&board, 5);
+    // debug::perft_divide(&board, 1);
+    // debug::perft_divide(&board, 2);
+    // debug::perft_divide(&board, 3);
+    // debug::perft_divide(&board, 4);
+    // debug::perft_divide(&board, 5);
 
-    // println!("Perft Depth 0 : {:?} Nodes", debug::perft(&board, 0));
-    // println!("Perft Depth 1 : {:?} Nodes", debug::perft(&board, 1));
-    // println!("Perft Depth 2 : {:?} Nodes", debug::perft(&board, 2));
-    // println!("Perft Depth 3 : {:?} Nodes", debug::perft(&board, 3));
-    // println!("Perft Depth 4 : {:?} Nodes", debug::perft(&board, 4));
-    // println!("Perft Depth 5 : {:?} Nodes", debug::perft(&board, 5));
-    // println!("Perft Depth 6 : {:?} Nodes", debug::perft(&board, 6));
-    //println!("Perft Depth 7 : {:?} Nodes", debug::perft(&board, 6));
+    for i in 0..10 {
+        perft(&board, i);
+    }
 
     // debug::print_board(
     //     &board,

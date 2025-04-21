@@ -28,17 +28,10 @@ pub struct Board {
 }
 
 impl Board {
-    pub fn get_friendly_pieces(&self, color: Color) -> Bitboard {
+    pub fn get_pieces_by_color(&self, color: Color) -> Bitboard {
         match color {
             Color::Black => self.black_pieces,
             Color::White => self.white_pieces,
-        }
-    }
-
-    pub fn get_enemy_pieces(&self, color: Color) -> Bitboard {
-        match color {
-            Color::Black => self.white_pieces,
-            Color::White => self.black_pieces,
         }
     }
 

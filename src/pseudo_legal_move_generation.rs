@@ -4,7 +4,6 @@ pub fn get_all_moves(board: &Board, color: Color) -> (Bitboard, Vec<ChessMove>) 
     let mut moves_bitboard = Bitboard(0);
     let mut moves: Vec<ChessMove> = Vec::new();
 
-    // Pawn by 1
     moves_bitboard |= get_pawn_moves(board, color, &mut moves);
 
     // Knight
@@ -345,4 +344,26 @@ pub fn get_en_passant_moves(board: &Board, color: Color, moves: &mut Vec<ChessMo
             }
         }
     }
+}
+
+pub fn get_all_attacks(board: &Board, color: Color) -> Bitboard {
+    let mut attacks = Bitboard(0);
+    let mut positions = match color {
+        Color::Black => board.black_pieces,
+        Color::White => board.white_pieces,
+    };
+    while positions != Bitboard(0) {
+        let current_pos = positions.pop_lsb_position();
+        let (piece, color) = board.get_piece_and_color_at_position(current_pos);
+        attacks |= match piece {
+            Piece::Pawn => get_pawn_attack_positions(board, current_pos, color),
+            Piece::Knight => get_knight_positions(board, current_pos, color),
+            Piece::Bishop => get_bishop_positions(board, current_pos, color),
+            Piece::Rook => get_rook_positions(board, current_pos, color),
+            Piece::Queen => get_queen_positions(board, current_pos, color),
+            Piece::King => get_king_positions(board, current_pos, color),
+            _ => Bitboard(0),
+        };
+    }
+    attacks
 }

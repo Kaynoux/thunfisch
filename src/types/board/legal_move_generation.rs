@@ -1,6 +1,5 @@
 use crate::prelude::*;
 use crate::pseudo_legal_move_generation;
-use crate::types::board::legal_move_generation;
 
 impl Board {
     pub fn generate_legal_moves(&self) -> (Bitboard, Vec<ChessMove>) {
@@ -20,9 +19,7 @@ impl Board {
             }
 
             if mv.is_castle {
-                bc.current_color = !color;
-                let counter_positions = pseudo_legal_move_generation::get_all_moves(&bc, !color).0;
-                bc.current_color = color;
+                let counter_positions = pseudo_legal_move_generation::get_all_attacks(&bc, !color);
 
                 let king_pos = match color {
                     Color::Black => bc.black_king,
@@ -33,7 +30,7 @@ impl Board {
                 if counter_positions & king_pos != Bitboard(0) {
                     moves_bitboard &= !mv.to;
                     return false;
-                }
+                };
 
                 const WHITE_CASTLE_LEFT_MOVE: (Position, Position) =
                     (Position::from_idx(4), Position::from_idx(2));
@@ -81,7 +78,7 @@ impl Board {
 
             // generate counter moves for this move
             let counter_positions_after_move =
-                pseudo_legal_move_generation::get_all_moves(&bc, !color).0;
+                pseudo_legal_move_generation::get_all_attacks(&bc, !color);
 
             let king_pos_after_move = match color {
                 Color::Black => bc.black_king,

@@ -95,7 +95,7 @@ pub fn print_moves(board: &Board, moves: &Vec<ChessMove>) {
     println!()
 }
 
-pub fn perft(board: &Board, depth: usize) -> usize {
+pub fn r_perft(board: &Board, depth: usize) -> usize {
     if depth == 0 {
         return 1;
     }
@@ -104,12 +104,12 @@ pub fn perft(board: &Board, depth: usize) -> usize {
     for mv in moves {
         let mut b2 = board.clone();
         b2.make_move(&mv);
-        nodes += perft(&b2, depth - 1);
+        nodes += r_perft(&b2, depth - 1);
     }
     nodes
 }
 
-pub fn detailed_perft(
+pub fn r_detailed_perft(
     board: &Board,
     depth: usize,
     captures: &mut isize,
@@ -126,7 +126,7 @@ pub fn detailed_perft(
     for mv in moves {
         let mut b2 = board.clone();
         b2.make_move(&mv);
-        nodes += detailed_perft(
+        nodes += r_detailed_perft(
             &b2,
             depth - 1,
             captures,
@@ -167,12 +167,12 @@ pub fn perft_divide(board: &Board, depth: usize) {
     }
     let start = Instant::now();
     println!("Perft divide depth {}:", depth);
-    let mut total = 0;
+    let mut total_nodes = 0;
     let moves = board.generate_legal_moves().1;
     for mv in &moves {
         let mut b2 = board.clone();
         b2.make_move(&mv);
-        let cnt = detailed_perft(
+        let nodes_for_move = r_detailed_perft(
             &b2,
             depth - 1,
             &mut captures,
@@ -181,15 +181,20 @@ pub fn perft_divide(board: &Board, depth: usize) {
             &mut en_passants,
             &mut double_moves,
         );
-        total += cnt;
-        println!("{}{}: {}", mv.from.to_coords(), mv.to.to_coords(), cnt);
+        total_nodes += nodes_for_move;
+        println!(
+            "{}{}: {}",
+            mv.from.to_coords(),
+            mv.to.to_coords(),
+            nodes_for_move
+        );
     }
     let elapsed = start.elapsed();
-    println!("Total: {}", total);
+    println!("Total: {}", total_nodes);
     println!(
         "Time: {:.3}s, Nodes/sec: {:.0}",
         elapsed.as_secs_f64(),
-        total as f64 / elapsed.as_secs_f64()
+        total_nodes as f64 / elapsed.as_secs_f64()
     );
 
     for m in moves {
@@ -214,4 +219,21 @@ pub fn perft_divide(board: &Board, depth: usize) {
     println!("Castles: {}", castles);
     println!("Promotions: {}", promotions);
     println!("Double moves: {}", double_moves);
+}
+
+pub fn perft(board: &Board, depth: usize) {
+    if depth == 0 {
+        println!("Perft: Depth=0 Nodes=0 Time=0s Nodes/sec=0");
+        return;
+    }
+    let start = Instant::now();
+    let total_nodes = r_perft(board, depth);
+    let elapsed = start.elapsed();
+    println!(
+        "Perft: Depth={} Nodes={} Time={:.3}s Nodes/sec={:.0}",
+        depth,
+        total_nodes,
+        elapsed.as_secs_f64(),
+        total_nodes as f64 / elapsed.as_secs_f64()
+    );
 }
