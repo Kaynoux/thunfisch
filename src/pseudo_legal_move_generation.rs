@@ -1,36 +1,47 @@
 use crate::position_generation::*;
 use crate::prelude::*;
-pub fn get_all_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) -> Bitboard {
+pub fn get_all_moves(board: &Board, color: Color) -> (Bitboard, Vec<ChessMove>) {
     let mut moves_bitboard = Bitboard(0);
+    let mut moves: Vec<ChessMove> = Vec::new();
 
     // Pawn by 1
-    moves_bitboard |= get_pawn_moves(board, color, moves);
+    moves_bitboard |= get_pawn_moves(board, color, &mut moves);
 
     // Knight
-    moves_bitboard |=
-        get_moves_for_piece_type(board, Piece::Knight, color, moves, get_knight_positions);
+    moves_bitboard |= get_moves_for_piece_type(
+        board,
+        Piece::Knight,
+        color,
+        &mut moves,
+        get_knight_positions,
+    );
 
     // Bishop
-    moves_bitboard |=
-        get_moves_for_piece_type(board, Piece::Bishop, color, moves, get_bishop_positions);
+    moves_bitboard |= get_moves_for_piece_type(
+        board,
+        Piece::Bishop,
+        color,
+        &mut moves,
+        get_bishop_positions,
+    );
 
     // Rook
     moves_bitboard |=
-        get_moves_for_piece_type(board, Piece::Rook, color, moves, get_rook_positions);
+        get_moves_for_piece_type(board, Piece::Rook, color, &mut moves, get_rook_positions);
 
     // Queen
     moves_bitboard |=
-        get_moves_for_piece_type(board, Piece::Queen, color, moves, get_queen_positions);
+        get_moves_for_piece_type(board, Piece::Queen, color, &mut moves, get_queen_positions);
 
     // King
     let king_pos = board.get_king_pos(color);
     if king_pos != Position(0) {
-        moves_bitboard |= get_king_moves(board, king_pos, color, moves, get_king_positions);
+        moves_bitboard |= get_king_moves(board, king_pos, color, &mut moves, get_king_positions);
     }
 
-    get_castle_moves(board, color, moves);
-    get_en_passant_moves(board, color, moves);
-    moves_bitboard
+    get_castle_moves(board, color, &mut moves);
+    get_en_passant_moves(board, color, &mut moves);
+    (moves_bitboard, moves)
 }
 
 /// Calculate all moves for each instance of a piece type exept the king because it is unique and pawns because they are

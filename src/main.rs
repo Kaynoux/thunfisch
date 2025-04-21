@@ -40,14 +40,14 @@ fn main() {
     //     debug::print_board(&bc, "Test", None);
     // }
 
-    let moves = board.generate_legal_moves();
+    let moves = board.generate_legal_moves().1;
     debug::print_moves(&board, &moves);
     debug::print_board(&board, Some(&moves));
 
     debug::perft_divide(&board, 1);
     debug::perft_divide(&board, 2);
     debug::perft_divide(&board, 3);
-    //debug::perft_divide(&board, 4);
+    debug::perft_divide(&board, 4);
     //debug::perft_divide(&board, 5);
 
     // println!("Perft Depth 0 : {:?} Nodes", debug::perft(&board, 0));
@@ -56,7 +56,7 @@ fn main() {
     // println!("Perft Depth 3 : {:?} Nodes", debug::perft(&board, 3));
     // println!("Perft Depth 4 : {:?} Nodes", debug::perft(&board, 4));
     // println!("Perft Depth 5 : {:?} Nodes", debug::perft(&board, 5));
-    //println!("Perft Depth 6 : {:?} Nodes", debug::perft(&board, 6));
+    // println!("Perft Depth 6 : {:?} Nodes", debug::perft(&board, 6));
     //println!("Perft Depth 7 : {:?} Nodes", debug::perft(&board, 6));
 
     // debug::print_board(
