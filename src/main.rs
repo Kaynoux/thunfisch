@@ -22,7 +22,7 @@ fn main() {
         "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10", // 9. perft 6
     ];
 
-    let mut board = Board::from_fen(start_pos[0]);
+    let mut board = Board::from_fen(start_pos[7]);
 
     // let mut idx = 0;
     // loop {
@@ -52,7 +52,7 @@ fn main() {
     // debug::perft_divide(&board, 4);
     // debug::perft_divide(&board, 5);
 
-    for i in 0..10 {
+    for i in 0..=5 {
         perft(&board, i);
     }
 

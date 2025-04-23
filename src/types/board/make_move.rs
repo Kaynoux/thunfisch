@@ -33,7 +33,7 @@ impl Board {
         }
 
         // Also revoke castle rights if rook is captured
-        if mv.captured == Piece::Rook {
+        if mv.is_capture && mv.captured == Piece::Rook {
             match target_pos {
                 WHITE_ROOK_LEFT_POS => self.white_castle_left = false,
                 WHITE_ROOK_RIGHT_POS => self.white_castle_right = false,
