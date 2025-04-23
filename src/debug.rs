@@ -155,7 +155,7 @@ pub fn r_detailed_perft(
     nodes
 }
 
-pub fn perft_divide(board: &Board, depth: usize) {
+pub fn debug_perft(board: &Board, depth: usize) {
     let mut captures: isize = 0;
     let mut promotions: isize = 0;
     let mut castles: isize = 0;

@@ -1,5 +1,4 @@
 use crate::prelude::*;
-use std::collections::VecDeque;
 
 const START_POS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
@@ -9,7 +8,6 @@ pub struct EngineState {
 }
 
 impl EngineState {
-    /// Erstellt neuen State ab Startposition
     pub fn new() -> Self {
         EngineState {
             board: Board::from_fen(START_POS),
@@ -17,39 +15,40 @@ impl EngineState {
         }
     }
 
-    /// Handhabt den UCI-`position`-Befehl inkrementell
     pub fn handle_position(&mut self, args: &[&str]) {
         let mut iter = args.iter().peekable();
 
-        // 1) Stellung initialisieren, wenn Startpos oder FEN
         if let Some(&&token) = iter.peek() {
             match token {
-                "startpos" => {
-                    self.board = Board::from_fen(START_POS);
-                    self.applied_moves.clear();
-                    iter.next();
-                }
                 "fen" => {
-                    iter.next(); // "fen"
-                    if let Some(&fen_str) = iter.next() {
-                        self.board = Board::from_fen(fen_str);
-                        self.applied_moves.clear();
+                    iter.next(); // Skips fen keyword
+
+                    //collects the parts which belong to the fen
+                    let mut fen_parts = Vec::new();
+                    while let Some(&&s) = iter.peek() {
+                        if s == "moves" {
+                            break;
+                        }
+                        fen_parts.push(*iter.next().unwrap());
                     }
+                    //joins them back together and creates board with them
+                    let fen = fen_parts.join(" ");
+                    self.board = Board::from_fen(&fen);
+                    self.applied_moves.clear();
                 }
                 _ => {}
             }
         }
 
-        // 2) Über "moves" zur Zugliste springen
+        // if keyword moves appear then we will execute the following moves on the board
         if let Some(&"moves") = iter.next() {
-            // Sammle alle Moves als Strings
             let moves: Vec<&str> = iter.cloned().collect();
-            // 3) Ab dem ersten neuen Zug anwenden
+
+            // makes every move in order the perfectly recreate the input
             for (idx, &mv_str) in moves.iter().enumerate() {
                 if idx < self.applied_moves.len() {
                     continue;
                 }
-                // Parse und ausführen
                 let mv = ChessMove::from_coords(mv_str.to_string(), &self.board);
                 self.board.make_move(&mv);
                 self.applied_moves.push(mv_str.to_string());

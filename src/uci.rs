@@ -1,9 +1,8 @@
+use crate::debug;
 use crate::prelude::*;
 use std::io::{self, BufRead, Write};
 
 pub fn handle_uci_communication() {
-    const START_POS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
-
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     let mut state = EngineState::new(); // State enthält jetzt das Board
@@ -25,11 +24,9 @@ pub fn handle_uci_communication() {
                 println!("readyok");
             }
             Some("ucinewgame") => {
-                // Neue Partie: State komplett zurücksetzen
                 state = EngineState::new();
             }
             Some("position") => {
-                // Alle restlichen Tokens als Slice weiterreichen
                 let args: Vec<&str> = parts.collect();
                 state.handle_position(&args);
             }
@@ -43,6 +40,22 @@ pub fn handle_uci_communication() {
                 }
             }
             Some("quit") => break,
+            Some("perft") => {
+                let args: Vec<&str> = parts.collect();
+                let depth: usize = match args[0].parse() {
+                    Ok(d) => d,
+                    Err(_) => 0,
+                };
+
+                let debug = args.iter().any(|&flag| flag == "--debug");
+
+                if debug == true {
+                    debug::debug_perft(&state.board, depth);
+                } else {
+                    debug::perft(&state.board, depth);
+                }
+            }
+            Some("fen") => println!("Current Fen: {}", state.board.generate_fen()),
             Some(cmd) => {
                 eprintln!("Unknown command: {}", cmd);
             }
