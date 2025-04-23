@@ -13,7 +13,7 @@ pub enum Piece {
 
 impl Piece {
     /// Returns the correct FIN symbol by matching the piece together with the provided color.
-    pub fn get_fin_symbol(self, color: Color) -> char {
+    pub fn to_fin_char(self, color: Color) -> char {
         match (self, color) {
             (Piece::Empty, _) => ' ',
             (Piece::Pawn, Color::White) => 'P',
@@ -31,7 +31,7 @@ impl Piece {
         }
     }
 
-    pub fn get_unicode_symbol(self, color: Color) -> char {
+    pub fn to_unicode_char(self, color: Color) -> char {
         match (self, color) {
             (Piece::Empty, _) => '.',
             (Piece::Pawn, Color::Black) => '♙',
@@ -46,6 +46,30 @@ impl Piece {
             (Piece::Queen, Color::White) => '♛',
             (Piece::King, Color::Black) => '♔',
             (Piece::King, Color::White) => '♚',
+        }
+    }
+
+    pub fn from_char(piece_char: char) -> Option<Piece> {
+        match piece_char {
+            'p' => Some(Piece::Pawn),
+            'n' => Some(Piece::Knight),
+            'b' => Some(Piece::Bishop),
+            'r' => Some(Piece::Rook),
+            'q' => Some(Piece::Queen),
+            'k' => Some(Piece::King),
+            _ => None,
+        }
+    }
+
+    pub fn to_lowercase_char(self) -> char {
+        match self {
+            Piece::Empty => ' ',
+            Piece::Pawn => 'p',
+            Piece::Knight => 'n',
+            Piece::Bishop => 'b',
+            Piece::Rook => 'r',
+            Piece::Queen => 'q',
+            Piece::King => 'k',
         }
     }
 }

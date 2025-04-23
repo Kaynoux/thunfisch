@@ -18,7 +18,7 @@ impl Board {
                         empty_counter = 0;
                     }
 
-                    let c = piece.get_fin_symbol(color);
+                    let c = piece.to_fin_char(color);
                     fen.push(c);
                 }
             }

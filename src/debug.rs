@@ -48,7 +48,7 @@ fn get_char_board(board: &Board, moves: &[ChessMove]) -> [(char, &'static str); 
             if moves.iter().any(|chess_move| chess_move.to == pos) {
                 text_color = "red";
             }
-            char_board[idx] = (Piece::get_unicode_symbol(piece, color), text_color);
+            char_board[idx] = (Piece::to_unicode_char(piece, color), text_color);
         }
     }
     char_board

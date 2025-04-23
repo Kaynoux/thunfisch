@@ -24,6 +24,16 @@ impl Position {
         (x, y)
     }
 
+    pub fn to_x(self) -> isize {
+        let idx = self.to_index();
+        idx % 8
+    }
+
+    pub fn to_y(self) -> isize {
+        let idx = self.to_index();
+        idx / 8
+    }
+
     pub fn is_position_empty(self, board: &Board) -> bool {
         board.empty_pieces.is_position_set(self)
     }
