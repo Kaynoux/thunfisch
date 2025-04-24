@@ -14,13 +14,13 @@ impl Board {
             white_rooks: Bitboard(0),
             white_bishops: Bitboard(0),
             white_queens: Bitboard(0),
-            white_king: Position(0),
+            white_king: Bitboard(0),
             black_pawns: Bitboard(0),
             black_knights: Bitboard(0),
             black_rooks: Bitboard(0),
             black_bishops: Bitboard(0),
             black_queens: Bitboard(0),
-            black_king: Position(0),
+            black_king: Bitboard(0),
             black_castle_left: true,
             black_castle_right: true,
             white_castle_left: true,
@@ -61,14 +61,14 @@ impl Board {
                         'b' => board.black_bishops |= bit,
                         'r' => board.black_rooks |= bit,
                         'q' => board.black_queens |= bit,
-                        'k' => board.black_king = bit,
+                        'k' => board.black_king |= bit,
 
                         'P' => board.white_pawns |= bit,
                         'N' => board.white_knights |= bit,
                         'B' => board.white_bishops |= bit,
                         'R' => board.white_rooks |= bit,
                         'Q' => board.white_queens |= bit,
-                        'K' => board.white_king = bit,
+                        'K' => board.white_king |= bit,
 
                         _ => {}
                     }

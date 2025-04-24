@@ -56,6 +56,7 @@ pub fn handle_uci_communication() {
                 }
             }
             Some("fen") => println!("Current Fen: {}", state.board.generate_fen()),
+            Some("draw") => debug::print_board(&state.board, None),
             Some(cmd) => {
                 eprintln!("Unknown command: {}", cmd);
             }

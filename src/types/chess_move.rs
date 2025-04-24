@@ -57,7 +57,7 @@ impl ChessMove {
             _ => true,
         };
 
-        let is_castle = if from_piece == Piece::King && (from.to_x() - to.to_x()).abs() == 2 {
+        let is_castle = if from_piece == Piece::King && from.to_x().abs_diff(to.to_y()) == 2 {
             true
         } else {
             false
@@ -85,7 +85,7 @@ impl ChessMove {
             (false, Piece::Empty)
         };
 
-        let is_double_move = if from_piece == Piece::Pawn && (from.to_y() - to.to_y()).abs() == 2 {
+        let is_double_move = if from_piece == Piece::Pawn && from.to_y().abs_diff(to.to_y()) == 2 {
             true
         } else {
             false

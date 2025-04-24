@@ -4,8 +4,9 @@ use crate::pseudo_legal_move_generation;
 impl Board {
     pub fn generate_legal_moves(&self) -> (Bitboard, Vec<ChessMove>) {
         let color = self.current_color;
-        let (mut moves_bitboard, mut moves) =
-            pseudo_legal_move_generation::get_all_moves(self, color);
+        let mut moves = Vec::with_capacity(128);
+        let mut moves_bitboard =
+            pseudo_legal_move_generation::get_all_moves(&mut moves, self, color);
 
         // only retain moves where king is not in check after being in check and follows all rules when castling
         moves.retain(|mv| {

@@ -12,26 +12,55 @@ impl fmt::Debug for Position {
     }
 }
 
+pub const POSITION_XY: [(usize, usize); 64] = {
+    let mut lookup_table = [(0, 0); 64];
+    let mut i = 0;
+    while i < 64 {
+        lookup_table[i] = ((i % 8), (i / 8));
+        i += 1;
+    }
+    lookup_table
+};
+
+pub const POSITION_X: [usize; 64] = {
+    let mut lookup_table = [0; 64];
+    let mut i = 0;
+    while i < 64 {
+        lookup_table[i] = i % 8;
+        i += 1;
+    }
+    lookup_table
+};
+
+pub const POSITION_Y: [usize; 64] = {
+    let mut lookup_table = [0; 64];
+    let mut i = 0;
+    while i < 64 {
+        lookup_table[i] = i / 8;
+        i += 1;
+    }
+    lookup_table
+};
+
 impl Position {
-    pub fn to_index(self) -> isize {
-        self.0.trailing_zeros() as isize
+    #[inline(always)]
+    pub const fn to_index(self) -> usize {
+        self.0.trailing_zeros() as usize
     }
 
-    pub fn to_xy(self) -> (isize, isize) {
-        let idx = self.to_index();
-        let x = idx % 8;
-        let y = idx / 8;
-        (x, y)
+    #[inline(always)]
+    pub const fn to_xy(self) -> (usize, usize) {
+        POSITION_XY[self.to_index()]
     }
 
-    pub fn to_x(self) -> isize {
-        let idx = self.to_index();
-        idx % 8
+    #[inline(always)]
+    pub fn to_x(self) -> usize {
+        POSITION_X[self.to_index()]
     }
 
-    pub fn to_y(self) -> isize {
-        let idx = self.to_index();
-        idx / 8
+    #[inline(always)]
+    pub fn to_y(self) -> usize {
+        POSITION_Y[self.to_index()]
     }
 
     pub fn is_position_empty(self, board: &Board) -> bool {

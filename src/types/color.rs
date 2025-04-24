@@ -1,8 +1,9 @@
 use std::ops::Not;
+#[repr(usize)]
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Color {
-    Black,
-    White,
+    White = 0usize,
+    Black = 1usize,
 }
 
 impl Not for Color {

@@ -10,13 +10,13 @@ pub struct Board {
     pub white_rooks: Bitboard,
     pub white_bishops: Bitboard,
     pub white_queens: Bitboard,
-    pub white_king: Position,
+    pub white_king: Bitboard,
     pub black_pawns: Bitboard,
     pub black_knights: Bitboard,
     pub black_rooks: Bitboard,
     pub black_bishops: Bitboard,
     pub black_queens: Bitboard,
-    pub black_king: Position,
+    pub black_king: Bitboard,
     pub black_castle_left: bool,
     pub black_castle_right: bool,
     pub white_castle_left: bool,
@@ -62,7 +62,7 @@ impl Board {
         if self.white_queens.is_position_set(pos) {
             return (Piece::Queen, Color::White);
         }
-        if pos == self.white_king {
+        if pos == Position(self.white_king.0) {
             return (Piece::King, Color::White);
         }
 
@@ -81,7 +81,7 @@ impl Board {
         if self.black_queens.is_position_set(pos) {
             return (Piece::Queen, Color::Black);
         }
-        if pos == self.black_king {
+        if pos == Position(self.black_king.0) {
             return (Piece::King, Color::Black);
         }
 
@@ -114,8 +114,8 @@ impl Board {
 
     pub fn get_king_pos(&self, color: Color) -> Position {
         match color {
-            Color::Black => self.black_king,
-            Color::White => self.white_king,
+            Color::Black => Position(self.black_king.0),
+            Color::White => Position(self.white_king.0),
         }
     }
 
@@ -135,5 +135,28 @@ impl Board {
             | self.black_king;
 
         self.empty_pieces = !(self.white_pieces | self.black_pieces);
+    }
+
+    pub fn get_count_of_piece(&self, color: Color, piece: Piece) -> u32 {
+        match color {
+            Color::Black => match piece {
+                Piece::Empty => self.empty_pieces.0.count_ones(),
+                Piece::Pawn => self.black_pawns.0.count_ones(),
+                Piece::Knight => self.black_knights.0.count_ones(),
+                Piece::Bishop => self.black_bishops.0.count_ones(),
+                Piece::Rook => self.black_rooks.0.count_ones(),
+                Piece::Queen => self.black_queens.0.count_ones(),
+                Piece::King => Bitboard(self.black_king.0).0.count_ones(),
+            },
+            Color::White => match piece {
+                Piece::Empty => self.empty_pieces.0.count_ones(),
+                Piece::Pawn => self.white_pawns.0.count_ones(),
+                Piece::Knight => self.white_knights.0.count_ones(),
+                Piece::Bishop => self.white_bishops.0.count_ones(),
+                Piece::Rook => self.white_rooks.0.count_ones(),
+                Piece::Queen => self.white_queens.0.count_ones(),
+                Piece::King => Bitboard(self.white_king.0).0.count_ones(),
+            },
+        }
     }
 }

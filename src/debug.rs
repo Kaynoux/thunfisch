@@ -13,8 +13,11 @@ pub fn print_board(board: &Board, moves: Option<&[ChessMove]>) {
         "Current Color: {:?} Halfmove Clock: {} Fullmove Counter: {}",
         board.current_color, board.halfmove_clock, board.fullmove_counter
     );
-    println!("{}", board.generate_fen());
-    println!("Possible amount of moves: {}", moves_slice.len());
+    println!("FEN: {}", board.generate_fen());
+    // println!("Phase: {}", board.get_game_phase());
+    if moves.is_some() {
+        println!("Moves Possible: {}", moves_slice.len());
+    }
 
     while y >= 0 {
         print!("{} | ", y);
