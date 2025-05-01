@@ -4,14 +4,12 @@ const START_POS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 
 
 pub struct EngineState {
     pub board: Board,
-    applied_moves: Vec<String>,
 }
 
 impl EngineState {
     pub fn new() -> Self {
         EngineState {
             board: Board::from_fen(START_POS),
-            applied_moves: Vec::new(),
         }
     }
 
@@ -34,7 +32,10 @@ impl EngineState {
                     //joins them back together and creates board with them
                     let fen = fen_parts.join(" ");
                     self.board = Board::from_fen(&fen);
-                    self.applied_moves.clear();
+                }
+                "startpos" => {
+                    iter.next();
+                    self.board = Board::from_fen(START_POS);
                 }
                 _ => {}
             }
@@ -45,13 +46,9 @@ impl EngineState {
             let moves: Vec<&str> = iter.cloned().collect();
 
             // makes every move in order the perfectly recreate the input
-            for (idx, &mv_str) in moves.iter().enumerate() {
-                if idx < self.applied_moves.len() {
-                    continue;
-                }
+            for &mv_str in moves.iter() {
                 let mv = ChessMove::from_coords(mv_str.to_string(), &self.board);
                 self.board.make_move(&mv);
-                self.applied_moves.push(mv_str.to_string());
             }
         }
     }

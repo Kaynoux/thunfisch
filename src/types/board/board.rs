@@ -148,23 +148,40 @@ impl Board {
     pub fn get_count_of_piece(&self, color: Color, piece: Piece) -> u32 {
         match color {
             Color::Black => match piece {
-                Piece::Empty => self.empty_pieces.0.count_ones(),
-                Piece::Pawn => self.black_pawns.0.count_ones(),
-                Piece::Knight => self.black_knights.0.count_ones(),
-                Piece::Bishop => self.black_bishops.0.count_ones(),
-                Piece::Rook => self.black_rooks.0.count_ones(),
-                Piece::Queen => self.black_queens.0.count_ones(),
-                Piece::King => Bitboard(self.black_king.0).0.count_ones(),
+                Piece::Empty => self.empty_pieces.get_count(),
+                Piece::Pawn => self.black_pawns.get_count(),
+                Piece::Knight => self.black_knights.get_count(),
+                Piece::Bishop => self.black_bishops.get_count(),
+                Piece::Rook => self.black_rooks.get_count(),
+                Piece::Queen => self.black_queens.get_count(),
+                Piece::King => Bitboard(self.black_king.0).get_count(),
             },
             Color::White => match piece {
-                Piece::Empty => self.empty_pieces.0.count_ones(),
-                Piece::Pawn => self.white_pawns.0.count_ones(),
-                Piece::Knight => self.white_knights.0.count_ones(),
-                Piece::Bishop => self.white_bishops.0.count_ones(),
-                Piece::Rook => self.white_rooks.0.count_ones(),
-                Piece::Queen => self.white_queens.0.count_ones(),
-                Piece::King => Bitboard(self.white_king.0).0.count_ones(),
+                Piece::Empty => self.empty_pieces.get_count(),
+                Piece::Pawn => self.white_pawns.get_count(),
+                Piece::Knight => self.white_knights.get_count(),
+                Piece::Bishop => self.white_bishops.get_count(),
+                Piece::Rook => self.white_rooks.get_count(),
+                Piece::Queen => self.white_queens.get_count(),
+                Piece::King => Bitboard(self.white_king.0).get_count(),
             },
         }
+    }
+
+    pub fn all_piece_bitboards(&self) -> [Bitboard; 12] {
+        [
+            self.white_pawns,
+            self.black_pawns,
+            self.white_knights,
+            self.black_knights,
+            self.white_bishops,
+            self.black_bishops,
+            self.white_rooks,
+            self.black_rooks,
+            self.white_queens,
+            self.black_queens,
+            self.white_king,
+            self.black_king,
+        ]
     }
 }

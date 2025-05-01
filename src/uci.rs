@@ -31,9 +31,29 @@ pub fn handle_uci_communication() {
                 state.handle_position(&args);
             }
             Some("go") => {
-                let moves = state.board.generate_legal_moves().1;
-                if let Some(best_move) = moves.first() {
-                    state.board.make_move(best_move);
+                let args: Vec<&str> = parts.collect();
+
+                if args.len() == 2 && args[0] == "depth" {
+                    let depth: usize = match args[1].parse() {
+                        Ok(d) => d,
+                        Err(_) => 0,
+                    };
+
+                    let (best_move, eval) = state.board.negamax(depth, i32::MIN, i32::MAX);
+
+                    if let Some(best_move) = best_move {
+                        println!("bestmove {}", best_move.to_coords());
+                    } else {
+                        println!("bestmove (none)");
+                    }
+
+                    continue;
+                }
+
+                // HARDCODED DEPTH 5 FIX LATER
+                let (best_move, eval) = state.board.negamax(5, i32::MIN, i32::MAX);
+
+                if let Some(best_move) = best_move {
                     println!("bestmove {}", best_move.to_coords());
                 } else {
                     println!("bestmove (none)");
@@ -60,6 +80,10 @@ pub fn handle_uci_communication() {
             }
             Some("fen") => println!("Current Fen: {}", state.board.generate_fen()),
             Some("draw") => debug::print_board(&state.board, None),
+            Some("moves") => {
+                debug::print_board(&state.board, Some(&state.board.get_legal_moves().1))
+            }
+            Some("eval") => loop {},
             Some(cmd) => {
                 eprintln!("Unknown command: {}", cmd);
             }

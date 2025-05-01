@@ -105,7 +105,7 @@ pub fn r_perft(board: &Board, depth: usize) -> usize {
         return 1;
     }
     let mut nodes = 0;
-    let moves = board.generate_legal_moves().1;
+    let moves = board.get_legal_moves().1;
     for mv in moves {
         let mut b2 = board.clone();
         b2.make_move(&mv);
@@ -127,7 +127,7 @@ pub fn r_detailed_perft(
         return 1;
     }
     let mut nodes = 0;
-    let moves = board.generate_legal_moves().1;
+    let moves = board.get_legal_moves().1;
     for mv in moves {
         let mut b2 = board.clone();
         b2.make_move(&mv);
@@ -173,7 +173,7 @@ pub fn debug_perft(board: &Board, depth: usize) {
     let start = Instant::now();
     println!("Perft divide depth {}:", depth);
     let mut total_nodes = 0;
-    let moves = board.generate_legal_moves().1;
+    let moves = board.get_legal_moves().1;
     for mv in &moves {
         let mut b2 = board.clone();
         b2.make_move(&mv);
@@ -269,7 +269,7 @@ pub fn r_perft_rayon(board: &Board, depth: usize) -> usize {
         return 1;
     }
     board
-        .generate_legal_moves()
+        .get_legal_moves()
         .1
         .par_iter()
         .map(|mv| {

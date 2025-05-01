@@ -2,7 +2,7 @@ use crate::prelude::*;
 use crate::pseudo_legal_move_generation;
 
 impl Board {
-    pub fn generate_legal_moves(&self) -> (Bitboard, Vec<ChessMove>) {
+    pub fn get_legal_moves(&self) -> (Bitboard, Vec<ChessMove>) {
         let color = self.current_color;
         let mut moves = Vec::with_capacity(128);
         let mut moves_bitboard =

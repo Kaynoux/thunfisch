@@ -1,20 +1,20 @@
-use crate::prelude::*;
+use crate::{prelude::*, types::bitboard};
 
-const KNIGHT: u32 = 1;
-const BISHOP: u32 = 1;
-const ROOK: u32 = 2;
-const QUEEN: u32 = 4;
-const TOTAL: u32 = KNIGHT * 4 + BISHOP * 4 + ROOK * 4 + QUEEN * 2;
-const EMPTY: u32 = 12;
+const KNIGHT: i32 = 1;
+const BISHOP: i32 = 1;
+const ROOK: i32 = 2;
+const QUEEN: i32 = 4;
+const TOTAL: i32 = KNIGHT * 4 + BISHOP * 4 + ROOK * 4 + QUEEN * 2;
+const EMPTY: i32 = 12;
 
-const WHITE: u32 = 0;
-const BLACK: u32 = 1;
+const WHITE: i32 = 0;
+const BLACK: i32 = 1;
 
-const MG_BASE_VALUE: [i32; 6] = [82, 337, 365, 477, 1025, 0];
-const EG_BASE_VALUE: [i32; 6] = [94, 281, 297, 512, 936, 0];
-const MG_TABLE: [[i32; 64]; 12] = init_table(MG_BASE_VALUE, MG_BASE_POSITION_TABLE);
-const EG_TABLE: [[i32; 64]; 12] = init_table(EG_BASE_VALUE, EG_BASE_POSITION_TABLE);
-const GAMEPHASE_INC: [u32; 12] = [0, 0, 1, 1, 1, 1, 2, 2, 4, 4, 0, 0];
+const MG_PIECE_VALUES: [i32; 6] = [82, 337, 365, 477, 1025, 0];
+const EG_PIECE_VALUES: [i32; 6] = [94, 281, 297, 512, 936, 0];
+const MG_TABLE: [[i32; 64]; 12] = init_table(MG_PIECE_VALUES, MG_BASE_POSITION_TABLE);
+const EG_TABLE: [[i32; 64]; 12] = init_table(EG_PIECE_VALUES, EG_BASE_POSITION_TABLE);
+const GAMEPHASE_INC: [i32; 12] = [0, 0, 1, 1, 1, 1, 2, 2, 4, 4, 0, 0];
 
 // Flips square index to represent black site with white site offsets
 const fn flip(sq: usize) -> usize {
@@ -124,64 +124,37 @@ pub const EG_BASE_POSITION_TABLE: [[i32; 64]; 6] = [
 ];
 
 impl Board {
-    /// Evaluates the board
-    /// positive -> advantage for white
-    /// black -> advantage for black
-    /// Unit = Centipawns, 100 Centipawns => 1 Pawn
-    // pub fn evaluate(&self) -> i32 {
-    //     //let mut valuation = self.evaluate_material();
-    // }
-
-    pub fn evaluate_material(&self) {
-        const PAWN: i32 = 100;
-        const KNIGHT: i32 = 320;
-        const BISHOP: i32 = 330;
-        const ROOK: i32 = 500;
-        const QUEEN: i32 = 900;
-    }
-
-    pub fn get_game_phase(&self) -> u32 {
+    /// Gamephase is calculated by getting the amount of each piece type and using predefined values, e.g. a Queen is captured then the game phase increases mroe than if a pawn is captured
+    pub fn get_game_phase(&self) -> i32 {
         let mut phase = TOTAL;
-        phase -= self.get_count_of_piece(Color::White, Piece::Knight);
-        phase -= self.get_count_of_piece(Color::White, Piece::Bishop);
-        phase -= self.get_count_of_piece(Color::White, Piece::Rook);
-        phase -= self.get_count_of_piece(Color::White, Piece::Queen);
-        phase -= self.get_count_of_piece(Color::Black, Piece::Knight);
-        phase -= self.get_count_of_piece(Color::Black, Piece::Bishop);
-        phase -= self.get_count_of_piece(Color::Black, Piece::Rook);
-        phase -= self.get_count_of_piece(Color::Black, Piece::Queen);
+        for (bitboard_idx, bitboard) in self.all_piece_bitboards().iter().enumerate() {
+            phase -= (bitboard.get_count() as i32) * GAMEPHASE_INC[bitboard_idx];
+        }
         phase = (phase * 256 + (TOTAL / 2)) / TOTAL;
         phase
     }
 
-    pub fn evaluate(&self) {
-        let side = self.current_color as u32;
+    /// Evaluates the board,
+    /// positive -> advantage for white,
+    /// negative -> advantage for black,
+    /// Unit = Centipawns, 100 Centipawns => 1 Pawn
+    pub fn evaluate(&self) -> i32 {
+        let white = 0usize;
+        let black = 1usize;
         let mut mg = [0i32; 2];
         let mut eg = [0i32; 2];
-        let mut game_phase = 0u32;
 
-        let bitboards: [Bitboard; 12] = [
-            self.white_pawns,   // pc = 0
-            self.black_pawns,   // pc = 1
-            self.white_knights, // pc = 2
-            self.black_knights, // pc = 3
-            self.white_bishops, // pc = 4
-            self.black_bishops, // pc = 5
-            self.white_rooks,   // pc = 6
-            self.black_rooks,   // pc = 7
-            self.white_queens,  // pc = 8
-            self.black_queens,  // pc = 9
-            self.white_king,    // pc = 10
-            self.black_king,    // pc = 11
-        ];
+        for (bitboard_idx, bitboard) in self.all_piece_bitboards().iter_mut().enumerate() {
+            for position in bitboard.iter_mut() {
+                mg[bitboard_idx & 1] += MG_TABLE[bitboard_idx][position.to_index()];
+                eg[bitboard_idx & 1] += EG_TABLE[bitboard_idx][position.to_index()];
+            }
+        }
 
-        // for piece_idx in 0..=11 {
-        //     // use board iterator here not implement yet
-        //     let mut bitboard = bitboards[piece_idx];
-        //     while
-        //     mg[pc & 1] += self.mg_table[pc][sq as u32];
-        //     eg[pc & 1] += self.eg_table[pc][sq as u32];
-        //     game_phase += GAMEPHASE_INC[pc];
-        // }
+        let mg_score = mg[white] - mg[black];
+        let eg_score = eg[white] - mg[black];
+        let gamephase = self.get_game_phase() as i32;
+
+        mg_score * (256 - gamephase) + eg_score * gamephase >> 8
     }
 }

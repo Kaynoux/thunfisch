@@ -44,7 +44,13 @@ impl Bitboard {
         }
     }
 
-    pub fn iter(&mut self) -> impl Iterator<Item = Position> + '_ {
+    #[inline(always)]
+    pub fn get_count(&self) -> u32 {
+        self.0.count_ones()
+    }
+
+    /// Iterator for Bitboard, uses pop lsb to always return
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = Position> + '_ {
         std::iter::from_fn(move || self.pop_lsb_position())
     }
 
