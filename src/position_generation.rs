@@ -1,5 +1,6 @@
 use crate::prelude::*;
 
+#[inline(always)]
 pub fn get_pawn_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
     let mut moves_to_empty = Bitboard(0);
     let mut moves_to_enemy = Bitboard(0);
@@ -41,6 +42,7 @@ pub fn get_pawn_positions(board: &Board, pos: Position, color: Color) -> Bitboar
     moves_to_empty | moves_to_enemy
 }
 
+#[inline(always)]
 pub fn get_pawn_attack_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
     let mut moves_to_enemy = Bitboard(0);
     let non_friendly_pieces = board.get_non_friendly_pieces(color);
@@ -56,6 +58,7 @@ pub fn get_pawn_attack_positions(board: &Board, pos: Position, color: Color) -> 
     moves_to_enemy
 }
 
+#[inline(always)]
 pub fn get_king_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
     let mut moves = Bitboard(0);
     let non_friendly_pieces = board.get_non_friendly_pieces(color);
@@ -70,6 +73,7 @@ pub fn get_king_positions(board: &Board, pos: Position, color: Color) -> Bitboar
     moves & non_friendly_pieces
 }
 
+#[inline(always)]
 pub fn get_knight_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
     let mut moves = Bitboard(0);
     let non_friendly_pieces = board.get_non_friendly_pieces(color);
@@ -84,6 +88,7 @@ pub fn get_knight_positions(board: &Board, pos: Position, color: Color) -> Bitbo
     moves & non_friendly_pieces
 }
 
+#[inline(always)]
 pub fn get_sliding_positions(
     board: &Board,
     pos: Position,
@@ -116,6 +121,7 @@ pub fn get_sliding_positions(
     moves & non_friendly_pieces
 }
 
+#[inline(always)]
 pub fn get_queen_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
     let mut moves = Bitboard(0);
     moves |= get_sliding_positions(board, pos, color, 1, -1);
@@ -129,6 +135,7 @@ pub fn get_queen_positions(board: &Board, pos: Position, color: Color) -> Bitboa
     moves
 }
 
+#[inline(always)]
 pub fn get_bishop_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
     let mut moves = Bitboard(0);
     moves |= get_sliding_positions(board, pos, color, 1, -1);
@@ -138,6 +145,7 @@ pub fn get_bishop_positions(board: &Board, pos: Position, color: Color) -> Bitbo
     moves
 }
 
+#[inline(always)]
 pub fn get_rook_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
     let mut moves = Bitboard(0);
     moves |= get_sliding_positions(board, pos, color, 1, 0);

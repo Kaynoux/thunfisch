@@ -77,7 +77,7 @@ impl Board {
             }
         }
 
-        // Alle individual bitboards set now calculate the generell bitboards
+        // All individual bitboards set now calculate the generell bitboards
         board.recalculate_black_white_empty_pieces();
 
         // Set Active Color Part

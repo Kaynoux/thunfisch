@@ -28,6 +28,7 @@ pub struct Board {
 }
 
 impl Board {
+    #[inline(always)]
     pub fn get_pieces_by_color(&self, color: Color) -> Bitboard {
         match color {
             Color::Black => self.black_pieces,
@@ -35,6 +36,7 @@ impl Board {
         }
     }
 
+    #[inline(always)]
     pub fn get_non_friendly_pieces(&self, color: Color) -> Bitboard {
         match color {
             Color::Black => !self.black_pieces,
@@ -42,10 +44,12 @@ impl Board {
         }
     }
 
+    #[inline(always)]
     pub fn get_empty_pieces(&self) -> Bitboard {
         self.empty_pieces
     }
 
+    #[inline(always)]
     pub fn get_piece_and_color_at_position(&self, pos: Position) -> (Piece, Color) {
         if self.white_pawns.is_position_set(pos) {
             return (Piece::Pawn, Color::White);
@@ -89,6 +93,7 @@ impl Board {
         (Piece::Empty, Color::White)
     }
 
+    #[inline(always)]
     pub fn get_positions_by_piece_color(&self, color: Color, piece: Piece) -> Bitboard {
         match color {
             Color::Black => match piece {
@@ -112,6 +117,7 @@ impl Board {
         }
     }
 
+    #[inline(always)]
     pub fn get_king_pos(&self, color: Color) -> Position {
         match color {
             Color::Black => Position(self.black_king.0),
@@ -119,6 +125,7 @@ impl Board {
         }
     }
 
+    #[inline(always)]
     pub fn recalculate_black_white_empty_pieces(&mut self) {
         self.white_pieces = self.white_pawns
             | self.white_knights
@@ -137,6 +144,7 @@ impl Board {
         self.empty_pieces = !(self.white_pieces | self.black_pieces);
     }
 
+    #[inline(always)]
     pub fn get_count_of_piece(&self, color: Color, piece: Piece) -> u32 {
         match color {
             Color::Black => match piece {

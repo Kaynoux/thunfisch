@@ -1,5 +1,7 @@
 use crate::position_generation::*;
 use crate::prelude::*;
+
+#[inline(always)]
 pub fn get_all_moves(moves: &mut Vec<ChessMove>, board: &Board, color: Color) -> Bitboard {
     let mut moves_bitboard = Bitboard(0);
     //let mut moves: Vec<ChessMove> = Vec::with_capacity(256);
@@ -34,6 +36,7 @@ pub fn get_all_moves(moves: &mut Vec<ChessMove>, board: &Board, color: Color) ->
 }
 
 /// Calculate all moves for each instance of a piece type exept the king because it is unique and pawns because they are
+#[inline(always)]
 pub fn get_moves_for_piece_type(
     board: &Board,
     piece: Piece,
@@ -45,13 +48,13 @@ pub fn get_moves_for_piece_type(
     let mut target_positions = Bitboard(0);
 
     while piece_positions != Bitboard(0) {
-        let current_pos = piece_positions.pop_lsb_position();
+        let current_pos = piece_positions.pop_lsb_position().unwrap();
 
         let mut target_positions_for_one_piece = f(board, current_pos, color);
         target_positions |= target_positions_for_one_piece;
 
         while target_positions_for_one_piece != Bitboard(0) {
-            let target_pos = target_positions_for_one_piece.pop_lsb_position();
+            let target_pos = target_positions_for_one_piece.pop_lsb_position().unwrap();
             let (target_piece, _) = board.get_piece_and_color_at_position(target_pos);
             let is_capture = match target_piece {
                 Piece::Empty => false,
@@ -73,17 +76,18 @@ pub fn get_moves_for_piece_type(
     target_positions
 }
 
+#[inline(always)]
 pub fn get_pawn_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) -> Bitboard {
     let mut target_positions = Bitboard(0);
     let mut pawn_positions = board.get_positions_by_piece_color(color, Piece::Pawn);
     while pawn_positions != Bitboard(0) {
-        let current_pos = pawn_positions.pop_lsb_position();
+        let current_pos = pawn_positions.pop_lsb_position().unwrap();
 
         let mut target_positions_for_one_piece = get_pawn_positions(board, current_pos, color);
         target_positions |= target_positions_for_one_piece;
 
         while target_positions_for_one_piece != Bitboard(0) {
-            let target_pos = target_positions_for_one_piece.pop_lsb_position();
+            let target_pos = target_positions_for_one_piece.pop_lsb_position().unwrap();
             let (target_piece, _) = board.get_piece_and_color_at_position(target_pos);
             let is_capture = match target_piece {
                 Piece::Empty => false,
@@ -161,6 +165,7 @@ pub fn get_pawn_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) -
 }
 
 /// Calculates all possible moves for the king which is the only unique piece
+#[inline(always)]
 pub fn get_king_moves(
     board: &Board,
     current_pos: Position,
@@ -170,7 +175,7 @@ pub fn get_king_moves(
 ) -> Bitboard {
     let mut target_positions = f(board, current_pos, color);
     while target_positions != Bitboard(0) {
-        let target_pos = target_positions.pop_lsb_position();
+        let target_pos = target_positions.pop_lsb_position().unwrap();
         let (target_piece, _) = board.get_piece_and_color_at_position(target_pos);
         let is_capture = match target_piece {
             Piece::Empty => false,
@@ -262,6 +267,7 @@ pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>)
     }
 }
 
+#[inline(always)]
 pub fn get_en_passant_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) {
     let ep_target = match board.en_passant_target {
         Some(pos) => pos,
@@ -336,6 +342,7 @@ pub fn get_en_passant_moves(board: &Board, color: Color, moves: &mut Vec<ChessMo
     }
 }
 
+#[inline(always)]
 pub fn get_all_attacks(board: &Board, color: Color) -> Bitboard {
     let mut attacks = Bitboard(0);
     let mut positions = match color {
@@ -343,7 +350,7 @@ pub fn get_all_attacks(board: &Board, color: Color) -> Bitboard {
         Color::White => board.white_pieces,
     };
     while positions != Bitboard(0) {
-        let current_pos = positions.pop_lsb_position();
+        let current_pos = positions.pop_lsb_position().unwrap();
         let (piece, color) = board.get_piece_and_color_at_position(current_pos);
         attacks |= match piece {
             Piece::Pawn => get_pawn_attack_positions(board, current_pos, color),

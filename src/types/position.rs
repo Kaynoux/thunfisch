@@ -63,20 +63,24 @@ impl Position {
         POSITION_Y[self.to_index()]
     }
 
+    #[inline(always)]
     pub fn is_position_empty(self, board: &Board) -> bool {
         board.empty_pieces.is_position_set(self)
     }
 
+    #[inline(always)]
     pub fn is_friendly(self, board: &Board, color: Color) -> bool {
         (color == Color::Black && board.black_pieces.is_position_set(self))
             || (color == Color::White && board.white_pieces.is_position_set(self))
     }
 
+    #[inline(always)]
     pub fn is_enemy(self, board: &Board, color: Color) -> bool {
         (color == Color::White && board.black_pieces.is_position_set(self))
             || (color == Color::Black && board.white_pieces.is_position_set(self))
     }
 
+    #[inline(always)]
     pub fn get_offset_pos(self, dx: isize, dy: isize) -> Position {
         let pos_idx = self.to_index() as isize;
         let new_x: isize = pos_idx % 8 + dx;
@@ -88,10 +92,12 @@ impl Position {
         Position(0)
     }
 
+    #[inline(always)]
     pub const fn from_idx(idx: isize) -> Self {
         Position(1u64 << idx)
     }
 
+    #[inline(always)]
     pub fn get_first_two_string_chars(s: &str) -> Option<(char, char)> {
         let mut iter = s.chars();
         match (iter.next(), iter.next()) {
@@ -100,6 +106,7 @@ impl Position {
         }
     }
 
+    #[inline(always)]
     pub fn from_coords(coords: &str) -> Option<Position> {
         let (c1, c2) = match Position::get_first_two_string_chars(coords) {
             Some(c1c2) => c1c2,
@@ -133,6 +140,7 @@ impl Position {
         Some(Position::from_idx(y * 8 + x))
     }
 
+    #[inline(always)]
     pub fn to_coords(self) -> String {
         let (x, y) = self.to_xy();
         let file = (b'a' + x as u8) as char;
@@ -140,6 +148,7 @@ impl Position {
         format!("{}{}", file, rank)
     }
 
+    #[inline(always)]
     pub const fn from_xy(x: isize, y: isize) -> Position {
         Position::from_idx(x + (y * 8))
     }

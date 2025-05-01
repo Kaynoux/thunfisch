@@ -48,9 +48,12 @@ pub fn handle_uci_communication() {
                 };
 
                 let debug = args.iter().any(|&flag| flag == "--debug");
+                let rayon = args.iter().any(|&flag| flag == "--rayon");
 
                 if debug == true {
                     debug::debug_perft(&state.board, depth);
+                } else if rayon == true {
+                    debug::perft_rayon(&state.board, depth);
                 } else {
                     debug::perft(&state.board, depth);
                 }

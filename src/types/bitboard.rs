@@ -1,5 +1,8 @@
 use crate::prelude::*;
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not};
+use std::{
+    arch::asm,
+    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not},
+};
 
 /// the bits the are set represent a position on the board with the bit being the index of the chess position
 /// Counting begins bottom left
@@ -12,12 +15,40 @@ impl Bitboard {
         (self & position) != Bitboard(0)
     }
 
-    pub fn pop_lsb_position(&mut self) -> Position {
-        let pos = Position(self.0 & self.0.wrapping_neg());
-        self.0 &= self.0 - 1;
-        pos
+    #[inline(always)]
+    pub fn pop_lsb_position(&mut self) -> Option<Position> {
+        if self.0 == 0 {
+            None
+        } else {
+            let pos = Position(self.0 & self.0.wrapping_neg());
+            self.0 &= self.0 - 1;
+            Some(pos)
+        }
     }
 
+    #[inline(always)]
+    pub fn pop_lsb_asm(&mut self) -> Option<Position> {
+        let mut lsb_index: u64;
+        unsafe {
+            asm!(
+                "bsf {0}, {1}",
+                out(reg) lsb_index,
+                in(reg) self.0,
+            );
+        }
+        if lsb_index != 64 {
+            self.0 &= self.0 - 1;
+            Some(Position(lsb_index))
+        } else {
+            None
+        }
+    }
+
+    pub fn iter(&mut self) -> impl Iterator<Item = Position> + '_ {
+        std::iter::from_fn(move || self.pop_lsb_position())
+    }
+
+    #[inline(always)]
     pub const fn from_idx<const N: usize>(indexes: [usize; N]) -> Self {
         let mut bitboard = Bitboard(0);
         let mut i = 0;

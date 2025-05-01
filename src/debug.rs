@@ -1,6 +1,8 @@
 use crate::prelude::*;
 use colored;
 use colored::Colorize;
+use num_format::{Locale, ToFormattedString};
+use rayon::prelude::*;
 use std::time::Instant;
 
 pub fn print_board(board: &Board, moves: Option<&[ChessMove]>) {
@@ -193,11 +195,13 @@ pub fn debug_perft(board: &Board, depth: usize) {
         );
     }
     let elapsed = start.elapsed();
-    println!("Total: {}", total_nodes);
+    let nodes_per_seconds = (total_nodes as f64 / elapsed.as_secs_f64()) as usize;
     println!(
-        "Time: {:.3}s, Nodes/sec: {:.0}",
+        "Perft: Depth={} Nodes={} Time={:.3}s Nodes/sec={}",
+        depth,
+        total_nodes.to_formatted_string(&Locale::en),
         elapsed.as_secs_f64(),
-        total_nodes as f64 / elapsed.as_secs_f64()
+        nodes_per_seconds.to_formatted_string(&Locale::en)
     );
 
     for m in moves {
@@ -232,11 +236,46 @@ pub fn perft(board: &Board, depth: usize) {
     let start = Instant::now();
     let total_nodes = r_perft(board, depth);
     let elapsed = start.elapsed();
+    let nodes_per_seconds = (total_nodes as f64 / elapsed.as_secs_f64()) as usize;
     println!(
-        "Perft: Depth={} Nodes={} Time={:.3}s Nodes/sec={:.0}",
+        "Perft: Depth={} Nodes={} Time={:.3}s Nodes/sec={}",
         depth,
-        total_nodes,
+        total_nodes.to_formatted_string(&Locale::en),
         elapsed.as_secs_f64(),
-        total_nodes as f64 / elapsed.as_secs_f64()
+        nodes_per_seconds.to_formatted_string(&Locale::en)
     );
+}
+
+pub fn perft_rayon(board: &Board, depth: usize) {
+    if depth == 0 {
+        println!("Perft: Depth=0 Nodes=0 Time=0s Nodes/sec=0");
+        return;
+    }
+    let start = Instant::now();
+    let total_nodes = r_perft_rayon(board, depth);
+    let elapsed = start.elapsed();
+    let nodes_per_seconds = (total_nodes as f64 / elapsed.as_secs_f64()) as usize;
+    println!(
+        "Perft: Depth={} Nodes={} Time={:.3}s Nodes/sec={}",
+        depth,
+        total_nodes.to_formatted_string(&Locale::en),
+        elapsed.as_secs_f64(),
+        nodes_per_seconds.to_formatted_string(&Locale::en)
+    );
+}
+
+pub fn r_perft_rayon(board: &Board, depth: usize) -> usize {
+    if depth == 0 {
+        return 1;
+    }
+    board
+        .generate_legal_moves()
+        .1
+        .par_iter()
+        .map(|mv| {
+            let mut b2 = board.clone();
+            b2.make_move(mv);
+            r_perft_rayon(&b2, depth - 1) // Rückgabe ohne Semikolon
+        })
+        .sum::<usize>()
 }
