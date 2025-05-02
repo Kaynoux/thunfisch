@@ -1,6 +1,8 @@
 use crate::debug;
 use crate::prelude::*;
+use crate::search;
 use std::io::{self, BufRead, Write};
+use std::time::Duration;
 
 pub fn handle_uci_communication() {
     let stdin = io::stdin();
@@ -39,7 +41,11 @@ pub fn handle_uci_communication() {
                         Err(_) => 0,
                     };
 
-                    let (best_move, eval) = state.board.negamax(depth, i32::MIN, i32::MAX);
+                    let best_move = search::iterative_deepening::iterative_deepening(
+                        &mut state.board,
+                        depth,
+                        Duration::new(3600, 0),
+                    );
 
                     if let Some(best_move) = best_move {
                         println!("bestmove {}", best_move.to_coords());
@@ -50,8 +56,11 @@ pub fn handle_uci_communication() {
                     continue;
                 }
 
-                // HARDCODED DEPTH 5 FIX LATER
-                let (best_move, eval) = state.board.negamax(5, i32::MIN, i32::MAX);
+                let best_move = search::iterative_deepening::iterative_deepening(
+                    &mut state.board,
+                    100,
+                    Duration::new(1, 0),
+                );
 
                 if let Some(best_move) = best_move {
                     println!("bestmove {}", best_move.to_coords());

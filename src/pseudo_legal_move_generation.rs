@@ -55,7 +55,7 @@ pub fn get_moves_for_piece_type(
 
         while target_positions_for_one_piece != Bitboard(0) {
             let target_pos = target_positions_for_one_piece.pop_lsb_position().unwrap();
-            let (target_piece, _) = board.get_piece_and_color_at_position(target_pos);
+            let target_piece = board.get_piece_at_position(target_pos);
             let is_capture = match target_piece {
                 Piece::Empty => false,
                 _ => true,
@@ -88,7 +88,7 @@ pub fn get_pawn_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) -
 
         while target_positions_for_one_piece != Bitboard(0) {
             let target_pos = target_positions_for_one_piece.pop_lsb_position().unwrap();
-            let (target_piece, _) = board.get_piece_and_color_at_position(target_pos);
+            let target_piece = board.get_piece_at_position(target_pos);
             let is_capture = match target_piece {
                 Piece::Empty => false,
                 _ => true,
@@ -176,7 +176,7 @@ pub fn get_king_moves(
     let mut target_positions = f(board, current_pos, color);
     while target_positions != Bitboard(0) {
         let target_pos = target_positions.pop_lsb_position().unwrap();
-        let (target_piece, _) = board.get_piece_and_color_at_position(target_pos);
+        let target_piece = board.get_piece_at_position(target_pos);
         let is_capture = match target_piece {
             Piece::Empty => false,
             _ => true,

@@ -94,6 +94,92 @@ impl Board {
     }
 
     #[inline(always)]
+    pub fn get_piece_at_position(&self, pos: Position) -> Piece {
+        if self.white_pawns.is_position_set(pos) {
+            return Piece::Pawn;
+        }
+        if self.white_knights.is_position_set(pos) {
+            return Piece::Knight;
+        }
+        if self.white_bishops.is_position_set(pos) {
+            return Piece::Bishop;
+        }
+        if self.white_rooks.is_position_set(pos) {
+            return Piece::Rook;
+        }
+        if self.white_queens.is_position_set(pos) {
+            return Piece::Queen;
+        }
+        if pos == Position(self.white_king.0) {
+            return Piece::King;
+        }
+
+        if self.black_pawns.is_position_set(pos) {
+            return Piece::Pawn;
+        }
+        if self.black_knights.is_position_set(pos) {
+            return Piece::Knight;
+        }
+        if self.black_bishops.is_position_set(pos) {
+            return Piece::Bishop;
+        }
+        if self.black_rooks.is_position_set(pos) {
+            return Piece::Rook;
+        }
+        if self.black_queens.is_position_set(pos) {
+            return Piece::Queen;
+        }
+        if pos == Position(self.black_king.0) {
+            return Piece::King;
+        }
+
+        Piece::Empty
+    }
+
+    #[inline(always)]
+    pub fn get_piece_idx_at_position(&self, pos: Position) -> usize {
+        if self.white_pawns.is_position_set(pos) {
+            return 0;
+        }
+        if self.white_knights.is_position_set(pos) {
+            return 1;
+        }
+        if self.white_bishops.is_position_set(pos) {
+            return 2;
+        }
+        if self.white_rooks.is_position_set(pos) {
+            return 3;
+        }
+        if self.white_queens.is_position_set(pos) {
+            return 4;
+        }
+        if pos == Position(self.white_king.0) {
+            return 5;
+        }
+
+        if self.black_pawns.is_position_set(pos) {
+            return 0;
+        }
+        if self.black_knights.is_position_set(pos) {
+            return 1;
+        }
+        if self.black_bishops.is_position_set(pos) {
+            return 2;
+        }
+        if self.black_rooks.is_position_set(pos) {
+            return 3;
+        }
+        if self.black_queens.is_position_set(pos) {
+            return 4;
+        }
+        if pos == Position(self.black_king.0) {
+            return 5;
+        }
+
+        0
+    }
+
+    #[inline(always)]
     pub fn get_positions_by_piece_color(&self, color: Color, piece: Piece) -> Bitboard {
         match color {
             Color::Black => match piece {

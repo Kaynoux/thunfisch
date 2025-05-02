@@ -1,14 +1,15 @@
 use crate::prelude::*;
 
+#[repr(usize)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Piece {
-    Empty,
-    Pawn,
-    Knight,
-    Bishop,
-    Rook,
-    Queen,
-    King,
+    Empty = 6,
+    Pawn = 0,
+    Knight = 1,
+    Bishop = 2,
+    Rook = 3,
+    Queen = 4,
+    King = 5,
 }
 
 impl Piece {
