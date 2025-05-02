@@ -152,9 +152,14 @@ impl Board {
         }
 
         let mg_score = mg[white] - mg[black];
-        let eg_score = eg[white] - mg[black];
+        let eg_score = eg[white] - eg[black];
         let gamephase = self.get_game_phase() as i32;
 
-        mg_score * (256 - gamephase) + eg_score * gamephase >> 8
+        let current_color_multiplier = match self.current_color {
+            Color::White => 1,
+            Color::Black => -1,
+        };
+
+        (mg_score * (256 - gamephase) + eg_score * gamephase >> 8) * current_color_multiplier
     }
 }

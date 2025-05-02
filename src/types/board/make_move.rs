@@ -267,7 +267,7 @@ impl Board {
         if start_color == Color::White {
             self.fullmove_counter += 1
         }
-        self.current_color = !start_color;
+        self.current_color = !self.current_color;
         self.recalculate_black_white_empty_pieces();
     }
 }

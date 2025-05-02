@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{prelude::*, pseudo_legal_move_generation};
 /// Each piece type gets its own 64bits where
 #[derive(Clone, Copy, Debug)]
 pub struct Board {
@@ -269,5 +269,13 @@ impl Board {
             self.white_king,
             self.black_king,
         ]
+    }
+
+    #[inline(always)]
+    pub fn is_in_check(&self) -> bool {
+        let opposite_attacks =
+            pseudo_legal_move_generation::get_all_attacks(self, !self.current_color);
+
+        (opposite_attacks & self.get_king_pos(self.current_color)) != Bitboard(0)
     }
 }

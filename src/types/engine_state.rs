@@ -37,6 +37,23 @@ impl EngineState {
                     iter.next();
                     self.board = Board::from_fen(START_POS);
                 }
+                "index" => {
+                    let fens =
+                        ["r3k2r/p1ppqpb1/Bn2pnp1/3PN3/1p2P3/2N2Q2/PPPB1PpP/R3K2R b KQ - 0 1"]; // 0. sebastian lague alpa beta test
+                    iter.next();
+                    if let Some(&idx_str) = iter.next() {
+                        match idx_str.parse::<usize>() {
+                            Ok(index_val) => {
+                                if index_val >= fens.len() {
+                                    eprintln!("Index to large, FEN not found");
+                                } else {
+                                    self.board = Board::from_fen(fens[index_val]);
+                                }
+                            }
+                            Err(err) => eprintln!("Could not parse index `{}`: {}", idx_str, err),
+                        }
+                    }
+                }
                 _ => {}
             }
         }
