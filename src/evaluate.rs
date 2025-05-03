@@ -131,7 +131,11 @@ impl Board {
     pub fn get_game_phase(&self) -> i32 {
         let mut phase = TOTAL;
         for color_piece in self.pieces.iter() {
-            phase -= GAMEPHASE_INC[*color_piece as usize];
+            let cp = *color_piece;
+            if cp == ColorPiece::Empty {
+                continue;
+            }
+            phase -= GAMEPHASE_INC[cp as usize];
         }
         phase = (phase * 256 + (TOTAL / 2)) / TOTAL;
         phase

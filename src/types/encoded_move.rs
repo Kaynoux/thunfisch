@@ -7,20 +7,20 @@ use crate::prelude::*;
 #[rustfmt::skip]
 pub mod move_flags {
     pub const QUIET:                u16 = 0b0000000000000000; // 0
-    pub const DOUBLE_MOVE:          u16 = 0b0000000000000001; // 1
-    pub const KING_CASTLE:          u16 = 0b0000000000000010; // 2
-    pub const QUEEN_CASTLE:         u16 = 0b0000000000000011; // 3
-    pub const CAPTURE:              u16 = 0b0000000000000100; // 4
-    pub const EP_CAPTURE:           u16 = 0b0000000000000101; // 5
+    pub const DOUBLE_MOVE:          u16 = 0b0001000000000000; // 1
+    pub const KING_CASTLE:          u16 = 0b0010000000000000; // 2
+    pub const QUEEN_CASTLE:         u16 = 0b0011000000000000; // 3
+    pub const CAPTURE:              u16 = 0b0100000000000000; // 4
+    pub const EP_CAPTURE:           u16 = 0b0101000000000000; // 5
     // 6,7 unused
-    pub const KNIGHT_PROMO:         u16 = 0b0000000000001000; // 8
-    pub const BISHOP_PROMO:         u16 = 0b0000000000001001; // 9
-    pub const ROOK_PROMO:           u16 = 0b0000000000001010; // 10
-    pub const QUEEN_PROMO:          u16 = 0b0000000000001011; // 11
-    pub const KNIGHT_PROMO_CAPTURE: u16 = 0b0000000000001100; // 12
-    pub const BISHOP_PROMO_CAPTURE: u16 = 0b0000000000001101; // 13
-    pub const ROOK_PROMO_CAPTURE:   u16 = 0b0000000000001110; // 14
-    pub const QUEEN_PROMO_CAPTURE:  u16 = 0b0000000000001111; // 15
+    pub const KNIGHT_PROMO:         u16 = 0b1000000000000000; // 8
+    pub const BISHOP_PROMO:         u16 = 0b1001000000000000; // 9
+    pub const ROOK_PROMO:           u16 = 0b1010000000000000; // 10
+    pub const QUEEN_PROMO:          u16 = 0b1011000000000000; // 11
+    pub const KNIGHT_PROMO_CAPTURE: u16 = 0b1100000000000000; // 12
+    pub const BISHOP_PROMO_CAPTURE: u16 = 0b1101000000000000; // 13
+    pub const ROOK_PROMO_CAPTURE:   u16 = 0b1110000000000000; // 14
+    pub const QUEEN_PROMO_CAPTURE:  u16 = 0b1111000000000000; // 15
 }
 use move_flags::*;
 
@@ -39,8 +39,8 @@ impl EncodedMove {
     }
 
     pub const fn decode(self) -> DecodedMove {
-        let from = IndexPosition((self.0 & 0b1111110000000000) as usize);
-        let to = IndexPosition((self.0 & 0b0000001111110000) as usize);
+        let from = IndexPosition((self.0 & 0b0000000000111111) as usize);
+        let to = IndexPosition(((self.0  & 0b0000111111000000) >> 6) as usize);
         let (
             is_capture,
             is_double_move,

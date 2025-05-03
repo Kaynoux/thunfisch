@@ -11,6 +11,14 @@ impl Board {
         let from_piece = self.pieces[from_idx.0];
         let to_piece = self.pieces[to_idx.0];
 
+        // Remove start piece from bitboard
+        self.bbs[from_piece as usize] &= !from_pos;
+        self.pieces[from_idx.0] = ColorPiece::Empty;
+
+        // Remove target piece from bitboard
+        self.bbs[to_piece as usize] &= !to_pos;
+        self.pieces[to_idx.0] = ColorPiece::Empty;
+
         // Revoking castling rights
         const WHITE_ROOK_QUEEN_POS: IndexPosition = IndexPosition(0);
         const WHITE_ROOK_KING_POS: IndexPosition = IndexPosition(7);
@@ -61,6 +69,7 @@ impl Board {
         const BLACK_KING_CASTLE_POS: Position = IndexPosition(58).to_position();
         const BLACK_QUEEN_CASTLE_POS: Position = IndexPosition(62).to_position();
 
+        // !!! REMOVE AND ADD ROOK IN ARRAY
         if mv.is_queen_castle && current_color == Color::White {
             let inverse_rook_position = !IndexPosition(0).to_position();
             self.bbs[ColorPiece::WhiteRook as usize] &= inverse_rook_position;
@@ -89,10 +98,12 @@ impl Board {
                 Color::White => {
                     let pawn_mask = !to_pos.get_offset_pos(0, -1);
                     self.bbs[ColorPiece::BlackPawn as usize] &= pawn_mask;
+                    // !!!REMOVE PAWN ON ARRAY
                 }
                 Color::Black => {
                     let pawn_mask = !to_pos.get_offset_pos(0, 1);
                     self.bbs[ColorPiece::WhitePawn as usize] &= pawn_mask;
+                    // !!!REMOVE PAWN ON ARRAY
                 }
             }
         }
@@ -109,18 +120,16 @@ impl Board {
             self.en_passant_target = None;
         }
 
-        // Remove start piece from bitboard
-        self.bbs[from_piece as usize] &= !from_pos;
-
-        // Remove target piece from bitboard
-        self.bbs[to_piece as usize] &= !to_pos;
-
         // Add the start piece to the target position
         match (mv.promotion, current_color) {
             (None, _) => {
                 self.bbs[from_piece as usize] |= to_pos;
+                self.pieces[to_idx.0] = from_piece;
             }
-            (Some(piece), color) => self.bbs[(piece as usize) * 2 + (color as usize)] |= to_pos,
+            (Some(piece), color) => {
+                self.bbs[(piece as usize) * 2 + (color as usize)] |= to_pos;
+                self.pieces[to_idx.0] = piece.to_color_piece(color);
+            }
         }
 
         if current_color == Color::White {

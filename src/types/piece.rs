@@ -3,13 +3,13 @@ use crate::prelude::*;
 #[repr(usize)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Piece {
-    Empty = 6,
     Pawn = 0,
     Knight = 1,
     Bishop = 2,
     Rook = 3,
     Queen = 4,
     King = 5,
+    Empty = 6,
 }
 
 impl Piece {
@@ -72,5 +72,9 @@ impl Piece {
             Piece::Queen => 'q',
             Piece::King => 'k',
         }
+    }
+
+    pub fn to_color_piece(self, color: Color) -> ColorPiece {
+        ColorPiece::from_idx((self as usize) * 2 + (color as usize))
     }
 }
