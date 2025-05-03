@@ -1,4 +1,4 @@
 pub use crate::types::{
-    bitboard::Bitboard, board::board::Board, chess_move::ChessMove, color::Color,
-    engine_state::EngineState, piece::Piece, position::Position,
+    bitboard::Bitboard, board::board::Board, color::Color, color_piece::ColorPiece,
+    engine_state::EngineState, old_chess_move::OldChessMove, piece::Piece, position::Position,
 };

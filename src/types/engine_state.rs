@@ -64,7 +64,7 @@ impl EngineState {
 
             // makes every move in order the perfectly recreate the input
             for &mv_str in moves.iter() {
-                let mv = ChessMove::from_coords(mv_str.to_string(), &self.board);
+                let mv = OldChessMove::from_coords(mv_str.to_string(), &self.board);
                 self.board.make_move(&mv);
             }
         }

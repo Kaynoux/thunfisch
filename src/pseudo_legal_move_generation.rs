@@ -2,7 +2,7 @@ use crate::position_generation::*;
 use crate::prelude::*;
 
 #[inline(always)]
-pub fn get_all_moves(moves: &mut Vec<ChessMove>, board: &Board, color: Color) -> Bitboard {
+pub fn get_all_moves(moves: &mut Vec<OldChessMove>, board: &Board, color: Color) -> Bitboard {
     let mut moves_bitboard = Bitboard(0);
     //let mut moves: Vec<ChessMove> = Vec::with_capacity(256);
 
@@ -41,7 +41,7 @@ pub fn get_moves_for_piece_type(
     board: &Board,
     piece: Piece,
     color: Color,
-    moves: &mut Vec<ChessMove>,
+    moves: &mut Vec<OldChessMove>,
     f: fn(board: &Board, pos: Position, color: Color) -> Bitboard,
 ) -> Bitboard {
     let mut piece_positions = board.get_positions_by_piece_color(color, piece);
@@ -60,7 +60,7 @@ pub fn get_moves_for_piece_type(
                 Piece::Empty => false,
                 _ => true,
             };
-            moves.push(ChessMove {
+            moves.push(OldChessMove {
                 from: current_pos,
                 to: target_pos,
                 is_capture: is_capture,
@@ -77,7 +77,7 @@ pub fn get_moves_for_piece_type(
 }
 
 #[inline(always)]
-pub fn get_pawn_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) -> Bitboard {
+pub fn get_pawn_moves(board: &Board, color: Color, moves: &mut Vec<OldChessMove>) -> Bitboard {
     let mut target_positions = Bitboard(0);
     let mut pawn_positions = board.get_positions_by_piece_color(color, Piece::Pawn);
     while pawn_positions != Bitboard(0) {
@@ -100,7 +100,7 @@ pub fn get_pawn_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) -
 
             if ty == 0 || ty == 7 {
                 let promotion_moves = [
-                    ChessMove {
+                    OldChessMove {
                         from: current_pos,
                         to: target_pos,
                         is_capture: is_capture,
@@ -111,7 +111,7 @@ pub fn get_pawn_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) -
                         promotion: Piece::Queen,
                         captured: target_piece,
                     },
-                    ChessMove {
+                    OldChessMove {
                         from: current_pos,
                         to: target_pos,
                         is_capture: is_capture,
@@ -122,7 +122,7 @@ pub fn get_pawn_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) -
                         promotion: Piece::Rook,
                         captured: target_piece,
                     },
-                    ChessMove {
+                    OldChessMove {
                         from: current_pos,
                         to: target_pos,
                         is_capture: is_capture,
@@ -133,7 +133,7 @@ pub fn get_pawn_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) -
                         promotion: Piece::Bishop,
                         captured: target_piece,
                     },
-                    ChessMove {
+                    OldChessMove {
                         from: current_pos,
                         to: target_pos,
                         is_capture: is_capture,
@@ -147,7 +147,7 @@ pub fn get_pawn_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) -
                 ];
                 moves.extend_from_slice(&promotion_moves);
             } else {
-                moves.push(ChessMove {
+                moves.push(OldChessMove {
                     from: current_pos,
                     to: target_pos,
                     is_capture: is_capture,
@@ -170,7 +170,7 @@ pub fn get_king_moves(
     board: &Board,
     current_pos: Position,
     color: Color,
-    moves: &mut Vec<ChessMove>,
+    moves: &mut Vec<OldChessMove>,
     f: fn(board: &Board, pos: Position, color: Color) -> Bitboard,
 ) -> Bitboard {
     let mut target_positions = f(board, current_pos, color);
@@ -181,7 +181,7 @@ pub fn get_king_moves(
             Piece::Empty => false,
             _ => true,
         };
-        moves.push(ChessMove {
+        moves.push(OldChessMove {
             from: current_pos,
             to: target_pos,
             is_capture: is_capture,
@@ -196,12 +196,12 @@ pub fn get_king_moves(
     target_positions
 }
 
-pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) {
+pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<OldChessMove>) {
     match color {
         Color::White => {
             let mask_white_left = Bitboard(1u64 << 1 | 1u64 << 2 | 1u64 << 3);
             if board.white_castle_left && board.empty_pieces & mask_white_left == mask_white_left {
-                let mv = ChessMove {
+                let mv = OldChessMove {
                     from: Position::from_idx(4),
                     to: Position::from_idx(2),
                     is_capture: false,
@@ -217,7 +217,7 @@ pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>)
             let mask_white_right = Bitboard(1u64 << 5 | 1u64 << 6);
             if board.white_castle_right && board.empty_pieces & mask_white_right == mask_white_right
             {
-                let mv = ChessMove {
+                let mv = OldChessMove {
                     from: Position::from_idx(4),
                     to: Position::from_idx(6),
                     is_capture: false,
@@ -234,7 +234,7 @@ pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>)
         Color::Black => {
             let mask_black_left = Bitboard(1u64 << 57 | 1u64 << 58 | 1u64 << 59);
             if board.black_castle_left && board.empty_pieces & mask_black_left == mask_black_left {
-                let mv = ChessMove {
+                let mv = OldChessMove {
                     from: Position::from_idx(60),
                     to: Position::from_idx(58),
                     is_capture: false,
@@ -250,7 +250,7 @@ pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>)
             let mask_black_right = Bitboard(1u64 << 61 | 1u64 << 62);
             if board.black_castle_right && board.empty_pieces & mask_black_right == mask_black_right
             {
-                let mv = ChessMove {
+                let mv = OldChessMove {
                     from: Position::from_idx(60),
                     to: Position::from_idx(62),
                     is_capture: false,
@@ -268,7 +268,7 @@ pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>)
 }
 
 #[inline(always)]
-pub fn get_en_passant_moves(board: &Board, color: Color, moves: &mut Vec<ChessMove>) {
+pub fn get_en_passant_moves(board: &Board, color: Color, moves: &mut Vec<OldChessMove>) {
     let ep_target = match board.en_passant_target {
         Some(pos) => pos,
         None => return,
@@ -279,7 +279,7 @@ pub fn get_en_passant_moves(board: &Board, color: Color, moves: &mut Vec<ChessMo
             let position_left = ep_target.get_offset_pos(-1, -1);
             let position_right = ep_target.get_offset_pos(1, -1);
             if board.white_pawns.is_position_set(position_left) {
-                let mv = ChessMove {
+                let mv = OldChessMove {
                     from: position_left,
                     to: ep_target,
                     is_capture: true,
@@ -293,7 +293,7 @@ pub fn get_en_passant_moves(board: &Board, color: Color, moves: &mut Vec<ChessMo
                 moves.push(mv);
             }
             if board.white_pawns.is_position_set(position_right) {
-                let mv = ChessMove {
+                let mv = OldChessMove {
                     from: position_right,
                     to: ep_target,
                     is_capture: true,
@@ -311,7 +311,7 @@ pub fn get_en_passant_moves(board: &Board, color: Color, moves: &mut Vec<ChessMo
             let position_left = ep_target.get_offset_pos(-1, 1);
             let position_right = ep_target.get_offset_pos(1, 1);
             if board.black_pawns.is_position_set(position_left) {
-                let mv = ChessMove {
+                let mv = OldChessMove {
                     from: position_left,
                     to: ep_target,
                     is_capture: true,
@@ -325,7 +325,7 @@ pub fn get_en_passant_moves(board: &Board, color: Color, moves: &mut Vec<ChessMo
                 moves.push(mv);
             }
             if board.black_pawns.is_position_set(position_right) {
-                let mv = ChessMove {
+                let mv = OldChessMove {
                     from: position_right,
                     to: ep_target,
                     is_capture: true,

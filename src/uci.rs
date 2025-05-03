@@ -90,7 +90,7 @@ pub fn handle_uci_communication() {
             Some("fen") => println!("Current Fen: {}", state.board.generate_fen()),
             Some("draw") => debug::print_board(&state.board, None),
             Some("moves") => {
-                debug::print_board(&state.board, Some(&state.board.get_legal_moves().1))
+                debug::print_board(&state.board, Some(&state.board.get_legal_moves(false)))
             }
             Some("eval") => loop {},
             Some(cmd) => {

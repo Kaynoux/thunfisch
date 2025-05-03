@@ -5,7 +5,7 @@ use num_format::{Locale, ToFormattedString};
 use rayon::prelude::*;
 use std::time::Instant;
 
-pub fn print_board(board: &Board, moves: Option<&[ChessMove]>) {
+pub fn print_board(board: &Board, moves: Option<&[OldChessMove]>) {
     let moves_slice = moves.unwrap_or(&[]);
     let char_board: [(char, &str); 64] = get_char_board(board, moves_slice);
     let mut y: i32 = 7;
@@ -38,7 +38,7 @@ pub fn print_board(board: &Board, moves: Option<&[ChessMove]>) {
     println!("-------------------");
 }
 
-fn get_char_board(board: &Board, moves: &[ChessMove]) -> [(char, &'static str); 64] {
+fn get_char_board(board: &Board, moves: &[OldChessMove]) -> [(char, &'static str); 64] {
     let mut char_board = [(' ', "white"); 64];
     for y in 0usize..=7usize {
         for x in 0usize..=7usize {
@@ -59,7 +59,7 @@ fn get_char_board(board: &Board, moves: &[ChessMove]) -> [(char, &'static str); 
     char_board
 }
 
-pub fn print_moves(board: &Board, moves: &Vec<ChessMove>) {
+pub fn print_moves(board: &Board, moves: &Vec<OldChessMove>) {
     println!("Potential Moves:");
     let (mut prev_pos, mut prev_is_castle, mut prev_is_promotion, mut prev_is_en_passant) =
         (Position(0), false, false, false);
@@ -105,7 +105,7 @@ pub fn r_perft(board: &Board, depth: usize) -> usize {
         return 1;
     }
     let mut nodes = 0;
-    let moves = board.get_legal_moves().1;
+    let moves = board.get_legal_moves(false);
     for mv in moves {
         let mut b2 = board.clone();
         b2.make_move(&mv);
@@ -127,7 +127,7 @@ pub fn r_detailed_perft(
         return 1;
     }
     let mut nodes = 0;
-    let moves = board.get_legal_moves().1;
+    let moves = board.get_legal_moves(false);
     for mv in moves {
         let mut b2 = board.clone();
         b2.make_move(&mv);
@@ -173,7 +173,7 @@ pub fn debug_perft(board: &Board, depth: usize) {
     let start = Instant::now();
     println!("Perft divide depth {}:", depth);
     let mut total_nodes = 0;
-    let moves = board.get_legal_moves().1;
+    let moves = board.get_legal_moves(false);
     for mv in &moves {
         let mut b2 = board.clone();
         b2.make_move(&mv);
@@ -269,8 +269,7 @@ pub fn r_perft_rayon(board: &Board, depth: usize) -> usize {
         return 1;
     }
     board
-        .get_legal_moves()
-        .1
+        .get_legal_moves(false)
         .par_iter()
         .map(|mv| {
             let mut b2 = board.clone();

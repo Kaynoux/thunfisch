@@ -1,7 +1,7 @@
 use crate::prelude::*;
 
 impl Board {
-    pub fn make_move(&mut self, mv: &ChessMove) {
+    pub fn make_move(&mut self, mv: &OldChessMove) {
         let start_pos = mv.from;
         let target_pos = mv.to;
 

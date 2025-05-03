@@ -2,20 +2,22 @@ use crate::prelude::*;
 use crate::pseudo_legal_move_generation;
 
 impl Board {
-    pub fn get_legal_moves(&self) -> (Bitboard, Vec<ChessMove>) {
+    pub fn get_legal_moves(&self, only_captures: bool) -> Vec<OldChessMove> {
         let color = self.current_color;
         let mut moves = Vec::with_capacity(128);
-        let mut moves_bitboard =
-            pseudo_legal_move_generation::get_all_moves(&mut moves, self, color);
+        let _ = pseudo_legal_move_generation::get_all_moves(&mut moves, self, color);
 
         // only retain moves where king is not in check after being in check and follows all rules when castling
         moves.retain(|mv| {
+            if only_captures && !mv.is_capture {
+                return false;
+            }
+
             let mut bc = self.clone();
 
             let enemy_king_pos = self.get_king_pos(!color);
             if mv.to == enemy_king_pos {
                 // winning move is invalid
-                moves_bitboard &= !mv.to;
                 return false;
             }
 
@@ -29,7 +31,6 @@ impl Board {
 
                 // castling not allowed if king is in check before castling
                 if counter_positions & king_pos != Bitboard(0) {
-                    moves_bitboard &= !mv.to;
                     return false;
                 };
 
@@ -45,28 +46,24 @@ impl Board {
                     WHITE_CASTLE_LEFT_MOVE => {
                         const MASK_WHITE_LEFT: Bitboard = Bitboard::from_idx([2usize, 3usize]);
                         if counter_positions & MASK_WHITE_LEFT != Bitboard(0) {
-                            moves_bitboard &= !mv.to;
                             return false;
                         }
                     }
                     WHITE_CASTLE_RIGHT_MOVE => {
                         const MASK_WHITE_RIGHT: Bitboard = Bitboard::from_idx([5usize, 6usize]);
                         if counter_positions & MASK_WHITE_RIGHT != Bitboard(0) {
-                            moves_bitboard &= !mv.to;
                             return false;
                         }
                     }
                     BLACK_CASTLE_LEFT_MOVE => {
                         const MASK_BLACK_LEFT: Bitboard = Bitboard::from_idx([58usize, 59usize]);
                         if counter_positions & MASK_BLACK_LEFT != Bitboard(0) {
-                            moves_bitboard &= !mv.to;
                             return false;
                         }
                     }
                     BLACK_CASTLE_RIGHT_MOVE => {
                         const MASK_BLACK_RIGHT: Bitboard = Bitboard::from_idx([61usize, 62usize]);
                         if counter_positions & MASK_BLACK_RIGHT != Bitboard(0) {
-                            moves_bitboard &= !mv.to;
                             return false;
                         }
                     }
@@ -88,13 +85,12 @@ impl Board {
 
             // Keep move if not in check and throw away if it is
             if counter_positions_after_move & king_pos_after_move != Bitboard(0) {
-                moves_bitboard &= !mv.to;
                 return false;
             }
 
             true
         });
 
-        (moves_bitboard, moves)
+        moves
     }
 }
