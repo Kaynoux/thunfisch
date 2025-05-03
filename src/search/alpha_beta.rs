@@ -18,7 +18,7 @@ pub fn alpha_beta(
     beta: i32,
     stop: &Arc<AtomicBool>,
     search_info: &mut SearchInfo,
-) -> (Option<OldChessMove>, i32) {
+) -> (Option<EncodedMove>, i32) {
     search_info.total_nodes += 1;
     if depth == 0 {
         return (
@@ -42,7 +42,7 @@ pub fn alpha_beta(
 
     // set the best evaluation very low to begin with
     let mut best_eval = i32::MIN + 1;
-    let mut best_move: Option<OldChessMove> = None;
+    let mut best_move: Option<EncodedMove> = None;
 
     let mut moves = board.get_legal_moves(false);
 
@@ -59,7 +59,7 @@ pub fn alpha_beta(
 
     for mv in moves {
         let mut bc = board.clone();
-        bc.make_move(&mv);
+        bc.make_move(&mv.decode());
         let eval = -alpha_beta(&bc, depth - 1, -beta, -alpha, stop, search_info).1;
         if eval > best_eval {
             best_eval = eval;
@@ -111,7 +111,7 @@ pub fn quiescence_search(
 
     for mv in capture_moves {
         let mut bc = board.clone();
-        bc.make_move(&mv);
+        bc.make_move(&mv.decode());
         let score = -quiescence_search(board, -beta, -alpha, depth - 1, stop, search_info);
 
         if score >= beta {

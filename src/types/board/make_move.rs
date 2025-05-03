@@ -1,93 +1,98 @@
 use crate::prelude::*;
 
 impl Board {
-    pub fn make_move(&mut self, mv: &OldChessMove) {
-        let start_pos = mv.from;
-        let target_pos = mv.to;
+    pub fn make_move(&mut self, mv: &DecodedMove) {
+        let current_color = self.current_color;
+        let from_idx = mv.from;
+        let to_idx = mv.to;
+        let from_pos = from_idx.to_position();
+        let to_pos = to_idx.to_position();
 
-        let (start_piece, start_color) = self.get_piece_and_color_at_position(start_pos);
-        let (target_piece, target_color) = self.get_piece_and_color_at_position(target_pos);
+        let from_piece = self.pieces[from_idx.0];
+        let to_piece = self.pieces[to_idx.0];
 
         // Revoking castling rights
-        const WHITE_ROOK_LEFT_POS: Position = Position::from_idx(0);
-        const WHITE_ROOK_RIGHT_POS: Position = Position::from_idx(7);
-        const BLACK_ROOK_LEFT_POS: Position = Position::from_idx(56);
-        const BLACK_ROOK_RIGHT_POS: Position = Position::from_idx(63);
-        const WHITE_KING_POS: Position = Position::from_idx(4);
-        const BLACK_KING_POS: Position = Position::from_idx(60);
+        const WHITE_ROOK_QUEEN_POS: IndexPosition = IndexPosition(0);
+        const WHITE_ROOK_KING_POS: IndexPosition = IndexPosition(7);
+        const BLACK_ROOK_KING_POS: IndexPosition = IndexPosition(56);
+        const BLACK_ROOK_QUEEN_POS: IndexPosition = IndexPosition(63);
+        const WHITE_KING_POS: IndexPosition = IndexPosition(4);
+        const BLACK_KING_POS: IndexPosition = IndexPosition(60);
 
-        match (start_piece, start_pos) {
-            (Piece::Rook, WHITE_ROOK_LEFT_POS) => self.white_castle_left = false,
-            (Piece::Rook, WHITE_ROOK_RIGHT_POS) => self.white_castle_right = false,
-            (Piece::Rook, BLACK_ROOK_LEFT_POS) => self.black_castle_left = false,
-            (Piece::Rook, BLACK_ROOK_RIGHT_POS) => self.black_castle_right = false,
-            (Piece::King, WHITE_KING_POS) => {
-                self.white_castle_left = false;
-                self.white_castle_right = false;
-            }
-            (Piece::King, BLACK_KING_POS) => {
-                self.black_castle_left = false;
-                self.black_castle_right = false;
-            }
-            (_, _) => {}
+        // Revoke castling rights if
+        // - Rook on the relevant side has moved
+        // - King has moved
+        // - Rook on the relevant side was captured
+        if self.white_queen_castle
+            && (from_idx == WHITE_ROOK_QUEEN_POS
+                || from_idx == WHITE_KING_POS
+                || to_idx == WHITE_ROOK_QUEEN_POS)
+        {
+            self.white_queen_castle = false;
         }
 
-        // Also revoke castle rights if rook is captured
-        if mv.is_capture && mv.captured == Piece::Rook {
-            match target_pos {
-                WHITE_ROOK_LEFT_POS => self.white_castle_left = false,
-                WHITE_ROOK_RIGHT_POS => self.white_castle_right = false,
-                BLACK_ROOK_LEFT_POS => self.black_castle_left = false,
-                BLACK_ROOK_RIGHT_POS => self.black_castle_right = false,
-                _ => {}
-            }
+        if self.white_king_castle
+            && (from_idx == WHITE_ROOK_KING_POS
+                || from_idx == WHITE_KING_POS
+                || to_idx == WHITE_ROOK_KING_POS)
+        {
+            self.white_king_castle = false;
+        }
+
+        if self.black_queen_castle
+            && (from_idx == BLACK_ROOK_QUEEN_POS
+                || from_idx == BLACK_KING_POS
+                || to_idx == BLACK_ROOK_QUEEN_POS)
+        {
+            self.black_queen_castle = false;
+        }
+
+        if self.black_king_castle
+            && (from_idx == BLACK_ROOK_KING_POS
+                || from_idx == BLACK_KING_POS
+                || to_idx == BLACK_ROOK_KING_POS)
+        {
+            self.black_king_castle = false;
         }
 
         // Handling castling
-        const WHITE_CASTLE_LEFT_POS: Position = Position::from_idx(2);
-        const WHITE_CASTLE_RIGHT_POS: Position = Position::from_idx(6);
-        const BLACK_CASTLE_LEFT_POS: Position = Position::from_idx(58);
-        const BLACK_CASTLE_RIGHT_POS: Position = Position::from_idx(62);
-        if mv.is_castle {
-            match mv.to {
-                WHITE_CASTLE_LEFT_POS => {
-                    let inverse_rook_position = !Position::from_idx(0);
-                    self.white_rooks &= inverse_rook_position;
-                    let rook_target_position = Position::from_idx(3);
-                    self.white_rooks |= rook_target_position;
-                }
-                WHITE_CASTLE_RIGHT_POS => {
-                    let inverse_rook_position = !Position::from_idx(7);
-                    self.white_rooks &= inverse_rook_position;
-                    let rook_target_position = Position::from_idx(5);
-                    self.white_rooks |= rook_target_position;
-                }
-                BLACK_CASTLE_LEFT_POS => {
-                    let inverse_rook_position = !Position::from_idx(56);
-                    self.black_rooks &= inverse_rook_position;
-                    let rook_target_position = Position::from_idx(59);
-                    self.black_rooks |= rook_target_position;
-                }
-                BLACK_CASTLE_RIGHT_POS => {
-                    let inverse_rook_position = !Position::from_idx(63);
-                    self.black_rooks &= inverse_rook_position;
-                    let rook_target_position = Position::from_idx(61);
-                    self.black_rooks |= rook_target_position;
-                }
-                _ => {}
-            }
+        const WHITE_QUEEN_CASTLE_POS: Position = IndexPosition(2).to_position();
+        const WHITE_KING_CASTLE_POS: Position = IndexPosition(6).to_position();
+        const BLACK_KING_CASTLE_POS: Position = IndexPosition(58).to_position();
+        const BLACK_QUEEN_CASTLE_POS: Position = IndexPosition(62).to_position();
+
+        if mv.is_queen_castle && current_color == Color::White {
+            let inverse_rook_position = !IndexPosition(0).to_position();
+            self.bbs[ColorPiece::WhiteRook as usize] &= inverse_rook_position;
+            let rook_target_position = IndexPosition(3).to_position();
+            self.bbs[ColorPiece::WhiteRook as usize] |= rook_target_position;
+        } else if mv.is_king_castle && current_color == Color::White {
+            let inverse_rook_position = !IndexPosition(7).to_position();
+            self.bbs[ColorPiece::WhiteRook as usize] &= inverse_rook_position;
+            let rook_target_position = IndexPosition(5).to_position();
+            self.bbs[ColorPiece::WhiteRook as usize] |= rook_target_position;
+        } else if mv.is_queen_castle && current_color == Color::Black {
+            let inverse_rook_position = !IndexPosition(56).to_position();
+            self.bbs[ColorPiece::BlackRook as usize] &= inverse_rook_position;
+            let rook_target_position = IndexPosition(59).to_position();
+            self.bbs[ColorPiece::BlackRook as usize] |= rook_target_position;
+        } else if mv.is_king_castle && current_color == Color::Black {
+            let inverse_rook_position = !IndexPosition(63).to_position();
+            self.bbs[ColorPiece::BlackRook as usize] &= inverse_rook_position;
+            let rook_target_position = IndexPosition(61).to_position();
+            self.bbs[ColorPiece::BlackRook as usize] |= rook_target_position;
         }
 
         // Remove pawn if En-passant happened
-        if mv.is_en_passant {
-            match start_color {
+        if mv.is_ep_capture {
+            match current_color {
                 Color::White => {
-                    let pawn_mask = !mv.to.get_offset_pos(0, -1);
-                    self.black_pawns &= pawn_mask;
+                    let pawn_mask = !to_pos.get_offset_pos(0, -1);
+                    self.bbs[ColorPiece::BlackPawn as usize] &= pawn_mask;
                 }
                 Color::Black => {
-                    let pawn_mask = !mv.to.get_offset_pos(0, 1);
-                    self.white_pawns &= pawn_mask;
+                    let pawn_mask = !to_pos.get_offset_pos(0, 1);
+                    self.bbs[ColorPiece::WhitePawn as usize] &= pawn_mask;
                 }
             }
         }
@@ -95,179 +100,33 @@ impl Board {
         // Set En-passant target
 
         if mv.is_double_move {
-            let offset_dir: isize = match start_color {
+            let offset_dir: isize = match current_color {
                 Color::White => -1,
                 Color::Black => 1,
             };
-            self.en_passant_target = Some(target_pos.get_offset_pos(0, offset_dir));
+            self.en_passant_target = Some(to_pos.get_offset_pos(0, offset_dir));
         } else {
             self.en_passant_target = None;
         }
 
         // Remove start piece from bitboard
-        let start_mask = !start_pos;
-        match start_color {
-            Color::Black => match start_piece {
-                Piece::Empty => self.empty_pieces &= start_mask,
-                Piece::Pawn => {
-                    self.black_pawns &= start_mask;
-                }
-                Piece::Knight => {
-                    self.black_knights &= start_mask;
-                }
-                Piece::Bishop => {
-                    self.black_bishops &= start_mask;
-                }
-                Piece::Rook => {
-                    self.black_rooks &= start_mask;
-                }
-                Piece::Queen => {
-                    self.black_queens &= start_mask;
-                }
-                Piece::King => {
-                    self.black_king &= start_mask;
-                }
-            },
-            Color::White => match start_piece {
-                Piece::Empty => self.empty_pieces &= start_mask,
-                Piece::Pawn => {
-                    self.white_pawns &= start_mask;
-                }
-                Piece::Knight => {
-                    self.white_knights &= start_mask;
-                }
-                Piece::Bishop => {
-                    self.white_bishops &= start_mask;
-                }
-                Piece::Rook => {
-                    self.white_rooks &= start_mask;
-                }
-                Piece::Queen => {
-                    self.white_queens &= start_mask;
-                }
-                Piece::King => {
-                    self.white_king &= start_mask;
-                }
-            },
-        }
+        self.bbs[from_piece as usize] &= !from_pos;
 
         // Remove target piece from bitboard
-        let target_mask = !target_pos;
-        match target_color {
-            Color::Black => match target_piece {
-                Piece::Empty => self.empty_pieces &= target_mask,
-                Piece::Pawn => {
-                    self.black_pawns &= target_mask;
-                }
-                Piece::Knight => {
-                    self.black_knights &= target_mask;
-                }
-                Piece::Bishop => {
-                    self.black_bishops &= target_mask;
-                }
-                Piece::Rook => {
-                    self.black_rooks &= target_mask;
-                }
-                Piece::Queen => {
-                    self.black_queens &= target_mask;
-                }
-                Piece::King => {
-                    self.black_king &= target_mask;
-                }
-            },
-            Color::White => match target_piece {
-                Piece::Empty => self.empty_pieces &= target_mask,
-                Piece::Pawn => {
-                    self.white_pawns &= target_mask;
-                }
-                Piece::Knight => {
-                    self.white_knights &= target_mask;
-                }
-                Piece::Bishop => {
-                    self.white_bishops &= target_mask;
-                }
-                Piece::Rook => {
-                    self.white_rooks &= target_mask;
-                }
-                Piece::Queen => {
-                    self.white_queens &= target_mask;
-                }
-                Piece::King => {
-                    self.white_king &= target_mask;
-                }
-            },
-        }
+        self.bbs[to_piece as usize] &= !to_pos;
 
         // Add the start piece to the target position
-        match start_color {
-            Color::Black => match start_piece {
-                Piece::Empty => {}
-                Piece::Pawn => {
-                    if mv.is_promotion {
-                        match mv.promotion {
-                            Piece::Knight => self.black_knights |= target_pos,
-                            Piece::Bishop => self.black_bishops |= target_pos,
-                            Piece::Rook => self.black_rooks |= target_pos,
-                            Piece::Queen => self.black_queens |= target_pos,
-                            _ => {}
-                        }
-                    } else {
-                        self.black_pawns |= target_pos;
-                    }
-                }
-                Piece::Knight => {
-                    self.black_knights |= target_pos;
-                }
-                Piece::Bishop => {
-                    self.black_bishops |= target_pos;
-                }
-                Piece::Rook => {
-                    self.black_rooks |= target_pos;
-                }
-                Piece::Queen => {
-                    self.black_queens |= target_pos;
-                }
-                Piece::King => {
-                    self.black_king |= target_pos;
-                }
-            },
-            Color::White => match start_piece {
-                Piece::Empty => {}
-                Piece::Pawn => {
-                    if mv.is_promotion {
-                        match mv.promotion {
-                            Piece::Knight => self.white_knights |= target_pos,
-                            Piece::Bishop => self.white_bishops |= target_pos,
-                            Piece::Rook => self.white_rooks |= target_pos,
-                            Piece::Queen => self.white_queens |= target_pos,
-                            _ => {}
-                        }
-                    } else {
-                        self.white_pawns |= target_pos;
-                    }
-                }
-                Piece::Knight => {
-                    self.white_knights |= target_pos;
-                }
-                Piece::Bishop => {
-                    self.white_bishops |= target_pos;
-                }
-                Piece::Rook => {
-                    self.white_rooks |= target_pos;
-                }
-                Piece::Queen => {
-                    self.white_queens |= target_pos;
-                }
-                Piece::King => {
-                    self.white_king |= target_pos;
-                }
-            },
+        match (mv.promotion, current_color) {
+            (None, _) => {
+                self.bbs[from_piece as usize] |= to_pos;
+            }
+            (Some(piece), color) => self.bbs[(piece as usize) * 2 + (color as usize)] |= to_pos,
         }
 
-        if start_color == Color::White {
+        if current_color == Color::White {
             self.fullmove_counter += 1
         }
-        self.current_color = !self.current_color;
+        self.current_color = !current_color;
         self.recalculate_black_white_empty_pieces();
     }
 }

@@ -5,11 +5,12 @@ pub struct Board {
     pub white_pieces: Bitboard,
     pub black_pieces: Bitboard,
     pub empty_pieces: Bitboard,
-    pub bbs: [Bitboard; 12],
-    pub black_castle_left: bool,
-    pub black_castle_right: bool,
-    pub white_castle_left: bool,
-    pub white_castle_right: bool,
+    pub bbs: [Bitboard; 13],
+    pub pieces: [ColorPiece; 64],
+    pub black_king_castle: bool,
+    pub black_queen_castle: bool,
+    pub white_queen_castle: bool,
+    pub white_king_castle: bool,
     pub en_passant_target: Option<Position>,
     pub current_color: Color,
     pub halfmove_clock: isize,
@@ -40,128 +41,92 @@ impl Board {
 
     #[inline(always)]
     pub fn get_piece_and_color_at_position(&self, pos: Position) -> (Piece, Color) {
-        if self.white_pawns.is_position_set(pos) {
-            return (Piece::Pawn, Color::White);
+        if self.bbs[ColorPiece::WhitePawn as usize].is_position_set(pos) {
+            (Piece::Pawn, Color::White)
+        } else if self.bbs[ColorPiece::WhiteKnight as usize].is_position_set(pos) {
+            (Piece::Knight, Color::White)
+        } else if self.bbs[ColorPiece::WhiteBishop as usize].is_position_set(pos) {
+            (Piece::Bishop, Color::White)
+        } else if self.bbs[ColorPiece::WhiteRook as usize].is_position_set(pos) {
+            (Piece::Rook, Color::White)
+        } else if self.bbs[ColorPiece::WhiteQueen as usize].is_position_set(pos) {
+            (Piece::Queen, Color::White)
+        } else if pos == Position(self.bbs[ColorPiece::WhiteKing as usize].0) {
+            (Piece::King, Color::White)
+        } else if self.bbs[ColorPiece::BlackPawn as usize].is_position_set(pos) {
+            (Piece::Pawn, Color::Black)
+        } else if self.bbs[ColorPiece::BlackKnight as usize].is_position_set(pos) {
+            (Piece::Knight, Color::Black)
+        } else if self.bbs[ColorPiece::BlackBishop as usize].is_position_set(pos) {
+            (Piece::Bishop, Color::Black)
+        } else if self.bbs[ColorPiece::BlackRook as usize].is_position_set(pos) {
+            (Piece::Rook, Color::Black)
+        } else if self.bbs[ColorPiece::BlackQueen as usize].is_position_set(pos) {
+            (Piece::Queen, Color::Black)
+        } else if pos == Position(self.bbs[ColorPiece::BlackKing as usize].0) {
+            (Piece::King, Color::Black)
+        } else {
+            // Color does not matter for empty
+            (Piece::Empty, Color::White)
         }
-        if self.white_knights.is_position_set(pos) {
-            return (Piece::Knight, Color::White);
-        }
-        if self.white_bishops.is_position_set(pos) {
-            return (Piece::Bishop, Color::White);
-        }
-        if self.white_rooks.is_position_set(pos) {
-            return (Piece::Rook, Color::White);
-        }
-        if self.white_queens.is_position_set(pos) {
-            return (Piece::Queen, Color::White);
-        }
-        if pos == Position(self.white_king.0) {
-            return (Piece::King, Color::White);
-        }
-
-        if self.black_pawns.is_position_set(pos) {
-            return (Piece::Pawn, Color::Black);
-        }
-        if self.black_knights.is_position_set(pos) {
-            return (Piece::Knight, Color::Black);
-        }
-        if self.black_bishops.is_position_set(pos) {
-            return (Piece::Bishop, Color::Black);
-        }
-        if self.black_rooks.is_position_set(pos) {
-            return (Piece::Rook, Color::Black);
-        }
-        if self.black_queens.is_position_set(pos) {
-            return (Piece::Queen, Color::Black);
-        }
-        if pos == Position(self.black_king.0) {
-            return (Piece::King, Color::Black);
-        }
-
-        // Color does not matter for empty
-        (Piece::Empty, Color::White)
     }
 
     #[inline(always)]
-    pub fn get_piece_at_position(&self, pos: Position) -> Piece {
-        if self.white_pawns.is_position_set(pos) {
-            return Piece::Pawn;
+    pub fn get_piece_at_position(&self, pos: IndexPosition) -> Piece {
+        match self.pieces[pos.0] {
+            ColorPiece::Empty => Piece::Empty,
+            ColorPiece::WhitePawn => Piece::Pawn,
+            ColorPiece::BlackPawn => Piece::Pawn,
+            ColorPiece::WhiteKnight => Piece::Knight,
+            ColorPiece::BlackKnight => Piece::Knight,
+            ColorPiece::WhiteBishop => Piece::Bishop,
+            ColorPiece::BlackBishop => Piece::Bishop,
+            ColorPiece::WhiteRook => Piece::Rook,
+            ColorPiece::BlackRook => Piece::Rook,
+            ColorPiece::WhiteQueen => Piece::Queen,
+            ColorPiece::BlackQueen => Piece::Queen,
+            ColorPiece::WhiteKing => Piece::King,
+            ColorPiece::BlackKing => Piece::King,
         }
-        if self.white_knights.is_position_set(pos) {
-            return Piece::Knight;
-        }
-        if self.white_bishops.is_position_set(pos) {
-            return Piece::Bishop;
-        }
-        if self.white_rooks.is_position_set(pos) {
-            return Piece::Rook;
-        }
-        if self.white_queens.is_position_set(pos) {
-            return Piece::Queen;
-        }
-        if pos == Position(self.white_king.0) {
-            return Piece::King;
-        }
-
-        if self.black_pawns.is_position_set(pos) {
-            return Piece::Pawn;
-        }
-        if self.black_knights.is_position_set(pos) {
-            return Piece::Knight;
-        }
-        if self.black_bishops.is_position_set(pos) {
-            return Piece::Bishop;
-        }
-        if self.black_rooks.is_position_set(pos) {
-            return Piece::Rook;
-        }
-        if self.black_queens.is_position_set(pos) {
-            return Piece::Queen;
-        }
-        if pos == Position(self.black_king.0) {
-            return Piece::King;
-        }
-
-        Piece::Empty
     }
 
     #[inline(always)]
     pub fn get_piece_idx_at_position(&self, pos: Position) -> usize {
-        if self.white_pawns.is_position_set(pos) {
+        if self.bbs[ColorPiece::WhitePawn as usize].is_position_set(pos) {
             return 0;
         }
-        if self.white_knights.is_position_set(pos) {
+        if self.bbs[ColorPiece::WhiteKnight as usize].is_position_set(pos) {
             return 1;
         }
-        if self.white_bishops.is_position_set(pos) {
+        if self.bbs[ColorPiece::WhiteBishop as usize].is_position_set(pos) {
             return 2;
         }
-        if self.white_rooks.is_position_set(pos) {
+        if self.bbs[ColorPiece::WhiteRook as usize].is_position_set(pos) {
             return 3;
         }
-        if self.white_queens.is_position_set(pos) {
+        if self.bbs[ColorPiece::WhiteQueen as usize].is_position_set(pos) {
             return 4;
         }
-        if pos == Position(self.white_king.0) {
+        if pos == Position(self.bbs[ColorPiece::WhiteKing as usize].0) {
             return 5;
         }
 
-        if self.black_pawns.is_position_set(pos) {
+        if self.bbs[ColorPiece::BlackPawn as usize].is_position_set(pos) {
             return 0;
         }
-        if self.black_knights.is_position_set(pos) {
+        if self.bbs[ColorPiece::BlackKnight as usize].is_position_set(pos) {
             return 1;
         }
-        if self.black_bishops.is_position_set(pos) {
+        if self.bbs[ColorPiece::BlackBishop as usize].is_position_set(pos) {
             return 2;
         }
-        if self.black_rooks.is_position_set(pos) {
+        if self.bbs[ColorPiece::BlackRook as usize].is_position_set(pos) {
             return 3;
         }
-        if self.black_queens.is_position_set(pos) {
+        if self.bbs[ColorPiece::BlackQueen as usize].is_position_set(pos) {
             return 4;
         }
-        if pos == Position(self.black_king.0) {
+        if pos == Position(self.bbs[ColorPiece::BlackKing as usize].0) {
             return 5;
         }
 
@@ -173,21 +138,21 @@ impl Board {
         match color {
             Color::Black => match piece {
                 Piece::Empty => self.empty_pieces,
-                Piece::Pawn => self.black_pawns,
-                Piece::Knight => self.black_knights,
-                Piece::Bishop => self.black_bishops,
-                Piece::Rook => self.black_rooks,
-                Piece::Queen => self.black_queens,
-                Piece::King => Bitboard(self.black_king.0),
+                Piece::Pawn => self.bbs[ColorPiece::BlackPawn as usize],
+                Piece::Knight => self.bbs[ColorPiece::BlackKnight as usize],
+                Piece::Bishop => self.bbs[ColorPiece::BlackBishop as usize],
+                Piece::Rook => self.bbs[ColorPiece::BlackRook as usize],
+                Piece::Queen => self.bbs[ColorPiece::BlackQueen as usize],
+                Piece::King => self.bbs[ColorPiece::BlackKing as usize],
             },
             Color::White => match piece {
                 Piece::Empty => self.empty_pieces,
-                Piece::Pawn => self.white_pawns,
-                Piece::Knight => self.white_knights,
-                Piece::Bishop => self.white_bishops,
-                Piece::Rook => self.white_rooks,
-                Piece::Queen => self.white_queens,
-                Piece::King => Bitboard(self.white_king.0),
+                Piece::Pawn => self.bbs[ColorPiece::WhitePawn as usize],
+                Piece::Knight => self.bbs[ColorPiece::WhiteKnight as usize],
+                Piece::Bishop => self.bbs[ColorPiece::WhiteBishop as usize],
+                Piece::Rook => self.bbs[ColorPiece::WhiteRook as usize],
+                Piece::Queen => self.bbs[ColorPiece::WhiteQueen as usize],
+                Piece::King => self.bbs[ColorPiece::WhiteKing as usize],
             },
         }
     }
@@ -195,8 +160,8 @@ impl Board {
     #[inline(always)]
     pub fn get_king_pos(&self, color: Color) -> Position {
         match color {
-            Color::Black => Position(self.black_king.0),
-            Color::White => Position(self.white_king.0),
+            Color::Black => Position(self.bbs[ColorPiece::BlackKing as usize].0),
+            Color::White => Position(self.bbs[ColorPiece::WhiteKing as usize].0),
         }
     }
 
@@ -209,14 +174,14 @@ impl Board {
             | self.bbs[ColorPiece::WhiteQueen as usize]
             | self.bbs[ColorPiece::WhiteKing as usize];
 
-        self.black_pieces = self.black_pawns
-            | self.black_knights
-            | self.black_bishops
-            | self.black_rooks
-            | self.black_queens
-            | self.black_king;
+        self.black_pieces = self.bbs[ColorPiece::BlackPawn as usize]
+            | self.bbs[ColorPiece::BlackKnight as usize]
+            | self.bbs[ColorPiece::BlackBishop as usize]
+            | self.bbs[ColorPiece::BlackRook as usize]
+            | self.bbs[ColorPiece::BlackQueen as usize]
+            | self.bbs[ColorPiece::BlackKing as usize];
 
-        self.empty_pieces = !(self.white_pieces | self.black_pieces);
+        self.bbs[ColorPiece::Empty as usize] = !(self.white_pieces | self.black_pieces);
     }
 
     // #[inline(always)]

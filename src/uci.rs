@@ -48,7 +48,7 @@ pub fn handle_uci_communication() {
                     );
 
                     if let Some(best_move) = best_move {
-                        println!("bestmove {}", best_move.to_coords());
+                        println!("bestmove {}", best_move.decode().to_coords());
                     } else {
                         println!("bestmove (none)");
                     }
@@ -63,7 +63,7 @@ pub fn handle_uci_communication() {
                 );
 
                 if let Some(best_move) = best_move {
-                    println!("bestmove {}", best_move.to_coords());
+                    println!("bestmove {}", best_move.decode().to_coords());
                 } else {
                     println!("bestmove (none)");
                 }

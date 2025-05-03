@@ -33,23 +33,23 @@ impl Board {
         };
         fen.push(color_char);
         fen.push(' ');
-        if self.white_castle_right {
+        if self.white_king_castle {
             fen.push('K');
         }
-        if self.white_castle_left {
+        if self.white_queen_castle {
             fen.push('Q');
         }
-        if self.black_castle_right {
+        if self.black_queen_castle {
             fen.push('k');
         }
-        if self.black_castle_left {
+        if self.black_king_castle {
             fen.push('q');
         }
 
-        if !self.black_castle_left
-            && !self.black_castle_right
-            && !self.white_castle_left
-            && !self.white_castle_right
+        if !self.black_king_castle
+            && !self.black_queen_castle
+            && !self.white_queen_castle
+            && !self.white_king_castle
         {
             fen.push('-');
         }

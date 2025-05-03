@@ -12,7 +12,7 @@ pub fn get_pawn_positions(board: &Board, pos: Position, color: Color) -> Bitboar
     moves_to_empty |= pos.get_offset_pos(0, move_direction_y);
 
     // Add possible move by 2 when pawn has not moved in the match and position in front is empty
-    match (color, pos.to_index() / 8) {
+    match (color, pos.to_index().0 / 8) {
         (Color::Black, 6) => {
             if board
                 .empty_pieces

@@ -9,22 +9,12 @@ impl Board {
             white_pieces: Bitboard(0),
             black_pieces: Bitboard(0),
             empty_pieces: Bitboard(0),
-            white_pawns: Bitboard(0),
-            white_knights: Bitboard(0),
-            white_rooks: Bitboard(0),
-            white_bishops: Bitboard(0),
-            white_queens: Bitboard(0),
-            white_king: Bitboard(0),
-            black_pawns: Bitboard(0),
-            black_knights: Bitboard(0),
-            black_rooks: Bitboard(0),
-            black_bishops: Bitboard(0),
-            black_queens: Bitboard(0),
-            black_king: Bitboard(0),
-            black_castle_left: true,
-            black_castle_right: true,
-            white_castle_left: true,
-            white_castle_right: true,
+            bbs: [Bitboard(0); 13],
+            pieces: [ColorPiece::Empty; 64],
+            black_king_castle: true,
+            black_queen_castle: true,
+            white_queen_castle: true,
+            white_king_castle: true,
             en_passant_target: None,
             current_color: Color::Black,
             fullmove_counter: 0,
@@ -56,20 +46,55 @@ impl Board {
                 ch => {
                     let bit = Position(1u64 << index as u64);
                     match ch {
-                        'p' => board.black_pawns |= bit,
-                        'n' => board.black_knights |= bit,
-                        'b' => board.black_bishops |= bit,
-                        'r' => board.black_rooks |= bit,
-                        'q' => board.black_queens |= bit,
-                        'k' => board.black_king |= bit,
+                        'p' => {
+                            board.bbs[ColorPiece::BlackPawn as usize] |= bit;
+                            board.pieces[index] = ColorPiece::BlackPawn;
+                        }
+                        'n' => {
+                            board.bbs[ColorPiece::BlackKnight as usize] |= bit;
+                            board.pieces[index] = ColorPiece::BlackKnight;
+                        }
+                        'b' => {
+                            board.bbs[ColorPiece::BlackBishop as usize] |= bit;
+                            board.pieces[index] = ColorPiece::BlackBishop;
+                        }
+                        'r' => {
+                            board.bbs[ColorPiece::BlackRook as usize] |= bit;
+                            board.pieces[index] = ColorPiece::BlackRook;
+                        }
+                        'q' => {
+                            board.bbs[ColorPiece::BlackQueen as usize] |= bit;
+                            board.pieces[index] = ColorPiece::BlackQueen;
+                        }
+                        'k' => {
+                            board.bbs[ColorPiece::BlackKing as usize] |= bit;
+                            board.pieces[index] = ColorPiece::BlackKing;
+                        }
 
-                        'P' => board.white_pawns |= bit,
-                        'N' => board.white_knights |= bit,
-                        'B' => board.white_bishops |= bit,
-                        'R' => board.white_rooks |= bit,
-                        'Q' => board.white_queens |= bit,
-                        'K' => board.white_king |= bit,
-
+                        'P' => {
+                            board.bbs[ColorPiece::WhitePawn as usize] |= bit;
+                            board.pieces[index] = ColorPiece::WhitePawn;
+                        }
+                        'N' => {
+                            board.bbs[ColorPiece::WhiteKnight as usize] |= bit;
+                            board.pieces[index] = ColorPiece::WhiteKnight;
+                        }
+                        'B' => {
+                            board.bbs[ColorPiece::WhiteBishop as usize] |= bit;
+                            board.pieces[index] = ColorPiece::WhiteBishop;
+                        }
+                        'R' => {
+                            board.bbs[ColorPiece::WhiteRook as usize] |= bit;
+                            board.pieces[index] = ColorPiece::WhiteRook;
+                        }
+                        'Q' => {
+                            board.bbs[ColorPiece::WhiteQueen as usize] |= bit;
+                            board.pieces[index] = ColorPiece::WhiteQueen;
+                        }
+                        'K' => {
+                            board.bbs[ColorPiece::WhiteKing as usize] |= bit;
+                            board.pieces[index] = ColorPiece::WhiteKing;
+                        }
                         _ => {}
                     }
                     index += 1;
@@ -88,10 +113,10 @@ impl Board {
         };
 
         // Set Castling bools
-        board.white_castle_left = castling.contains('Q');
-        board.white_castle_right = castling.contains('K');
-        board.black_castle_left = castling.contains('q');
-        board.black_castle_right = castling.contains('k');
+        board.white_queen_castle = castling.contains('Q');
+        board.white_king_castle = castling.contains('K');
+        board.black_king_castle = castling.contains('q');
+        board.black_queen_castle = castling.contains('k');
 
         // Set En passant target
         board.en_passant_target = if ep_target == "-" {

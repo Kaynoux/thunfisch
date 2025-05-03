@@ -18,7 +18,7 @@ pub fn iterative_deepening(
     board: &mut Board,
     max_depth: usize,
     time_limit: Duration,
-) -> Option<OldChessMove> {
+) -> Option<EncodedMove> {
     let stop = Arc::new(AtomicBool::new(false));
     {
         let stop_clone = stop.clone();
@@ -28,7 +28,7 @@ pub fn iterative_deepening(
         });
     }
 
-    let mut best_move_overall: Option<OldChessMove> = None;
+    let mut best_move_overall: Option<EncodedMove> = None;
     let mut best_eval_overall = i32::MIN;
     let start_time = Instant::now();
 
@@ -63,7 +63,7 @@ pub fn iterative_deepening(
         }
 
         let best_move_string = match best_move_overall {
-            Some(mv) => mv.to_coords(),
+            Some(mv) => mv.decode().to_coords(),
             None => "0000".to_string(),
         };
 

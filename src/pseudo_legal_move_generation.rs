@@ -1,8 +1,8 @@
 use crate::position_generation::*;
 use crate::prelude::*;
-
+use crate::types::encoded_move::move_flags;
 #[inline(always)]
-pub fn get_all_moves(moves: &mut Vec<OldChessMove>, board: &Board, color: Color) -> Bitboard {
+pub fn get_all_moves(moves: &mut Vec<EncodedMove>, board: &Board, color: Color) -> Bitboard {
     let mut moves_bitboard = Bitboard(0);
     //let mut moves: Vec<ChessMove> = Vec::with_capacity(256);
 
@@ -41,7 +41,7 @@ pub fn get_moves_for_piece_type(
     board: &Board,
     piece: Piece,
     color: Color,
-    moves: &mut Vec<OldChessMove>,
+    moves: &mut Vec<EncodedMove>,
     f: fn(board: &Board, pos: Position, color: Color) -> Bitboard,
 ) -> Bitboard {
     let mut piece_positions = board.get_positions_by_piece_color(color, piece);
@@ -55,29 +55,18 @@ pub fn get_moves_for_piece_type(
 
         while target_positions_for_one_piece != Bitboard(0) {
             let target_pos = target_positions_for_one_piece.pop_lsb_position().unwrap();
-            let target_piece = board.get_piece_at_position(target_pos);
-            let is_capture = match target_piece {
-                Piece::Empty => false,
-                _ => true,
+            let mv = match target_pos.is_enemy(board, color) {
+                true => EncodedMove::encode(current_pos, target_pos, move_flags::CAPTURE),
+                false => EncodedMove::encode(current_pos, target_pos, move_flags::QUIET),
             };
-            moves.push(OldChessMove {
-                from: current_pos,
-                to: target_pos,
-                is_capture: is_capture,
-                is_double_move: false,
-                is_promotion: false,
-                is_en_passant: false,
-                is_castle: false,
-                promotion: Piece::Empty,
-                captured: target_piece,
-            });
+            moves.push(mv);
         }
     }
     target_positions
 }
 
 #[inline(always)]
-pub fn get_pawn_moves(board: &Board, color: Color, moves: &mut Vec<OldChessMove>) -> Bitboard {
+pub fn get_pawn_moves(board: &Board, color: Color, moves: &mut Vec<EncodedMove>) -> Bitboard {
     let mut target_positions = Bitboard(0);
     let mut pawn_positions = board.get_positions_by_piece_color(color, Piece::Pawn);
     while pawn_positions != Bitboard(0) {
@@ -88,76 +77,57 @@ pub fn get_pawn_moves(board: &Board, color: Color, moves: &mut Vec<OldChessMove>
 
         while target_positions_for_one_piece != Bitboard(0) {
             let target_pos = target_positions_for_one_piece.pop_lsb_position().unwrap();
-            let target_piece = board.get_piece_at_position(target_pos);
-            let is_capture = match target_piece {
-                Piece::Empty => false,
-                _ => true,
-            };
 
             let cy = current_pos.to_xy().1;
             let ty = target_pos.to_xy().1;
             let is_double_move = if cy.abs_diff(ty) == 2 { true } else { false };
+            let is_capture = target_pos.is_enemy(board, color);
 
             if ty == 0 || ty == 7 {
-                let promotion_moves = [
-                    OldChessMove {
-                        from: current_pos,
-                        to: target_pos,
-                        is_capture: is_capture,
-                        is_double_move: false,
-                        is_promotion: true,
-                        is_en_passant: false,
-                        is_castle: false,
-                        promotion: Piece::Queen,
-                        captured: target_piece,
-                    },
-                    OldChessMove {
-                        from: current_pos,
-                        to: target_pos,
-                        is_capture: is_capture,
-                        is_double_move: false,
-                        is_promotion: true,
-                        is_en_passant: false,
-                        is_castle: false,
-                        promotion: Piece::Rook,
-                        captured: target_piece,
-                    },
-                    OldChessMove {
-                        from: current_pos,
-                        to: target_pos,
-                        is_capture: is_capture,
-                        is_double_move: false,
-                        is_promotion: true,
-                        is_en_passant: false,
-                        is_castle: false,
-                        promotion: Piece::Bishop,
-                        captured: target_piece,
-                    },
-                    OldChessMove {
-                        from: current_pos,
-                        to: target_pos,
-                        is_capture: is_capture,
-                        is_double_move: false,
-                        is_promotion: true,
-                        is_en_passant: false,
-                        is_castle: false,
-                        promotion: Piece::Knight,
-                        captured: target_piece,
-                    },
-                ];
+                let promotion_moves = match is_capture {
+                    true => [
+                        EncodedMove::encode(
+                            current_pos,
+                            target_pos,
+                            move_flags::KNIGHT_PROMO_CAPTURE,
+                        ),
+                        EncodedMove::encode(
+                            current_pos,
+                            target_pos,
+                            move_flags::BISHOP_PROMO_CAPTURE,
+                        ),
+                        EncodedMove::encode(
+                            current_pos,
+                            target_pos,
+                            move_flags::ROOK_PROMO_CAPTURE,
+                        ),
+                        EncodedMove::encode(
+                            current_pos,
+                            target_pos,
+                            move_flags::QUEEN_PROMO_CAPTURE,
+                        ),
+                    ],
+
+                    false => [
+                        EncodedMove::encode(current_pos, target_pos, move_flags::KNIGHT_PROMO),
+                        EncodedMove::encode(current_pos, target_pos, move_flags::BISHOP_PROMO),
+                        EncodedMove::encode(current_pos, target_pos, move_flags::ROOK_PROMO),
+                        EncodedMove::encode(current_pos, target_pos, move_flags::QUEEN_PROMO),
+                    ],
+                };
                 moves.extend_from_slice(&promotion_moves);
             } else {
-                moves.push(OldChessMove {
-                    from: current_pos,
-                    to: target_pos,
-                    is_capture: is_capture,
-                    is_double_move: is_double_move,
-                    is_promotion: false,
-                    is_en_passant: false,
-                    is_castle: false,
-                    promotion: Piece::Empty,
-                    captured: target_piece,
-                });
+                let mv = match (is_double_move, is_capture) {
+                    (true, false) => {
+                        EncodedMove::encode(current_pos, target_pos, move_flags::DOUBLE_MOVE)
+                    }
+                    (false, true) => {
+                        EncodedMove::encode(current_pos, target_pos, move_flags::CAPTURE)
+                    }
+                    _ => EncodedMove::encode(current_pos, target_pos, move_flags::QUIET),
+                };
+
+                moves.push(mv);
             }
         }
     }
@@ -170,97 +140,76 @@ pub fn get_king_moves(
     board: &Board,
     current_pos: Position,
     color: Color,
-    moves: &mut Vec<OldChessMove>,
+    moves: &mut Vec<EncodedMove>,
     f: fn(board: &Board, pos: Position, color: Color) -> Bitboard,
 ) -> Bitboard {
     let mut target_positions = f(board, current_pos, color);
     while target_positions != Bitboard(0) {
         let target_pos = target_positions.pop_lsb_position().unwrap();
-        let target_piece = board.get_piece_at_position(target_pos);
-        let is_capture = match target_piece {
-            Piece::Empty => false,
-            _ => true,
-        };
-        moves.push(OldChessMove {
-            from: current_pos,
-            to: target_pos,
-            is_capture: is_capture,
-            is_double_move: false,
-            is_promotion: false,
-            is_en_passant: false,
-            is_castle: false,
-            promotion: Piece::Empty,
-            captured: target_piece,
-        });
+
+        match target_pos.is_enemy(board, color) {
+            true => moves.push(EncodedMove::encode(
+                current_pos,
+                target_pos,
+                move_flags::CAPTURE,
+            )),
+            false => moves.push(EncodedMove::encode(
+                current_pos,
+                target_pos,
+                move_flags::QUIET,
+            )),
+        }
     }
     target_positions
 }
 
-pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<OldChessMove>) {
+pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<EncodedMove>) {
     match color {
         Color::White => {
-            let mask_white_left = Bitboard(1u64 << 1 | 1u64 << 2 | 1u64 << 3);
-            if board.white_castle_left && board.empty_pieces & mask_white_left == mask_white_left {
-                let mv = OldChessMove {
-                    from: Position::from_idx(4),
-                    to: Position::from_idx(2),
-                    is_capture: false,
-                    is_double_move: false,
-                    is_promotion: false,
-                    is_en_passant: false,
-                    is_castle: true,
-                    promotion: Piece::Empty,
-                    captured: Piece::Empty,
-                };
+            const MASK_WHITE_QUEEN_CASTLE: Bitboard = Bitboard(1u64 << 1 | 1u64 << 2 | 1u64 << 3);
+            if board.white_queen_castle
+                && board.empty_pieces & MASK_WHITE_QUEEN_CASTLE == MASK_WHITE_QUEEN_CASTLE
+            {
+                let mv = EncodedMove::encode(
+                    IndexPosition(4).to_position(),
+                    IndexPosition(2).to_position(),
+                    move_flags::QUEEN_CASTLE,
+                );
                 moves.push(mv);
             }
-            let mask_white_right = Bitboard(1u64 << 5 | 1u64 << 6);
-            if board.white_castle_right && board.empty_pieces & mask_white_right == mask_white_right
+            const MASK_WHITE_KING_CASTLE: Bitboard = Bitboard(1u64 << 5 | 1u64 << 6);
+            if board.white_king_castle
+                && board.empty_pieces & MASK_WHITE_KING_CASTLE == MASK_WHITE_KING_CASTLE
             {
-                let mv = OldChessMove {
-                    from: Position::from_idx(4),
-                    to: Position::from_idx(6),
-                    is_capture: false,
-                    is_double_move: false,
-                    is_promotion: false,
-                    is_en_passant: false,
-                    is_castle: true,
-                    promotion: Piece::Empty,
-                    captured: Piece::Empty,
-                };
+                let mv = EncodedMove::encode(
+                    IndexPosition(4).to_position(),
+                    IndexPosition(6).to_position(),
+                    move_flags::KING_CASTLE,
+                );
                 moves.push(mv);
             }
         }
         Color::Black => {
-            let mask_black_left = Bitboard(1u64 << 57 | 1u64 << 58 | 1u64 << 59);
-            if board.black_castle_left && board.empty_pieces & mask_black_left == mask_black_left {
-                let mv = OldChessMove {
-                    from: Position::from_idx(60),
-                    to: Position::from_idx(58),
-                    is_capture: false,
-                    is_double_move: false,
-                    is_promotion: false,
-                    is_en_passant: false,
-                    is_castle: true,
-                    promotion: Piece::Empty,
-                    captured: Piece::Empty,
-                };
+            const MASK_BLACK_KING_CASTLE: Bitboard = Bitboard(1u64 << 57 | 1u64 << 58 | 1u64 << 59);
+            if board.black_king_castle
+                && board.empty_pieces & MASK_BLACK_KING_CASTLE == MASK_BLACK_KING_CASTLE
+            {
+                let mv = EncodedMove::encode(
+                    IndexPosition(60).to_position(),
+                    IndexPosition(58).to_position(),
+                    move_flags::KING_CASTLE,
+                );
                 moves.push(mv);
             }
-            let mask_black_right = Bitboard(1u64 << 61 | 1u64 << 62);
-            if board.black_castle_right && board.empty_pieces & mask_black_right == mask_black_right
+            const MASK_BLACK_QUEEN_CASTLE: Bitboard = Bitboard(1u64 << 61 | 1u64 << 62);
+            if board.black_queen_castle
+                && board.empty_pieces & MASK_BLACK_QUEEN_CASTLE == MASK_BLACK_QUEEN_CASTLE
             {
-                let mv = OldChessMove {
-                    from: Position::from_idx(60),
-                    to: Position::from_idx(62),
-                    is_capture: false,
-                    is_double_move: false,
-                    is_promotion: false,
-                    is_en_passant: false,
-                    is_castle: true,
-                    promotion: Piece::Empty,
-                    captured: Piece::Empty,
-                };
+                let mv = EncodedMove::encode(
+                    IndexPosition(60).to_position(),
+                    IndexPosition(62).to_position(),
+                    move_flags::QUEEN_CASTLE,
+                );
                 moves.push(mv);
             }
         }
@@ -268,7 +217,7 @@ pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<OldChessMov
 }
 
 #[inline(always)]
-pub fn get_en_passant_moves(board: &Board, color: Color, moves: &mut Vec<OldChessMove>) {
+pub fn get_en_passant_moves(board: &Board, color: Color, moves: &mut Vec<EncodedMove>) {
     let ep_target = match board.en_passant_target {
         Some(pos) => pos,
         None => return,
@@ -278,64 +227,24 @@ pub fn get_en_passant_moves(board: &Board, color: Color, moves: &mut Vec<OldChes
         Color::White => {
             let position_left = ep_target.get_offset_pos(-1, -1);
             let position_right = ep_target.get_offset_pos(1, -1);
-            if board.white_pawns.is_position_set(position_left) {
-                let mv = OldChessMove {
-                    from: position_left,
-                    to: ep_target,
-                    is_capture: true,
-                    is_double_move: false,
-                    is_promotion: false,
-                    is_en_passant: true,
-                    is_castle: false,
-                    promotion: Piece::Empty,
-                    captured: Piece::Pawn,
-                };
+            if board.bbs[ColorPiece::WhitePawn as usize].is_position_set(position_left) {
+                let mv = EncodedMove::encode(position_left, ep_target, move_flags::EP_CAPTURE);
                 moves.push(mv);
             }
-            if board.white_pawns.is_position_set(position_right) {
-                let mv = OldChessMove {
-                    from: position_right,
-                    to: ep_target,
-                    is_capture: true,
-                    is_double_move: false,
-                    is_promotion: false,
-                    is_en_passant: true,
-                    is_castle: false,
-                    promotion: Piece::Empty,
-                    captured: Piece::Pawn,
-                };
+            if board.bbs[ColorPiece::WhitePawn as usize].is_position_set(position_right) {
+                let mv = EncodedMove::encode(position_right, ep_target, move_flags::EP_CAPTURE);
                 moves.push(mv);
             }
         }
         Color::Black => {
             let position_left = ep_target.get_offset_pos(-1, 1);
             let position_right = ep_target.get_offset_pos(1, 1);
-            if board.black_pawns.is_position_set(position_left) {
-                let mv = OldChessMove {
-                    from: position_left,
-                    to: ep_target,
-                    is_capture: true,
-                    is_double_move: false,
-                    is_promotion: false,
-                    is_en_passant: true,
-                    is_castle: false,
-                    promotion: Piece::Empty,
-                    captured: Piece::Pawn,
-                };
+            if board.bbs[ColorPiece::BlackPawn as usize].is_position_set(position_left) {
+                let mv = EncodedMove::encode(position_left, ep_target, move_flags::EP_CAPTURE);
                 moves.push(mv);
             }
-            if board.black_pawns.is_position_set(position_right) {
-                let mv = OldChessMove {
-                    from: position_right,
-                    to: ep_target,
-                    is_capture: true,
-                    is_double_move: false,
-                    is_promotion: false,
-                    is_en_passant: true,
-                    is_castle: false,
-                    promotion: Piece::Empty,
-                    captured: Piece::Pawn,
-                };
+            if board.bbs[ColorPiece::BlackPawn as usize].is_position_set(position_right) {
+                let mv = EncodedMove::encode(position_right, ep_target, move_flags::EP_CAPTURE);
                 moves.push(mv);
             }
         }

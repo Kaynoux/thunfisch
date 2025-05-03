@@ -5,7 +5,7 @@ use num_format::{Locale, ToFormattedString};
 use rayon::prelude::*;
 use std::time::Instant;
 
-pub fn print_board(board: &Board, moves: Option<&[OldChessMove]>) {
+pub fn print_board(board: &Board, moves: Option<&[EncodedMove]>) {
     let moves_slice = moves.unwrap_or(&[]);
     let char_board: [(char, &str); 64] = get_char_board(board, moves_slice);
     let mut y: i32 = 7;
@@ -38,19 +38,22 @@ pub fn print_board(board: &Board, moves: Option<&[OldChessMove]>) {
     println!("-------------------");
 }
 
-fn get_char_board(board: &Board, moves: &[OldChessMove]) -> [(char, &'static str); 64] {
+fn get_char_board(board: &Board, moves: &[EncodedMove]) -> [(char, &'static str); 64] {
     let mut char_board = [(' ', "white"); 64];
     for y in 0usize..=7usize {
         for x in 0usize..=7usize {
             let idx = y * 8 + x;
-            let pos = Position::from_idx(idx as isize);
+            let pos = IndexPosition(idx);
 
-            let (piece, color) = board.get_piece_and_color_at_position(pos);
+            let (piece, color) = board.get_piece_and_color_at_position(pos.to_position());
             let mut text_color = "white";
-            if moves.iter().any(|chess_move| chess_move.from == pos) {
+            if moves
+                .iter()
+                .any(|chess_move| chess_move.decode().from == pos)
+            {
                 text_color = "green";
             }
-            if moves.iter().any(|chess_move| chess_move.to == pos) {
+            if moves.iter().any(|chess_move| chess_move.decode().to == pos) {
                 text_color = "red";
             }
             char_board[idx] = (Piece::to_unicode_char(piece, color), text_color);
@@ -59,43 +62,71 @@ fn get_char_board(board: &Board, moves: &[OldChessMove]) -> [(char, &'static str
     char_board
 }
 
-pub fn print_moves(board: &Board, moves: &Vec<OldChessMove>) {
+pub fn print_moves(board: &Board, moves: &Vec<EncodedMove>) {
     println!("Potential Moves:");
-    let (mut prev_pos, mut prev_is_castle, mut prev_is_promotion, mut prev_is_en_passant) =
-        (Position(0), false, false, false);
-    for mv in moves {
-        let (current_pos, current_is_castle, current_is_promotion, current_is_en_passant) =
-            (mv.from, mv.is_castle, mv.is_promotion, mv.is_en_passant);
+    let (
+        mut prev_pos,
+        mut prev_is_queen_castle,
+        mut prev_is_king_castle,
+        mut prev_is_promotion,
+        mut prev_is_ep_capture,
+    ) = (Position(0), false, false, false, false);
+    for encoded_mv in moves {
+        let mv = encoded_mv.decode();
+        let (
+            current_pos,
+            current_is_queen_castle,
+            current_is_king_castle,
+            current_is_promotion,
+            current_is_ep_capture,
+        ) = (
+            mv.from.to_position(),
+            mv.is_queen_castle,
+            mv.is_king_castle,
+            mv.promotion.is_some(),
+            mv.is_ep_capture,
+        );
         let (current_color, current_piece) = board.get_piece_and_color_at_position(current_pos);
         if current_pos != prev_pos
-            || current_is_castle != prev_is_castle
+            || current_is_queen_castle != prev_is_queen_castle
+            || current_is_king_castle != prev_is_king_castle
             || current_is_promotion != prev_is_promotion
-            || current_is_en_passant != prev_is_en_passant
+            || current_is_ep_capture != prev_is_ep_capture
         {
             println!();
-            if current_is_castle {
-                print!("Castle: ")
+            if current_is_queen_castle {
+                print!("Queen Castle: ")
+            }
+            if current_is_king_castle {
+                print!("King Castle: ")
             }
             if current_is_promotion {
                 print!("Promotion: ")
             }
-            if current_is_en_passant {
+            if current_is_ep_capture {
                 print!("En-Passant: ")
             }
-            print!("{:?} {:?} {:?} -> ", current_color, current_piece, mv.from);
+            print!(
+                "{:?} {:?} {:?} -> ",
+                current_color,
+                current_piece,
+                mv.from.to_position()
+            );
             (
                 prev_pos,
-                prev_is_castle,
+                prev_is_queen_castle,
+                prev_is_king_castle,
                 prev_is_promotion,
-                prev_is_en_passant,
+                prev_is_ep_capture,
             ) = (
                 current_pos,
-                current_is_castle,
+                current_is_queen_castle,
+                current_is_king_castle,
                 current_is_promotion,
-                current_is_en_passant,
+                current_is_ep_capture,
             );
         }
-        print!(" {:?},", mv.to);
+        print!(" {:?},", mv.to.to_position());
     }
     println!()
 }
@@ -108,7 +139,7 @@ pub fn r_perft(board: &Board, depth: usize) -> usize {
     let moves = board.get_legal_moves(false);
     for mv in moves {
         let mut b2 = board.clone();
-        b2.make_move(&mv);
+        b2.make_move(&mv.decode());
         nodes += r_perft(&b2, depth - 1);
     }
     nodes
@@ -128,9 +159,9 @@ pub fn r_detailed_perft(
     }
     let mut nodes = 0;
     let moves = board.get_legal_moves(false);
-    for mv in moves {
+    for encoded_mv in moves {
         let mut b2 = board.clone();
-        b2.make_move(&mv);
+        b2.make_move(&encoded_mv.decode());
         nodes += r_detailed_perft(
             &b2,
             depth - 1,
@@ -141,16 +172,18 @@ pub fn r_detailed_perft(
             double_moves,
         );
 
+        let mv = encoded_mv.decode();
+
         if mv.is_capture {
             *captures += 1;
         }
-        if mv.is_promotion {
+        if mv.promotion.is_some() {
             *promotions += 1;
         }
-        if mv.is_castle {
+        if mv.is_king_castle || mv.is_queen_castle {
             *castles += 1;
         }
-        if mv.is_en_passant {
+        if mv.is_ep_capture {
             *en_passants += 1;
         }
         if mv.is_double_move {
@@ -163,8 +196,9 @@ pub fn r_detailed_perft(
 pub fn debug_perft(board: &Board, depth: usize) {
     let mut captures: isize = 0;
     let mut promotions: isize = 0;
-    let mut castles: isize = 0;
-    let mut en_passants: isize = 0;
+    let mut queen_castles: isize = 0;
+    let mut king_castles: isize = 0;
+    let mut ep_captures: isize = 0;
     let mut double_moves: isize = 0;
     if depth == 0 {
         println!("Perft divide depth {}:", 0);
@@ -174,7 +208,8 @@ pub fn debug_perft(board: &Board, depth: usize) {
     println!("Perft divide depth {}:", depth);
     let mut total_nodes = 0;
     let moves = board.get_legal_moves(false);
-    for mv in &moves {
+    for encoded_mv in &moves {
+        let mv = encoded_mv.decode();
         let mut b2 = board.clone();
         b2.make_move(&mv);
         let nodes_for_move = r_detailed_perft(
@@ -182,17 +217,36 @@ pub fn debug_perft(board: &Board, depth: usize) {
             depth - 1,
             &mut captures,
             &mut promotions,
-            &mut castles,
-            &mut en_passants,
+            &mut queen_castles,
+            &mut ep_captures,
             &mut double_moves,
         );
         total_nodes += nodes_for_move;
         println!(
             "{}{}: {}",
-            mv.from.to_coords(),
-            mv.to.to_coords(),
+            mv.from.to_position().to_coords(),
+            mv.to.to_position().to_coords(),
             nodes_for_move
         );
+
+        if mv.is_capture {
+            captures += 1;
+        }
+        if mv.promotion.is_some() {
+            promotions += 1;
+        }
+        if mv.is_queen_castle {
+            queen_castles += 1;
+        }
+        if mv.is_king_castle {
+            king_castles += 1;
+        }
+        if mv.is_ep_capture {
+            ep_captures += 1;
+        }
+        if mv.is_double_move {
+            double_moves += 1;
+        }
     }
     let elapsed = start.elapsed();
     let nodes_per_seconds = (total_nodes as f64 / elapsed.as_secs_f64()) as usize;
@@ -204,26 +258,10 @@ pub fn debug_perft(board: &Board, depth: usize) {
         nodes_per_seconds.to_formatted_string(&Locale::en)
     );
 
-    for m in moves {
-        if m.is_capture {
-            captures += 1;
-        }
-        if m.is_promotion {
-            promotions += 1;
-        }
-        if m.is_castle {
-            castles += 1;
-        }
-        if m.is_en_passant {
-            en_passants += 1;
-        }
-        if m.is_double_move {
-            double_moves += 1;
-        }
-    }
+    for m in moves {}
     println!("Captures: {}", captures);
-    println!("En Passants: {}", en_passants);
-    println!("Castles: {}", castles);
+    println!("En Passants: {}", ep_captures);
+    println!("Castles: {}", queen_castles);
     println!("Promotions: {}", promotions);
     println!("Double moves: {}", double_moves);
 }
@@ -273,7 +311,7 @@ pub fn r_perft_rayon(board: &Board, depth: usize) -> usize {
         .par_iter()
         .map(|mv| {
             let mut b2 = board.clone();
-            b2.make_move(mv);
+            b2.make_move(&mv.decode());
             r_perft_rayon(&b2, depth - 1) // Rückgabe ohne Semikolon
         })
         .sum::<usize>()

@@ -1,4 +1,7 @@
-use crate::{prelude::*, types::bitboard};
+use crate::{
+    prelude::*,
+    types::{bitboard, color},
+};
 
 const KNIGHT: i32 = 1;
 const BISHOP: i32 = 1;
@@ -127,8 +130,8 @@ impl Board {
     /// Gamephase is calculated by getting the amount of each piece type and using predefined values, e.g. a Queen is captured then the game phase increases mroe than if a pawn is captured
     pub fn get_game_phase(&self) -> i32 {
         let mut phase = TOTAL;
-        for (bitboard_idx, bitboard) in self.all_piece_bitboards().iter().enumerate() {
-            phase -= (bitboard.get_count() as i32) * GAMEPHASE_INC[bitboard_idx];
+        for color_piece in self.pieces.iter() {
+            phase -= GAMEPHASE_INC[*color_piece as usize];
         }
         phase = (phase * 256 + (TOTAL / 2)) / TOTAL;
         phase
@@ -144,11 +147,14 @@ impl Board {
         let mut mg = [0i32; 2];
         let mut eg = [0i32; 2];
 
-        for (bitboard_idx, bitboard) in self.all_piece_bitboards().iter_mut().enumerate() {
-            for position in bitboard.iter_mut() {
-                mg[bitboard_idx & 1] += MG_TABLE[bitboard_idx][position.to_index()];
-                eg[bitboard_idx & 1] += EG_TABLE[bitboard_idx][position.to_index()];
+        for (position_idx, color_piece) in self.pieces.iter().enumerate() {
+            let cp = *color_piece;
+            if cp == ColorPiece::Empty {
+                continue;
             }
+
+            mg[(cp as usize) & 1] += MG_TABLE[cp as usize][position_idx];
+            eg[(cp as usize) & 1] += EG_TABLE[cp as usize][position_idx];
         }
 
         let mg_score = mg[white] - mg[black];

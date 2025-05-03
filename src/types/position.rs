@@ -44,23 +44,23 @@ pub const POSITION_Y: [usize; 64] = {
 
 impl Position {
     #[inline(always)]
-    pub const fn to_index(self) -> usize {
-        self.0.trailing_zeros() as usize
+    pub const fn to_index(self) -> IndexPosition {
+        IndexPosition(self.0.trailing_zeros() as usize)
     }
 
     #[inline(always)]
     pub const fn to_xy(self) -> (usize, usize) {
-        POSITION_XY[self.to_index()]
+        POSITION_XY[self.to_index().0]
     }
 
     #[inline(always)]
     pub fn to_x(self) -> usize {
-        POSITION_X[self.to_index()]
+        POSITION_X[self.to_index().0]
     }
 
     #[inline(always)]
     pub fn to_y(self) -> usize {
-        POSITION_Y[self.to_index()]
+        POSITION_Y[self.to_index().0]
     }
 
     #[inline(always)]
@@ -82,7 +82,7 @@ impl Position {
 
     #[inline(always)]
     pub fn get_offset_pos(self, dx: isize, dy: isize) -> Position {
-        let pos_idx = self.to_index() as isize;
+        let pos_idx = self.to_index().0 as isize;
         let new_x: isize = pos_idx % 8 + dx;
         let new_y: isize = pos_idx / 8 + dy;
         if new_x >= 0 && new_x <= 7 && new_y >= 0 && new_y <= 7 {
@@ -90,11 +90,6 @@ impl Position {
             return Position(1u64 << new_idx);
         }
         Position(0)
-    }
-
-    #[inline(always)]
-    pub const fn from_idx(idx: isize) -> Self {
-        Position(1u64 << idx)
     }
 
     #[inline(always)]
@@ -137,7 +132,7 @@ impl Position {
             _ => return None,
         };
 
-        Some(Position::from_idx(y * 8 + x))
+        Some(IndexPosition((y * 8 + x) as usize).to_position())
     }
 
     #[inline(always)]
@@ -150,7 +145,7 @@ impl Position {
 
     #[inline(always)]
     pub const fn from_xy(x: isize, y: isize) -> Position {
-        Position::from_idx(x + (y * 8))
+        IndexPosition((x + (y * 8)) as usize).to_position()
     }
 }
 
