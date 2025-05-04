@@ -58,8 +58,8 @@ pub fn handle_uci_communication() {
 
                 let best_move = search::iterative_deepening::iterative_deepening(
                     &mut state.board,
-                    100,
-                    Duration::new(5, 0),
+                    5,
+                    Duration::new(1, 0),
                 );
 
                 if let Some(best_move) = best_move {

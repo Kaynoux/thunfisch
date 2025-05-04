@@ -1,5 +1,155 @@
 use crate::prelude::*;
 
+pub static PAWN_ATTACKS: [[Bitboard; 64]; 2] = {
+    let mut table = [[Bitboard(0); 64]; 2];
+    let mut square = 0usize;
+    while square < 64 {
+        let x = square % 8;
+        let y = square / 8;
+
+        // White Pawns attack up
+        if y < 7 {
+            // no left attack on x = 0
+            if x > 0 {
+                table[0][square].0 |= 1 << ((y + 1) * 8 + (x - 1));
+            }
+            // no right attack on x = 7
+            if x < 7 {
+                table[0][square].0 |= 1 << ((y + 1) * 8 + (x + 1));
+            }
+        }
+
+        // Black Pawns attack down
+        if y > 0 {
+            // no left attack on x = 0
+            if x > 0 {
+                table[0][square].0 |= 1 << ((y - 1) * 8 + (x - 1));
+            }
+            // no right attack on x = 7
+            if x < 7 {
+                table[0][square].0 |= 1 << ((y - 1) * 8 + (x + 1));
+            }
+        }
+        square += 1;
+    }
+
+    table
+};
+
+pub static KNIGHT_ATTACKS: [Bitboard; 64] = {
+    let mut table = [Bitboard(0); 64];
+    let offsets = [
+        (-2, -1),
+        (-2, 1),
+        (-1, -2),
+        (-1, 2),
+        (1, -2),
+        (1, 2),
+        (2, -1),
+        (2, 1),
+    ];
+
+    let mut square = 0usize;
+    while square < 64 {
+        let x = (square % 8) as isize;
+        let y = (square / 8) as isize;
+
+        let mut idx = 0;
+        while idx < offsets.len() {
+            let (dx, dy) = offsets[idx];
+            let tx = x + dx;
+            let ty = y + dy;
+            if tx >= 0 && tx <= 7 && ty >= 0 && ty <= 7 {
+                let to = (ty * 8 + tx) as usize;
+                table[square].0 |= 1 << to;
+            }
+            idx += 1;
+        }
+        square += 1;
+    }
+
+    table
+};
+
+pub static KING_ATTACKS: [Bitboard; 64] = {
+    let mut table = [Bitboard(0); 64];
+    let offsets = [
+        (-1, -1),
+        (-1, 0),
+        (-1, 1),
+        (0, -1),
+        (0, 1),
+        (1, -1),
+        (1, 0),
+        (1, 1),
+    ];
+
+    let mut square = 0usize;
+    while square < 64 {
+        let x = (square % 8) as isize;
+        let y = (square / 8) as isize;
+
+        let mut idx = 0;
+        while idx < offsets.len() {
+            let (dx, dy) = offsets[idx];
+            let tx = x + dx;
+            let ty = y + dy;
+            if tx >= 0 && tx <= 7 && ty >= 0 && ty <= 7 {
+                let to = (ty * 8 + tx) as usize;
+                table[square].0 |= 1 << to;
+            }
+            idx += 1;
+        }
+        square += 1;
+    }
+
+    table
+};
+
+pub static ROOK_MASK: [Bitboard; 64] = {
+    let mut masks = [Bitboard(0); 64];
+    let mut square = 0usize;
+    while square < 64 {
+        let r = square / 8;
+        let f = square % 8;
+        let mut mask = Bitboard(0);
+
+        // Nach Norden (ohne Reihe 7)
+        let mut nr = r + 1;
+        while nr < 7 {
+            mask.0 |= 1u64 << (nr * 8 + f);
+            nr += 1;
+        }
+        // Nach Süden (ohne Reihe 0)
+        let mut sr = r;
+        while sr > 0 {
+            sr -= 1; // Dekrementieren vor der Prüfung auf 0
+            if sr == 0 {
+                break;
+            } // Reihe 0 nicht maskieren
+            mask.0 |= 1u64 << (sr * 8 + f);
+        }
+        // Nach Osten (ohne Spalte 7)
+        let mut ef = f + 1;
+        while ef < 7 {
+            mask.0 |= 1u64 << (r * 8 + ef);
+            ef += 1;
+        }
+        // Nach Westen (ohne Spalte 0)
+        let mut wf = f;
+        while wf > 0 {
+            wf -= 1; // Dekrementieren vor der Prüfung auf 0
+            if wf == 0 {
+                break;
+            } // Spalte 0 nicht maskieren
+            mask.0 |= 1u64 << (r * 8 + wf);
+        }
+        masks[square] = mask;
+        square += 1; // Inkrementieren am Ende der äußeren Schleife
+    }
+    masks
+};
+
 #[inline(always)]
 pub fn get_pawn_positions(
     board: &Board,
