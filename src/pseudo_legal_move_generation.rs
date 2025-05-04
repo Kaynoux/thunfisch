@@ -69,6 +69,7 @@ pub fn get_moves_for_piece_type(
 pub fn get_pawn_moves(board: &Board, color: Color, moves: &mut Vec<EncodedMove>) -> Bitboard {
     let mut target_positions = Bitboard(0);
     let mut pawn_positions = board.get_positions_by_piece_color(color, Piece::Pawn);
+
     while pawn_positions != Bitboard(0) {
         let current_pos = pawn_positions.pop_lsb_position().unwrap();
 
@@ -78,8 +79,8 @@ pub fn get_pawn_moves(board: &Board, color: Color, moves: &mut Vec<EncodedMove>)
         while target_positions_for_one_piece != Bitboard(0) {
             let target_pos = target_positions_for_one_piece.pop_lsb_position().unwrap();
 
-            let cy = current_pos.to_xy().1;
-            let ty = target_pos.to_xy().1;
+            let cy = current_pos.to_y();
+            let ty = target_pos.to_y();
             let is_double_move = if cy.abs_diff(ty) == 2 { true } else { false };
             let is_capture = target_pos.is_enemy(board, color);
 
@@ -168,7 +169,7 @@ pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<EncodedMove
         Color::White => {
             const MASK_WHITE_QUEEN_CASTLE: Bitboard = Bitboard(1u64 << 1 | 1u64 << 2 | 1u64 << 3);
             if board.white_queen_castle
-                && board.empty_pieces & MASK_WHITE_QUEEN_CASTLE == MASK_WHITE_QUEEN_CASTLE
+                && board.get_empty_pieces() & MASK_WHITE_QUEEN_CASTLE == MASK_WHITE_QUEEN_CASTLE
             {
                 let mv = EncodedMove::encode(
                     IndexPosition(4).to_position(),
@@ -179,7 +180,7 @@ pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<EncodedMove
             }
             const MASK_WHITE_KING_CASTLE: Bitboard = Bitboard(1u64 << 5 | 1u64 << 6);
             if board.white_king_castle
-                && board.empty_pieces & MASK_WHITE_KING_CASTLE == MASK_WHITE_KING_CASTLE
+                && board.get_empty_pieces() & MASK_WHITE_KING_CASTLE == MASK_WHITE_KING_CASTLE
             {
                 let mv = EncodedMove::encode(
                     IndexPosition(4).to_position(),
@@ -192,7 +193,7 @@ pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<EncodedMove
         Color::Black => {
             const MASK_BLACK_KING_CASTLE: Bitboard = Bitboard(1u64 << 57 | 1u64 << 58 | 1u64 << 59);
             if board.black_king_castle
-                && board.empty_pieces & MASK_BLACK_KING_CASTLE == MASK_BLACK_KING_CASTLE
+                && board.get_empty_pieces() & MASK_BLACK_KING_CASTLE == MASK_BLACK_KING_CASTLE
             {
                 let mv = EncodedMove::encode(
                     IndexPosition(60).to_position(),
@@ -203,7 +204,7 @@ pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<EncodedMove
             }
             const MASK_BLACK_QUEEN_CASTLE: Bitboard = Bitboard(1u64 << 61 | 1u64 << 62);
             if board.black_queen_castle
-                && board.empty_pieces & MASK_BLACK_QUEEN_CASTLE == MASK_BLACK_QUEEN_CASTLE
+                && board.get_empty_pieces() & MASK_BLACK_QUEEN_CASTLE == MASK_BLACK_QUEEN_CASTLE
             {
                 let mv = EncodedMove::encode(
                     IndexPosition(60).to_position(),
@@ -218,7 +219,7 @@ pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<EncodedMove
 
 #[inline(always)]
 pub fn get_en_passant_moves(board: &Board, color: Color, moves: &mut Vec<EncodedMove>) {
-    let ep_target = match board.en_passant_target {
+    let ep_target = match board.ep_target {
         Some(pos) => pos,
         None => return,
     };

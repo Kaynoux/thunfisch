@@ -1,20 +1,20 @@
-use crate::{prelude::*, pseudo_legal_move_generation};
+use crate::{prelude::*, pseudo_legal_move_generation, types::unmake_info::UnmakeInfo};
 /// Each piece type gets its own 64bits where
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy)]
 pub struct Board {
     pub white_pieces: Bitboard,
     pub black_pieces: Bitboard,
-    pub empty_pieces: Bitboard,
     pub bbs: [Bitboard; 13],
     pub pieces: [ColorPiece; 64],
     pub black_king_castle: bool,
     pub black_queen_castle: bool,
     pub white_queen_castle: bool,
     pub white_king_castle: bool,
-    pub en_passant_target: Option<Position>,
+    pub ep_target: Option<Position>,
     pub current_color: Color,
-    pub halfmove_clock: isize,
-    pub fullmove_counter: isize,
+    pub halfmove_clock: usize,
+    pub total_halfmove_counter: usize,
+    pub unmake_info: Option<UnmakeInfo>,
 }
 
 impl Board {
@@ -36,7 +36,7 @@ impl Board {
 
     #[inline(always)]
     pub fn get_empty_pieces(&self) -> Bitboard {
-        self.empty_pieces
+        self.bbs[ColorPiece::Empty as usize]
     }
 
     #[inline(always)]
@@ -137,7 +137,7 @@ impl Board {
     pub fn get_positions_by_piece_color(&self, color: Color, piece: Piece) -> Bitboard {
         match color {
             Color::Black => match piece {
-                Piece::Empty => self.empty_pieces,
+                Piece::Empty => self.get_empty_pieces(),
                 Piece::Pawn => self.bbs[ColorPiece::BlackPawn as usize],
                 Piece::Knight => self.bbs[ColorPiece::BlackKnight as usize],
                 Piece::Bishop => self.bbs[ColorPiece::BlackBishop as usize],
@@ -146,7 +146,7 @@ impl Board {
                 Piece::King => self.bbs[ColorPiece::BlackKing as usize],
             },
             Color::White => match piece {
-                Piece::Empty => self.empty_pieces,
+                Piece::Empty => self.get_empty_pieces(),
                 Piece::Pawn => self.bbs[ColorPiece::WhitePawn as usize],
                 Piece::Knight => self.bbs[ColorPiece::WhiteKnight as usize],
                 Piece::Bishop => self.bbs[ColorPiece::WhiteBishop as usize],

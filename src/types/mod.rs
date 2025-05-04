@@ -8,3 +8,4 @@ pub mod engine_state;
 pub mod index_position;
 pub mod piece;
 pub mod position;
+pub mod unmake_info;

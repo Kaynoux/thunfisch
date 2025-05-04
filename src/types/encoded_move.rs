@@ -22,7 +22,25 @@ pub mod move_flags {
     pub const ROOK_PROMO_CAPTURE:   u16 = 0b1110000000000000; // 14
     pub const QUEEN_PROMO_CAPTURE:  u16 = 0b1111000000000000; // 15
 }
-use move_flags::*;
+#[rustfmt::skip]
+pub mod move_flags_nibble {
+    pub const QUIET:                u16 = 0b0000; // 0
+    pub const DOUBLE_MOVE:          u16 = 0b0001; // 1
+    pub const KING_CASTLE:          u16 = 0b0010; // 2
+    pub const QUEEN_CASTLE:         u16 = 0b0011; // 3
+    pub const CAPTURE:              u16 = 0b0100; // 4
+    pub const EP_CAPTURE:           u16 = 0b0101; // 5
+    // 6,7 unused
+    pub const KNIGHT_PROMO:         u16 = 0b1000; // 8
+    pub const BISHOP_PROMO:         u16 = 0b1001; // 9
+    pub const ROOK_PROMO:           u16 = 0b1010; // 10
+    pub const QUEEN_PROMO:          u16 = 0b1011; // 11
+    pub const KNIGHT_PROMO_CAPTURE: u16 = 0b1100; // 12
+    pub const BISHOP_PROMO_CAPTURE: u16 = 0b1101; // 13
+    pub const ROOK_PROMO_CAPTURE:   u16 = 0b1110; // 14
+    pub const QUEEN_PROMO_CAPTURE:  u16 = 0b1111; // 15
+}
+use move_flags_nibble::*;
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct EncodedMove(pub u16);
@@ -41,6 +59,7 @@ impl EncodedMove {
     pub const fn decode(self) -> DecodedMove {
         let from = IndexPosition((self.0 & 0b0000000000111111) as usize);
         let to = IndexPosition(((self.0  & 0b0000111111000000) >> 6) as usize);
+        let flag = self.0 >> 12;
         let (
             is_capture,
             is_double_move,
@@ -49,7 +68,7 @@ impl EncodedMove {
             is_queen_castle,
             promotion
         ): (bool, bool, bool, bool, bool, Option<Piece>) = 
-            match self.0  {
+            match flag  {
                QUIET => (false, false, false, false, false, None),
                DOUBLE_MOVE => (false, true, false, false, false, None),
                KING_CASTLE => (false, false, false, true, false, None),
@@ -60,11 +79,11 @@ impl EncodedMove {
                BISHOP_PROMO => (false, false, false, false, false, Some(Piece::Bishop)),
                ROOK_PROMO => (false, false, false, false, false, Some(Piece::Rook)),
                QUEEN_PROMO => (false, false, false, false, false, Some(Piece::Queen)),
-               KNIGHT_PROMO_CAPTURE => {(true, false, false, false, false, Some(Piece::Knight))},
+               KNIGHT_PROMO_CAPTURE => (true, false, false, false, false, Some(Piece::Knight)),
                BISHOP_PROMO_CAPTURE => (true, false, false, false, false, Some(Piece::Bishop)),
                ROOK_PROMO_CAPTURE => (true, false, false, false, false, Some(Piece::Rook)),
                QUEEN_PROMO_CAPTURE => (true, false, false, false, false, Some(Piece::Queen)),
-               _ => (false, false, false, false, false, None)
+               _ => panic!("Move decoding failed")
             };
 
         DecodedMove { from: from, to: to, is_capture: is_capture, is_double_move: is_double_move, is_ep_capture: is_ep_capture, is_king_castle: is_king_castle, is_queen_castle: is_queen_castle, promotion: promotion }

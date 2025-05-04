@@ -1,0 +1,3082 @@
+﻿use crate::prelude::*;
+use colored;
+use colored::Colorize;
+use num_format::{Locale, ToFormattedString};
+use rayon::prelude::*;
+use std::time::Instant;
+
+pub fn print_board(board: &Board, moves: Option<&[EncodedMove]>) {
+    let moves_slice = moves.unwrap_or(&[]);
+    let char_board: [(char, &str); 64] = get_char_board(board, moves_slice);
+    let mut y: i32 = 7;
+    let mut x: i32 = 0;
+
+    println!(
+        "Current Color: {:?} Halfmove Clock: {} Fullmove Counter: {}",
+        board.current_color, board.halfmove_clock, board.total_halfmove_counter
+    );
+    println!("FEN: {}", board.generate_fen());
+    // println!("Phase: {}", board.get_game_phase());
+    if moves.is_some() {
+        println!("Moves Possible: {}", moves_slice.len());
+    }
+
+    while y >= 0 {
+        print!("{} | ", y);
+        while x <= 7 {
+            let idx = (y * 8 + x) as usize;
+            let colored_str = char_board[idx].0.to_string().color(char_board[idx].1);
+            print!("{} ", colored_str);
+
+            x += 1;
+        }
+        x = 0;
+        y -= 1;
+        println!();
+    }
+    println!("    0 1 2 3 4 5 6 7");
+    println!("-------------------");
+}
+
+fn get_char_board(board: &Board, moves: &[EncodedMove]) -> [(char, &'static str); 64] {
+    let mut char_board = [(' ', "white"); 64];
+    for y in 0usize..=7usize {
+        for x in 0usize..=7usize {
+            let idx = y * 8 + x;
+            let pos = IndexPosition(idx);
+
+            let (piece, color) = board.get_piece_and_color_at_position(pos.to_position());
+            let mut text_color = "white";
+            if moves
+                .iter()
+                .any(|chess_move| chess_move.decode().from == pos)
+            {
+                text_color = "green";
+            }
+            if moves.iter().any(|chess_move| chess_move.decode().to == pos) {
+                text_color = "red";
+            }
+            char_board[idx] = (Piece::to_unicode_char(piece, color), text_color);
+        }
+    }
+    char_board
+}
+
+pub fn print_moves(board: &Board, moves: &Vec<EncodedMove>) {
+    println!("Potential Moves:");
+    let (
+        mut prev_pos,
+        mut prev_is_queen_castle,
+        mut prev_is_king_castle,
+        mut prev_is_promotion,
+        mut prev_is_ep_capture,
+    ) = (Position(0), false, false, false, false);
+    for encoded_mv in moves {
+        let mv = encoded_mv.decode();
+        let (
+            current_pos,
+            current_is_queen_castle,
+            current_is_king_castle,
+            current_is_promotion,
+            current_is_ep_capture,
+        ) = (
+            mv.from.to_position(),
+            mv.is_queen_castle,
+            mv.is_king_castle,
+            mv.promotion.is_some(),
+            mv.is_ep_capture,
+        );
+        let (current_color, current_piece) = board.get_piece_and_color_at_position(current_pos);
+        if current_pos != prev_pos
+            || current_is_queen_castle != prev_is_queen_castle
+            || current_is_king_castle != prev_is_king_castle
+            || current_is_promotion != prev_is_promotion
+            || current_is_ep_capture != prev_is_ep_capture
+        {
+            println!();
+            if current_is_queen_castle {
+                print!("Queen Castle: ")
+            }
+            if current_is_king_castle {
+                print!("King Castle: ")
+            }
+            if current_is_promotion {
+                print!("Promotion: ")
+            }
+            if current_is_ep_capture {
+                print!("En-Passant: ")
+            }
+            print!(
+                "{:?} {:?} {:?} -> ",
+                current_color,
+                current_piece,
+                mv.from.to_position()
+            );
+            (
+                prev_pos,
+                prev_is_queen_castle,
+                prev_is_king_castle,
+                prev_is_promotion,
+                prev_is_ep_capture,
+            ) = (
+                current_pos,
+                current_is_queen_castle,
+                current_is_king_castle,
+                current_is_promotion,
+                current_is_ep_capture,
+            );
+        }
+        print!(" {:?},", mv.to.to_position());
+    }
+    println!()
+}
+
+pub fn r_perft(board: &Board, depth: usize) -> usize {
+    if depth == 0 {
+        return 1;
+    }
+    let mut nodes = 0;
+    let moves = board.get_legal_moves(false);
+    for mv in moves {
+        let mut b2 = board.clone();
+        b2.make_move(&mv.decode());
+        nodes += r_perft(&b2, depth - 1);
+    }
+    nodes
+}
+
+pub fn r_detailed_perft(
+    board: &Board,
+    depth: usize,
+    captures: &mut isize,
+    total_promotions: &mut isize,
+    normal_promotions: &mut isize,
+    capture_promotions: &mut isize,
+    queen_castles: &mut isize,
+    king_castles: &mut isize,
+    ep_captures: &mut isize,
+    double_moves: &mut isize,
+) -> usize {
+    if depth == 0 {
+        return 1;
+    }
+    let mut nodes = 0;
+    let moves = board.get_legal_moves(false);
+    for encoded_mv in moves {
+        let mut b2 = board.clone();
+        b2.make_move(&encoded_mv.decode());
+        nodes += r_detailed_perft(
+            &b2,
+            depth - 1,
+            captures,
+            total_promotions,
+            normal_promotions,
+            capture_promotions,
+            queen_castles,
+            king_castles,
+            ep_captures,
+            double_moves,
+        );
+
+        let mv = encoded_mv.decode();
+
+        if mv.is_capture {
+            *captures += 1;
+        }
+        if mv.promotion.is_some() {
+            *total_promotions += 1;
+        }
+        if mv.promotion.is_some() && mv.is_capture {
+            *capture_promotions += 1;
+        }
+        if mv.promotion.is_some() && !mv.is_capture {
+            *normal_promotions += 1;
+        }
+        if mv.is_queen_castle {
+            *queen_castles += 1;
+        }
+        if mv.is_king_castle {
+            *king_castles += 1;
+        }
+        if mv.is_ep_capture {
+            *ep_captures += 1;
+        }
+        if mv.is_double_move {
+            *double_moves += 1;
+        }
+    }
+    nodes
+}
+
+pub fn debug_perft(board: &Board, depth: usize) {
+    let mut captures: isize = 0;
+    let mut total_promotions: isize = 0;
+    let mut normal_promotions: isize = 0;
+    let mut capture_promotions: isize = 0;
+    let mut queen_castles: isize = 0;
+    let mut king_castles: isize = 0;
+    let mut ep_captures: isize = 0;
+    let mut double_moves: isize = 0;
+    if depth == 0 {
+        println!("Perft divide depth {}:", 0);
+        return;
+    }
+    let start = Instant::now();
+    println!("Perft divide depth {}:", depth);
+    let mut total_nodes = 0;
+    let moves = board.get_legal_moves(false);
+    for encoded_mv in &moves {
+        let mv = encoded_mv.decode();
+        let mut b2 = board.clone();
+        b2.make_move(&mv);
+        let nodes_for_move = r_detailed_perft(
+            &b2,
+            depth - 1,
+            &mut captures,
+            &mut total_promotions,
+            &mut normal_promotions,
+            &mut capture_promotions,
+            &mut queen_castles,
+            &mut king_castles,
+            &mut ep_captures,
+            &mut double_moves,
+        );
+        total_nodes += nodes_for_move;
+        println!(
+            "{}{}: {}",
+            mv.from.to_position().to_coords(),
+            mv.to.to_position().to_coords(),
+            nodes_for_move
+        );
+
+        if mv.is_capture {
+            captures += 1;
+        }
+        if mv.promotion.is_some() {
+            total_promotions += 1;
+        }
+        if mv.promotion.is_some() && mv.is_capture {
+            capture_promotions += 1;
+        }
+        if mv.promotion.is_some() && !mv.is_capture {
+            normal_promotions += 1;
+        }
+        if mv.is_queen_castle {
+            queen_castles += 1;
+        }
+        if mv.is_king_castle {
+            king_castles += 1;
+        }
+        if mv.is_ep_capture {
+            ep_captures += 1;
+        }
+        if mv.is_double_move {
+            double_moves += 1;
+        }
+    }
+    let elapsed = start.elapsed();
+    let nodes_per_seconds = (total_nodes as f64 / elapsed.as_secs_f64()) as usize;
+    println!(
+        "Perft: Depth={} Nodes={} Time={:.3}s Nodes/sec={}",
+        depth,
+        total_nodes.to_formatted_string(&Locale::en),
+        elapsed.as_secs_f64(),
+        nodes_per_seconds.to_formatted_string(&Locale::en)
+    );
+
+    println!("Captures: {}", captures);
+    println!("En Passants: {}", ep_captures);
+    println!(
+        "Total Castles: {}  Queen Castles: {}  King Castles: {}",
+        queen_castles + king_castles,
+        queen_castles,
+        king_castles
+    );
+    println!(
+        "Promotions: {}  Normal Promotions: {}  Capture Promotions: {}",
+        total_promotions, normal_promotions, capture_promotions
+    );
+    println!("Double moves: {}", double_moves);
+}
+
+pub fn perft(board: &Board, depth: usize) {
+    if depth == 0 {
+        println!("Perft: Depth=0 Nodes=0 Time=0s Nodes/sec=0");
+        return;
+    }
+    let start = Instant::now();
+    let total_nodes = r_perft(board, depth);
+    let elapsed = start.elapsed();
+    let nodes_per_seconds = (total_nodes as f64 / elapsed.as_secs_f64()) as usize;
+    println!(
+        "Perft: Depth={} Nodes={} Time={:.3}s Nodes/sec={}",
+        depth,
+        total_nodes.to_formatted_string(&Locale::en),
+        elapsed.as_secs_f64(),
+        nodes_per_seconds.to_formatted_string(&Locale::en)
+    );
+}
+
+pub fn perft_rayon(board: &Board, depth: usize) {
+    if depth == 0 {
+        println!("Perft: Depth=0 Nodes=0 Time=0s Nodes/sec=0");
+        return;
+    }
+    let start = Instant::now();
+    let total_nodes = r_perft_rayon(board, depth);
+    let elapsed = start.elapsed();
+    let nodes_per_seconds = (total_nodes as f64 / elapsed.as_secs_f64()) as usize;
+    println!(
+        "Perft: Depth={} Nodes={} Time={:.3}s Nodes/sec={}",
+        depth,
+        total_nodes.to_formatted_string(&Locale::en),
+        elapsed.as_secs_f64(),
+        nodes_per_seconds.to_formatted_string(&Locale::en)
+    );
+}
+
+pub fn r_perft_rayon(board: &Board, depth: usize) -> usize {
+    if depth == 0 {
+        return 1;
+    }
+    board
+        .get_legal_moves(false)
+        .par_iter()
+        .map(|mv| {
+            let mut b2 = board.clone();
+            b2.make_move(&mv.decode());
+            r_perft_rayon(&b2, depth - 1) // RÃ¼ckgabe ohne Semikolon
+        })
+        .sum::<usize>()
+}
+use crate::{
+    prelude::*,
+    types::{bitboard, color},
+};
+
+const KNIGHT: i32 = 1;
+const BISHOP: i32 = 1;
+const ROOK: i32 = 2;
+const QUEEN: i32 = 4;
+const TOTAL: i32 = KNIGHT * 4 + BISHOP * 4 + ROOK * 4 + QUEEN * 2;
+const EMPTY: i32 = 12;
+
+const WHITE: i32 = 0;
+const BLACK: i32 = 1;
+
+const MG_PIECE_VALUES: [i32; 6] = [82, 337, 365, 477, 1025, 0];
+const EG_PIECE_VALUES: [i32; 6] = [94, 281, 297, 512, 936, 0];
+const MG_TABLE: [[i32; 64]; 12] = init_table(MG_PIECE_VALUES, MG_BASE_POSITION_TABLE);
+const EG_TABLE: [[i32; 64]; 12] = init_table(EG_PIECE_VALUES, EG_BASE_POSITION_TABLE);
+const GAMEPHASE_INC: [i32; 12] = [0, 0, 1, 1, 1, 1, 2, 2, 4, 4, 0, 0];
+
+// Flips square index to represent black site with white site offsets
+const fn flip(sq: usize) -> usize {
+    (sq & 7) | ((7 - (sq >> 3)) << 3)
+}
+
+const fn init_table(base_value: [i32; 6], base_position_table: [[i32; 64]; 6]) -> [[i32; 64]; 12] {
+    let mut table = [[0i32; 64]; 12];
+    let mut piece = 0;
+    while piece < 6 {
+        let piece_type = piece * 2;
+        let mut square = 0;
+        while square < 64 {
+            let base = base_value[piece];
+            let offset_white = base_position_table[piece][square];
+            let offset_black = base_position_table[piece][flip(square)];
+            table[piece_type][square] = base + offset_white;
+            table[piece_type + 1][square] = base + offset_black;
+            square += 1;
+        }
+        piece += 1;
+    }
+    table
+}
+
+/// Middlegame-Piece-Square Tables Base Values used for calculation of the real eval values
+pub const MG_BASE_POSITION_TABLE: [[i32; 64]; 6] = [
+    // 0: Pawn
+    [
+        0, 0, 0, 0, 0, 0, 0, 0, 98, 134, 61, 95, 68, 126, 34, -11, -6, 7, 26, 31, 65, 56, 25, -20,
+        -14, 13, 6, 21, 23, 12, 17, -23, -27, -2, -5, 12, 17, 6, 10, -25, -26, -4, -4, -10, 3, 3,
+        33, -12, -35, -1, -20, -23, -15, 24, 38, -22, 0, 0, 0, 0, 0, 0, 0, 0,
+    ],
+    // 1: Knight
+    [
+        -167, -89, -34, -49, 61, -97, -15, -107, -73, -41, 72, 36, 23, 62, 7, -17, -47, 60, 37, 65,
+        84, 129, 73, 44, -9, 17, 19, 53, 37, 69, 18, 22, -13, 4, 16, 13, 28, 19, 21, -8, -23, -9,
+        12, 10, 19, 17, 25, -16, -29, -53, -12, -3, -1, 18, -14, -19, -105, -21, -58, -33, -17,
+        -28, -19, -23,
+    ],
+    // 2: Bishop
+    [
+        -29, 4, -82, -37, -25, -42, 7, -8, -26, 16, -18, -13, 30, 59, 18, -47, -16, 37, 43, 40, 35,
+        50, 37, -2, -4, 5, 19, 50, 37, 37, 7, -2, -6, 13, 13, 26, 34, 12, 10, 4, 0, 15, 15, 15, 14,
+        27, 18, 10, 4, 15, 16, 0, 7, 21, 33, 1, -33, -3, -14, -21, -13, -12, -39, -21,
+    ],
+    // 3: Rook
+    [
+        32, 42, 32, 51, 63, 9, 31, 43, 27, 32, 58, 62, 80, 67, 26, 44, -5, 19, 26, 36, 17, 45, 61,
+        16, -24, -11, 7, 26, 24, 35, -8, -20, -36, -26, -12, -1, 9, -7, 6, -23, -45, -25, -16, -17,
+        3, 0, -5, -33, -44, -16, -20, -9, -1, 11, -6, -71, -19, -13, 1, 17, 16, 7, -37, -26,
+    ],
+    // 4: Queen
+    [
+        -28, 0, 29, 12, 59, 44, 43, 45, -24, -39, -5, 1, -16, 57, 28, 54, -13, -17, 7, 8, 29, 56,
+        47, 57, -27, -27, -16, -16, -1, 17, -2, 1, -9, -26, -9, -10, -2, -4, 3, -3, -14, 2, -11,
+        -2, -5, 2, 14, 5, -35, -8, 11, 2, 8, 15, -3, 1, -1, -18, -9, 10, -15, -25, -31, -50,
+    ],
+    // 5: King
+    [
+        -65, 23, 16, -15, -56, -34, 2, 13, 29, -1, -20, -7, -8, -4, -38, -29, -9, 24, 2, -16, -20,
+        6, 22, -22, -17, -20, -12, -27, -30, -25, -14, -36, -49, -1, -27, -39, -46, -44, -33, -51,
+        -14, -14, -22, -46, -44, -30, -15, -27, 1, 7, -8, -64, -43, -16, 9, 8, -15, 36, 12, -54, 8,
+        -28, 24, 14,
+    ],
+];
+
+/// Endgame-Piece-Square Tables Base Values used for calculation of the real eval values
+pub const EG_BASE_POSITION_TABLE: [[i32; 64]; 6] = [
+    // 0: Pawn
+    [
+        0, 0, 0, 0, 0, 0, 0, 0, 178, 173, 158, 134, 147, 132, 165, 187, 94, 100, 85, 67, 56, 53,
+        82, 84, 32, 24, 13, 5, -2, 4, 17, 17, 13, 9, -3, -7, -7, -8, 3, -1, 4, 7, -6, 1, 0, -5, -1,
+        -8, 13, 8, 8, 10, 13, 0, 2, -7, 0, 0, 0, 0, 0, 0, 0, 0,
+    ],
+    // 1: Knight
+    [
+        -58, -38, -13, -28, -31, -27, -63, -99, -25, -8, -25, -2, -9, -25, -24, -52, -24, -20, 10,
+        9, -1, -9, -19, -41, -17, 3, 22, 22, 22, 11, 8, -18, -18, -6, 16, 25, 16, 17, 4, -18, -23,
+        -3, -1, 15, 10, -3, -20, -22, -42, -20, -10, -5, -2, -20, -23, -44, -29, -51, -23, -15,
+        -22, -18, -50, -64,
+    ],
+    // 2: Bishop
+    [
+        -14, -21, -11, -8, -7, -9, -17, -24, -8, -4, 7, -12, -3, -13, -4, -14, 2, -8, 0, -1, -2, 6,
+        0, 4, -3, 9, 12, 9, 14, 10, 3, 2, -6, 3, 13, 19, 7, 10, -3, -9, -12, -3, 8, 10, 13, 3, -7,
+        -15, -14, -18, -7, -1, 4, -9, -15, -27, -23, -9, -23, -5, -9, -16, -5, -17,
+    ],
+    // 3: Rook
+    [
+        13, 10, 18, 15, 12, 12, 8, 5, 11, 13, 13, 11, -3, 3, 8, 3, 7, 7, 7, 5, 4, -3, -5, -3, 4, 3,
+        13, 1, 2, 1, -1, 2, 3, 5, 8, 4, -5, -6, -8, -11, -4, 0, -5, -1, -7, -12, -8, -16, -6, -6,
+        0, 2, -9, -9, -11, -3, -9, 2, 3, -1, -5, -13, 4, -20,
+    ],
+    // 4: Queen
+    [
+        -9, 22, 22, 27, 27, 19, 10, 20, -17, 20, 32, 41, 58, 25, 30, 0, -20, 6, 9, 49, 47, 35, 19,
+        9, 3, 22, 24, 45, 57, 40, 57, 36, -18, 28, 19, 47, 31, 34, 39, 23, -16, -27, 15, 6, 9, 17,
+        10, 5, -22, -23, -30, -16, -16, -23, -36, -32, -33, -28, -22, -43, -5, -32, -20, -41,
+    ],
+    // 5: King
+    [
+        -74, -35, -18, -18, -11, 15, 4, -17, -12, 17, 14, 17, 17, 38, 23, 11, 10, 17, 23, 15, 20,
+        45, 44, 13, -8, 22, 24, 27, 26, 33, 26, 3, -18, -4, 21, 24, 27, 23, 9, -11, -19, -3, 11,
+        21, 23, 16, 7, -9, -27, -11, 4, 13, 14, 4, -5, -17, -53, -34, -21, -11, -28, -14, -24, -43,
+    ],
+];
+
+impl Board {
+    /// Gamephase is calculated by getting the amount of each piece type and using predefined values, e.g. a Queen is captured then the game phase increases mroe than if a pawn is captured
+    pub fn get_game_phase(&self) -> i32 {
+        let mut phase = TOTAL;
+        for color_piece in self.pieces.iter() {
+            let cp = *color_piece;
+            if cp == ColorPiece::Empty {
+                continue;
+            }
+            phase -= GAMEPHASE_INC[cp as usize];
+        }
+        phase = (phase * 256 + (TOTAL / 2)) / TOTAL;
+        phase
+    }
+
+    /// Evaluates the board,
+    /// positive -> advantage for white,
+    /// negative -> advantage for black,
+    /// Unit = Centipawns, 100 Centipawns => 1 Pawn
+    pub fn evaluate(&self) -> i32 {
+        let white = 0usize;
+        let black = 1usize;
+        let mut mg = [0i32; 2];
+        let mut eg = [0i32; 2];
+
+        for (position_idx, color_piece) in self.pieces.iter().enumerate() {
+            let cp = *color_piece;
+            if cp == ColorPiece::Empty {
+                continue;
+            }
+
+            mg[(cp as usize) & 1] += MG_TABLE[cp as usize][position_idx];
+            eg[(cp as usize) & 1] += EG_TABLE[cp as usize][position_idx];
+        }
+
+        let mg_score = mg[white] - mg[black];
+        let eg_score = eg[white] - eg[black];
+        let gamephase = self.get_game_phase() as i32;
+
+        let current_color_multiplier = match self.current_color {
+            Color::White => 1,
+            Color::Black => -1,
+        };
+
+        (mg_score * (256 - gamephase) + eg_score * gamephase >> 8) * current_color_multiplier
+    }
+}
+mod debug;
+mod evaluate;
+mod position_generation;
+mod prelude;
+mod pseudo_legal_move_generation;
+mod search;
+mod test;
+mod types;
+mod uci;
+fn main() {
+    // Starts UCI Communication via std in and out
+    uci::handle_uci_communication();
+}
+use crate::prelude::*;
+
+#[inline(always)]
+pub fn get_pawn_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
+    let mut moves_to_empty = Bitboard(0);
+    let mut moves_to_enemy = Bitboard(0);
+    let move_direction_y = match color {
+        Color::Black => -1,
+        Color::White => 1,
+    };
+
+    moves_to_empty |= pos.get_offset_pos(0, move_direction_y);
+
+    // Add possible move by 2 when pawn has not moved in the match and position in front is empty
+    match (color, pos.to_index().0 / 8) {
+        (Color::Black, 6) => {
+            if board
+                .get_empty_pieces()
+                .is_position_set(pos.get_offset_pos(0, -1))
+            {
+                moves_to_empty |= pos.get_offset_pos(0, -2)
+            }
+        }
+        (Color::White, 1) => {
+            if board
+                .get_empty_pieces()
+                .is_position_set(pos.get_offset_pos(0, 1))
+            {
+                moves_to_empty |= pos.get_offset_pos(0, 2)
+            }
+        }
+        (_, _) => {}
+    }
+
+    // Positions need to be empty to be valid
+    moves_to_empty &= board.get_empty_pieces();
+
+    // Add the to possible Strike moves
+    moves_to_enemy |= pos.get_offset_pos(-1, move_direction_y);
+    moves_to_enemy |= pos.get_offset_pos(1, move_direction_y);
+
+    // Positions need to be enemy to be valid
+    moves_to_enemy &= board.get_pieces_by_color(!color);
+
+    moves_to_empty | moves_to_enemy
+}
+
+#[inline(always)]
+pub fn get_pawn_attack_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
+    let mut moves_to_enemy = Bitboard(0);
+    let non_friendly_pieces = board.get_non_friendly_pieces(color);
+    let move_direction_y = match color {
+        Color::Black => -1,
+        Color::White => 1,
+    };
+    // Add the to possible Strike moves
+    moves_to_enemy |= pos.get_offset_pos(-1, move_direction_y);
+    moves_to_enemy |= pos.get_offset_pos(1, move_direction_y);
+    moves_to_enemy &= non_friendly_pieces;
+
+    moves_to_enemy
+}
+
+#[inline(always)]
+pub fn get_king_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
+    let mut moves = Bitboard(0);
+    let non_friendly_pieces = board.get_non_friendly_pieces(color);
+    moves |= pos.get_offset_pos(-1, 1);
+    moves |= pos.get_offset_pos(0, 1);
+    moves |= pos.get_offset_pos(1, 1);
+    moves |= pos.get_offset_pos(-1, 0);
+    moves |= pos.get_offset_pos(1, 0);
+    moves |= pos.get_offset_pos(-1, -1);
+    moves |= pos.get_offset_pos(0, -1);
+    moves |= pos.get_offset_pos(1, -1);
+    moves & non_friendly_pieces
+}
+
+#[inline(always)]
+pub fn get_knight_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
+    let mut moves = Bitboard(0);
+    let non_friendly_pieces = board.get_non_friendly_pieces(color);
+    moves |= pos.get_offset_pos(-2, 1);
+    moves |= pos.get_offset_pos(-1, 2);
+    moves |= pos.get_offset_pos(1, 2);
+    moves |= pos.get_offset_pos(2, 1);
+    moves |= pos.get_offset_pos(-2, -1);
+    moves |= pos.get_offset_pos(-1, -2);
+    moves |= pos.get_offset_pos(1, -2);
+    moves |= pos.get_offset_pos(2, -1);
+    moves & non_friendly_pieces
+}
+
+#[inline(always)]
+pub fn get_sliding_positions(
+    board: &Board,
+    pos: Position,
+    color: Color,
+    dx: isize,
+    dy: isize,
+) -> Bitboard {
+    let mut moves = Bitboard(0);
+    let non_friendly_pieces = board.get_non_friendly_pieces(color);
+    let mut current_dx = 0isize;
+    let mut current_dy = 0isize;
+    loop {
+        current_dx += dx;
+        current_dy += dy;
+        let current_pos = pos.get_offset_pos(current_dx, current_dy);
+        if current_pos == Position(0) {
+            break;
+        }
+
+        if current_pos.is_friendly(board, color) {
+            break;
+        }
+
+        moves |= current_pos;
+
+        if current_pos.is_enemy(board, color) {
+            break;
+        }
+    }
+    moves & non_friendly_pieces
+}
+
+#[inline(always)]
+pub fn get_queen_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
+    let mut moves = Bitboard(0);
+    moves |= get_sliding_positions(board, pos, color, 1, -1);
+    moves |= get_sliding_positions(board, pos, color, 1, 0);
+    moves |= get_sliding_positions(board, pos, color, 1, 1);
+    moves |= get_sliding_positions(board, pos, color, 0, -1);
+    moves |= get_sliding_positions(board, pos, color, 0, 1);
+    moves |= get_sliding_positions(board, pos, color, -1, -1);
+    moves |= get_sliding_positions(board, pos, color, -1, 0);
+    moves |= get_sliding_positions(board, pos, color, -1, 1);
+    moves
+}
+
+#[inline(always)]
+pub fn get_bishop_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
+    let mut moves = Bitboard(0);
+    moves |= get_sliding_positions(board, pos, color, 1, -1);
+    moves |= get_sliding_positions(board, pos, color, 1, 1);
+    moves |= get_sliding_positions(board, pos, color, -1, -1);
+    moves |= get_sliding_positions(board, pos, color, -1, 1);
+    moves
+}
+
+#[inline(always)]
+pub fn get_rook_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
+    let mut moves = Bitboard(0);
+    moves |= get_sliding_positions(board, pos, color, 1, 0);
+    moves |= get_sliding_positions(board, pos, color, 0, -1);
+    moves |= get_sliding_positions(board, pos, color, 0, 1);
+    moves |= get_sliding_positions(board, pos, color, -1, 0);
+    moves
+}
+pub use crate::types::{
+    bitboard::Bitboard, board::board::Board, color::Color, color_piece::ColorPiece,
+    decoded_move::DecodedMove, encoded_move::EncodedMove, engine_state::EngineState,
+    index_position::IndexPosition, piece::Piece, position::Position,
+};
+use crate::position_generation::*;
+use crate::prelude::*;
+use crate::types::encoded_move::move_flags;
+#[inline(always)]
+pub fn get_all_moves(moves: &mut Vec<EncodedMove>, board: &Board, color: Color) -> Bitboard {
+    let mut moves_bitboard = Bitboard(0);
+    //let mut moves: Vec<ChessMove> = Vec::with_capacity(256);
+
+    moves_bitboard |= get_pawn_moves(board, color, moves);
+
+    // Knight
+    moves_bitboard |=
+        get_moves_for_piece_type(board, Piece::Knight, color, moves, get_knight_positions);
+
+    // Bishop
+    moves_bitboard |=
+        get_moves_for_piece_type(board, Piece::Bishop, color, moves, get_bishop_positions);
+
+    // Rook
+    moves_bitboard |=
+        get_moves_for_piece_type(board, Piece::Rook, color, moves, get_rook_positions);
+
+    // Queen
+    moves_bitboard |=
+        get_moves_for_piece_type(board, Piece::Queen, color, moves, get_queen_positions);
+
+    // King
+    let king_pos = board.get_king_pos(color);
+    if king_pos != Position(0) {
+        moves_bitboard |= get_king_moves(board, king_pos, color, moves, get_king_positions);
+    }
+
+    get_castle_moves(board, color, moves);
+    get_en_passant_moves(board, color, moves);
+    moves_bitboard
+}
+
+/// Calculate all moves for each instance of a piece type exept the king because it is unique and pawns because they are
+#[inline(always)]
+pub fn get_moves_for_piece_type(
+    board: &Board,
+    piece: Piece,
+    color: Color,
+    moves: &mut Vec<EncodedMove>,
+    f: fn(board: &Board, pos: Position, color: Color) -> Bitboard,
+) -> Bitboard {
+    let mut piece_positions = board.get_positions_by_piece_color(color, piece);
+    let mut target_positions = Bitboard(0);
+
+    while piece_positions != Bitboard(0) {
+        let current_pos = piece_positions.pop_lsb_position().unwrap();
+
+        let mut target_positions_for_one_piece = f(board, current_pos, color);
+        target_positions |= target_positions_for_one_piece;
+
+        while target_positions_for_one_piece != Bitboard(0) {
+            let target_pos = target_positions_for_one_piece.pop_lsb_position().unwrap();
+            let mv = match target_pos.is_enemy(board, color) {
+                true => EncodedMove::encode(current_pos, target_pos, move_flags::CAPTURE),
+                false => EncodedMove::encode(current_pos, target_pos, move_flags::QUIET),
+            };
+            moves.push(mv);
+        }
+    }
+    target_positions
+}
+
+#[inline(always)]
+pub fn get_pawn_moves(board: &Board, color: Color, moves: &mut Vec<EncodedMove>) -> Bitboard {
+    let mut target_positions = Bitboard(0);
+    let mut pawn_positions = board.get_positions_by_piece_color(color, Piece::Pawn);
+
+    while pawn_positions != Bitboard(0) {
+        let current_pos = pawn_positions.pop_lsb_position().unwrap();
+
+        let mut target_positions_for_one_piece = get_pawn_positions(board, current_pos, color);
+        target_positions |= target_positions_for_one_piece;
+
+        while target_positions_for_one_piece != Bitboard(0) {
+            let target_pos = target_positions_for_one_piece.pop_lsb_position().unwrap();
+
+            let cy = current_pos.to_y();
+            let ty = target_pos.to_y();
+            let is_double_move = if cy.abs_diff(ty) == 2 { true } else { false };
+            let is_capture = target_pos.is_enemy(board, color);
+
+            if ty == 0 || ty == 7 {
+                let promotion_moves = match is_capture {
+                    true => [
+                        EncodedMove::encode(
+                            current_pos,
+                            target_pos,
+                            move_flags::KNIGHT_PROMO_CAPTURE,
+                        ),
+                        EncodedMove::encode(
+                            current_pos,
+                            target_pos,
+                            move_flags::BISHOP_PROMO_CAPTURE,
+                        ),
+                        EncodedMove::encode(
+                            current_pos,
+                            target_pos,
+                            move_flags::ROOK_PROMO_CAPTURE,
+                        ),
+                        EncodedMove::encode(
+                            current_pos,
+                            target_pos,
+                            move_flags::QUEEN_PROMO_CAPTURE,
+                        ),
+                    ],
+
+                    false => [
+                        EncodedMove::encode(current_pos, target_pos, move_flags::KNIGHT_PROMO),
+                        EncodedMove::encode(current_pos, target_pos, move_flags::BISHOP_PROMO),
+                        EncodedMove::encode(current_pos, target_pos, move_flags::ROOK_PROMO),
+                        EncodedMove::encode(current_pos, target_pos, move_flags::QUEEN_PROMO),
+                    ],
+                };
+                moves.extend_from_slice(&promotion_moves);
+            } else {
+                let mv = match (is_double_move, is_capture) {
+                    (true, false) => {
+                        EncodedMove::encode(current_pos, target_pos, move_flags::DOUBLE_MOVE)
+                    }
+                    (false, true) => {
+                        EncodedMove::encode(current_pos, target_pos, move_flags::CAPTURE)
+                    }
+                    _ => EncodedMove::encode(current_pos, target_pos, move_flags::QUIET),
+                };
+
+                moves.push(mv);
+            }
+        }
+    }
+    target_positions
+}
+
+/// Calculates all possible moves for the king which is the only unique piece
+#[inline(always)]
+pub fn get_king_moves(
+    board: &Board,
+    current_pos: Position,
+    color: Color,
+    moves: &mut Vec<EncodedMove>,
+    f: fn(board: &Board, pos: Position, color: Color) -> Bitboard,
+) -> Bitboard {
+    let mut target_positions = f(board, current_pos, color);
+    while target_positions != Bitboard(0) {
+        let target_pos = target_positions.pop_lsb_position().unwrap();
+
+        match target_pos.is_enemy(board, color) {
+            true => moves.push(EncodedMove::encode(
+                current_pos,
+                target_pos,
+                move_flags::CAPTURE,
+            )),
+            false => moves.push(EncodedMove::encode(
+                current_pos,
+                target_pos,
+                move_flags::QUIET,
+            )),
+        }
+    }
+    target_positions
+}
+
+pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<EncodedMove>) {
+    match color {
+        Color::White => {
+            const MASK_WHITE_QUEEN_CASTLE: Bitboard = Bitboard(1u64 << 1 | 1u64 << 2 | 1u64 << 3);
+            if board.white_queen_castle
+                && board.get_empty_pieces() & MASK_WHITE_QUEEN_CASTLE == MASK_WHITE_QUEEN_CASTLE
+            {
+                let mv = EncodedMove::encode(
+                    IndexPosition(4).to_position(),
+                    IndexPosition(2).to_position(),
+                    move_flags::QUEEN_CASTLE,
+                );
+                moves.push(mv);
+            }
+            const MASK_WHITE_KING_CASTLE: Bitboard = Bitboard(1u64 << 5 | 1u64 << 6);
+            if board.white_king_castle
+                && board.get_empty_pieces() & MASK_WHITE_KING_CASTLE == MASK_WHITE_KING_CASTLE
+            {
+                let mv = EncodedMove::encode(
+                    IndexPosition(4).to_position(),
+                    IndexPosition(6).to_position(),
+                    move_flags::KING_CASTLE,
+                );
+                moves.push(mv);
+            }
+        }
+        Color::Black => {
+            const MASK_BLACK_KING_CASTLE: Bitboard = Bitboard(1u64 << 57 | 1u64 << 58 | 1u64 << 59);
+            if board.black_king_castle
+                && board.get_empty_pieces() & MASK_BLACK_KING_CASTLE == MASK_BLACK_KING_CASTLE
+            {
+                let mv = EncodedMove::encode(
+                    IndexPosition(60).to_position(),
+                    IndexPosition(58).to_position(),
+                    move_flags::KING_CASTLE,
+                );
+                moves.push(mv);
+            }
+            const MASK_BLACK_QUEEN_CASTLE: Bitboard = Bitboard(1u64 << 61 | 1u64 << 62);
+            if board.black_queen_castle
+                && board.get_empty_pieces() & MASK_BLACK_QUEEN_CASTLE == MASK_BLACK_QUEEN_CASTLE
+            {
+                let mv = EncodedMove::encode(
+                    IndexPosition(60).to_position(),
+                    IndexPosition(62).to_position(),
+                    move_flags::QUEEN_CASTLE,
+                );
+                moves.push(mv);
+            }
+        }
+    }
+}
+
+#[inline(always)]
+pub fn get_en_passant_moves(board: &Board, color: Color, moves: &mut Vec<EncodedMove>) {
+    let ep_target = match board.ep_target {
+        Some(pos) => pos,
+        None => return,
+    };
+
+    match color {
+        Color::White => {
+            let position_left = ep_target.get_offset_pos(-1, -1);
+            let position_right = ep_target.get_offset_pos(1, -1);
+            if board.bbs[ColorPiece::WhitePawn as usize].is_position_set(position_left) {
+                let mv = EncodedMove::encode(position_left, ep_target, move_flags::EP_CAPTURE);
+                moves.push(mv);
+            }
+            if board.bbs[ColorPiece::WhitePawn as usize].is_position_set(position_right) {
+                let mv = EncodedMove::encode(position_right, ep_target, move_flags::EP_CAPTURE);
+                moves.push(mv);
+            }
+        }
+        Color::Black => {
+            let position_left = ep_target.get_offset_pos(-1, 1);
+            let position_right = ep_target.get_offset_pos(1, 1);
+            if board.bbs[ColorPiece::BlackPawn as usize].is_position_set(position_left) {
+                let mv = EncodedMove::encode(position_left, ep_target, move_flags::EP_CAPTURE);
+                moves.push(mv);
+            }
+            if board.bbs[ColorPiece::BlackPawn as usize].is_position_set(position_right) {
+                let mv = EncodedMove::encode(position_right, ep_target, move_flags::EP_CAPTURE);
+                moves.push(mv);
+            }
+        }
+    }
+}
+
+#[inline(always)]
+pub fn get_all_attacks(board: &Board, color: Color) -> Bitboard {
+    let mut attacks = Bitboard(0);
+    let mut positions = match color {
+        Color::Black => board.black_pieces,
+        Color::White => board.white_pieces,
+    };
+    while positions != Bitboard(0) {
+        let current_pos = positions.pop_lsb_position().unwrap();
+        let (piece, color) = board.get_piece_and_color_at_position(current_pos);
+        attacks |= match piece {
+            Piece::Pawn => get_pawn_attack_positions(board, current_pos, color),
+            Piece::Knight => get_knight_positions(board, current_pos, color),
+            Piece::Bishop => get_bishop_positions(board, current_pos, color),
+            Piece::Rook => get_rook_positions(board, current_pos, color),
+            Piece::Queen => get_queen_positions(board, current_pos, color),
+            Piece::King => get_king_positions(board, current_pos, color),
+            _ => Bitboard(0),
+        };
+    }
+    attacks
+}
+#[cfg(test)]
+mod tests {
+    use crate::{
+        debug::{r_perft, r_perft_rayon},
+        prelude::*,
+    };
+
+    #[test]
+    fn test_move_encoding_decoding() {
+        let moves = [
+            "e5f7", "e5d7", "e5g6", "e5c6", "e5g4", "e5c4", "e5d3", "f3f6", "f3h5", "f3f5", "f3g4",
+            "f3f4", "f3h3", "f3g3", "f3e3", "f3d3", "f3g2", "c3d5", "c3b5", "c3a4", "c3d1", "c3b1",
+            "e2a6", "e2b5", "e2c4", "e2d3", "e2f1", "e2d1", "d2h6", "d2g5", "d2f4", "d2e3", "d2c1",
+            "h1g1", "h1f1", "e1d1", "a1d1", "a1c1", "a1b1", "e1c1", "c7c8q", "c7c8r", "c7c8b",
+            "c7c8n", "h2h3", "b2b3", "a2a3", "h2h4", "a2a4",
+        ];
+
+        let fen = "r3k2r/p1Ppqpb1/bn2pnp1/4N3/1p2P3/2N2Q2/PPPBBPpP/R3K2R w KQkq - 0 1";
+
+        let board = Board::from_fen(fen);
+
+        for mv_ref in moves.iter() {
+            let mv = *mv_ref;
+            let decoded = DecodedMove::from_coords(mv.to_string(), &board);
+            assert_eq!(mv, decoded.to_coords(), "Str -> Decoded -> Str");
+
+            let encoded = decoded.encode();
+            let decoded2 = encoded.decode();
+            assert_eq!(
+                mv,
+                decoded2.to_coords(),
+                "Str -> Decoded -> Encoded -> Decoded -> Str"
+            );
+        }
+    }
+
+    #[test]
+    fn test_legal_move_generation() {
+        // adjust to limit the depth
+        const MAX_DEPTH: usize = 5;
+
+        let fens = [
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", // Initial Pos
+            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ", // Pos 2
+            "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1 ",               // Pos 3
+            "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1", // Pos 4
+            "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8 ", // Pos 5
+            "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10 ", // Pos 6
+        ];
+        let perft_results: [[usize; 5]; 6] = [
+            [20, 400, 8_902, 197_281, 4_865_609],        // Initial Pos
+            [48, 2_039, 97_862, 4_085_603, 193_690_690], // Pos 2
+            [14, 191, 2_812, 43_238, 674_624],           // Pos 3
+            [6, 264, 9_467, 422_333, 15_833_292],        // Pos 4
+            [44, 1_486, 62_379, 2_103_487, 89_941_194],  // Pos 5
+            [46, 2_079, 89_890, 3_894_594, 164_075_551], // Pos 6
+        ];
+
+        for (fen_idx, fen) in fens.iter().enumerate() {
+            for (depth_idx, correct_node_count) in perft_results[fen_idx].iter().enumerate() {
+                let depth = depth_idx + 1;
+                if depth >= MAX_DEPTH {
+                    break;
+                }
+                let board = Board::from_fen(fen);
+                let calculated_node_count = r_perft_rayon(&board, depth);
+                assert_eq!(
+                    *correct_node_count,
+                    calculated_node_count,
+                    "Testing node count Fen: {} Depth: {}",
+                    fen_idx + 1,
+                    depth
+                );
+            }
+        }
+
+        // let perft_results = [[20, 400, 8902, 197281, 4865609], []]
+    }
+}
+use crate::debug;
+use crate::prelude::*;
+use crate::search;
+use std::io::{self, BufRead, Write};
+use std::time::Duration;
+
+pub fn handle_uci_communication() {
+    let stdin = io::stdin();
+    let mut stdout = io::stdout();
+    let mut state = EngineState::new(); // State enthÃ¤lt jetzt das Board
+
+    for line_res in stdin.lock().lines() {
+        let line = match line_res {
+            Ok(l) => l,
+            Err(_) => break,
+        };
+
+        let mut parts = line.split_whitespace();
+        match parts.next() {
+            Some("uci") => {
+                println!("id name MeinRustBot");
+                println!("id author DeinName");
+                println!("uciok");
+            }
+            Some("isready") => {
+                println!("readyok");
+            }
+            Some("ucinewgame") => {
+                state = EngineState::new();
+            }
+            Some("position") => {
+                let args: Vec<&str> = parts.collect();
+                state.handle_position(&args);
+            }
+            Some("go") => {
+                let args: Vec<&str> = parts.collect();
+
+                if args.len() == 2 && args[0] == "depth" {
+                    let depth: usize = match args[1].parse() {
+                        Ok(d) => d,
+                        Err(_) => 0,
+                    };
+
+                    let best_move = search::iterative_deepening::iterative_deepening(
+                        &mut state.board,
+                        depth,
+                        Duration::new(3600, 0),
+                    );
+
+                    if let Some(best_move) = best_move {
+                        println!("bestmove {}", best_move.decode().to_coords());
+                    } else {
+                        println!("bestmove (none)");
+                    }
+
+                    continue;
+                }
+
+                let best_move = search::iterative_deepening::iterative_deepening(
+                    &mut state.board,
+                    100,
+                    Duration::new(1, 0),
+                );
+
+                if let Some(best_move) = best_move {
+                    println!("bestmove {}", best_move.decode().to_coords());
+                } else {
+                    println!("bestmove (none)");
+                }
+            }
+            Some("quit") => break,
+            Some("perft") => {
+                let args: Vec<&str> = parts.collect();
+                let depth: usize = match args[0].parse() {
+                    Ok(d) => d,
+                    Err(_) => 0,
+                };
+
+                let debug = args.iter().any(|&flag| flag == "--debug");
+                let rayon = args.iter().any(|&flag| flag == "--rayon");
+
+                if debug == true {
+                    debug::debug_perft(&state.board, depth);
+                } else if rayon == true {
+                    debug::perft_rayon(&state.board, depth);
+                } else {
+                    debug::perft(&state.board, depth);
+                }
+            }
+            Some("fen") => println!("Current Fen: {}", state.board.generate_fen()),
+            Some("draw") => debug::print_board(&state.board, None),
+            Some("moves") => {
+                debug::print_board(&state.board, Some(&state.board.get_legal_moves(false)))
+            }
+            Some("eval") => loop {},
+            Some(cmd) => {
+                eprintln!("Unknown command: {}", cmd);
+            }
+            None => {}
+        }
+
+        stdout.flush().unwrap();
+    }
+}
+use crate::prelude::*;
+use crate::search::move_ordering;
+use crate::search::search_info::SearchInfo;
+
+use std::sync::{
+    Arc,
+    atomic::{AtomicBool, Ordering},
+};
+
+const MATE_SCORE: i32 = 100000;
+const MAX_QUIESCENCE_SEARCH_DEPTH: usize = 8;
+
+/// Modified Mini Max algorithm which always picks the best move for each side until a given depth is reached and the evaluates the outcomes to pick the best move at the first layer
+pub fn alpha_beta(
+    board: &Board,
+    depth: usize,
+    mut alpha: i32,
+    beta: i32,
+    stop: &Arc<AtomicBool>,
+    search_info: &mut SearchInfo,
+) -> (Option<EncodedMove>, i32) {
+    search_info.total_nodes += 1;
+    if depth == 0 {
+        return (
+            None,
+            quiescence_search(
+                board,
+                alpha,
+                beta,
+                MAX_QUIESCENCE_SEARCH_DEPTH,
+                stop,
+                search_info,
+            ),
+        );
+    }
+
+    // if search time is over this statement polls the corresponding bool every 1024 nodes and cancels the node if time is over
+    if search_info.total_nodes % 1024 == 0 && stop.load(Ordering::Relaxed) {
+        search_info.timeout_occurred = true;
+        return (None, 0);
+    }
+
+    // set the best evaluation very low to begin with
+    let mut best_eval = i32::MIN + 1;
+    let mut best_move: Option<EncodedMove> = None;
+
+    let mut moves = board.get_legal_moves(false);
+
+    // returns the mate score (very low) when in check but subtracts the depth to give a later check a better eval because the depth is lowers the further you go
+    if moves.is_empty() {
+        if board.is_in_check() {
+            return (None, -MATE_SCORE - (depth as i32));
+        } else {
+            return (None, 0);
+        }
+    }
+
+    move_ordering::order_moves(&mut moves, board);
+
+    for mv in moves {
+        let mut bc = board.clone();
+        bc.make_move(&mv.decode());
+        let eval = -alpha_beta(&bc, depth - 1, -beta, -alpha, stop, search_info).1;
+        if eval > best_eval {
+            best_eval = eval;
+            best_move = Some(mv);
+            if eval > alpha {
+                alpha = eval;
+            }
+        }
+        if eval >= beta {
+            return (best_move, best_eval);
+        }
+    }
+
+    (best_move, best_eval)
+}
+
+pub fn quiescence_search(
+    board: &Board,
+    mut alpha: i32,
+    beta: i32,
+    depth: usize,
+    stop: &Arc<AtomicBool>,
+    search_info: &mut SearchInfo,
+) -> i32 {
+    search_info.total_nodes += 1;
+
+    if search_info.total_nodes % 1024 == 0 && stop.load(Ordering::Relaxed) {
+        search_info.timeout_occurred = true;
+        return 0;
+    }
+
+    if depth == 0 {
+        return board.evaluate();
+    }
+
+    let stand_pat_score = board.evaluate();
+    let mut best_score = stand_pat_score;
+
+    if stand_pat_score >= beta {
+        return stand_pat_score;
+    }
+
+    if alpha < stand_pat_score {
+        alpha = stand_pat_score;
+    }
+
+    let mut capture_moves = board.get_legal_moves(true);
+    move_ordering::order_moves(&mut capture_moves, board);
+
+    for mv in capture_moves {
+        let mut bc = board.clone();
+        bc.make_move(&mv.decode());
+        let score = -quiescence_search(board, -beta, -alpha, depth - 1, stop, search_info);
+
+        if score >= beta {
+            return score;
+        }
+        if score > best_score {
+            best_score = score;
+        }
+        if score > alpha {
+            alpha = score
+        }
+    }
+
+    best_score
+}
+use num_format::Locale;
+use num_format::ToFormattedString;
+
+use crate::prelude::*;
+use crate::search;
+use crate::search::search_info::SearchInfo;
+use std::time::Instant;
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    thread,
+    time::Duration,
+};
+
+pub fn iterative_deepening(
+    board: &mut Board,
+    max_depth: usize,
+    time_limit: Duration,
+) -> Option<EncodedMove> {
+    let stop = Arc::new(AtomicBool::new(false));
+    {
+        let stop_clone = stop.clone();
+        thread::spawn(move || {
+            thread::sleep(time_limit);
+            stop_clone.store(true, Ordering::Relaxed);
+        });
+    }
+
+    let mut best_move_overall: Option<EncodedMove> = None;
+    let mut best_eval_overall = i32::MIN;
+    let start_time = Instant::now();
+
+    for depth in 1..=max_depth {
+        let start = Instant::now();
+        let mut search_info = SearchInfo {
+            total_nodes: 0,
+            stop_signal: stop.clone(),
+            timeout_occurred: false,
+        };
+
+        let (current_depth_best_move, current_depth_best_eval) = search::alpha_beta::alpha_beta(
+            board,
+            depth,
+            i32::MIN + 1,
+            i32::MAX,
+            &stop,
+            &mut search_info,
+        );
+
+        // If the timeout occured in the last minimax than we need to check if it maybe found a better position even though it was canceled
+        // However we need to check if it reached went to the desired depth, if not it could throw bad eval values
+        if search_info.timeout_occurred {
+            if current_depth_best_move.is_some() && current_depth_best_eval > best_eval_overall {
+                best_move_overall = current_depth_best_move;
+                best_eval_overall = current_depth_best_eval;
+            }
+        // Normal case if no timeout hapenned
+        } else if current_depth_best_move.is_some() {
+            best_move_overall = current_depth_best_move;
+            best_eval_overall = current_depth_best_eval;
+        }
+
+        let best_move_string = match best_move_overall {
+            Some(mv) => mv.decode().to_coords(),
+            None => "0000".to_string(),
+        };
+
+        let elapsed = start.elapsed();
+        let nodes_per_seconds = (search_info.total_nodes as f64 / elapsed.as_secs_f64()) as usize;
+        let canceled_str = match search_info.timeout_occurred {
+            true => "canceled",
+            false => "",
+        };
+
+        println!(
+            "info  depth={}  {}  {}cp  {}nps  {}nodes  {:.3}s  {}",
+            depth.to_formatted_string(&Locale::en),
+            best_move_string,
+            best_eval_overall.to_formatted_string(&Locale::en),
+            nodes_per_seconds.to_formatted_string(&Locale::en),
+            search_info.total_nodes.to_formatted_string(&Locale::en),
+            elapsed.as_secs_f64(),
+            canceled_str,
+        );
+
+        if search_info.timeout_occurred {
+            break;
+        }
+    }
+
+    best_move_overall
+}
+pub mod alpha_beta;
+pub mod iterative_deepening;
+pub mod move_ordering;
+pub mod mvv_lva;
+pub mod search_info;
+use crate::prelude::*;
+use crate::search::mvv_lva::MVV_LVA_TABLE;
+use std::cmp::Reverse;
+
+pub fn order_moves(moves: &mut Vec<EncodedMove>, board: &Board) {
+    moves.sort_unstable_by_key(|encoded_mv| {
+        let mv = encoded_mv.decode();
+        let mv_lva_score = if mv.is_capture {
+            let attacker_idx = (board.pieces[mv.from.0] as usize) / 2;
+            let victim_idx = (board.pieces[mv.to.0] as usize) / 2;
+            MVV_LVA_TABLE[attacker_idx][victim_idx]
+        } else {
+            0i32
+        };
+        // sort descending by highest value first
+        Reverse(mv_lva_score)
+    });
+}
+// These values or known to perform well
+const PAWN_VALUE: i32 = 100;
+const KNIGHT_VALUE: i32 = 300;
+const BISHOP_VALUE: i32 = 320;
+const ROOK_VALUE: i32 = 500;
+const QUEEN_VALUE: i32 = 900;
+const KING_VALUE: i32 = 10000;
+
+const ORDERING_OFFSET: i32 = 10000;
+const ORDERING_MULTIPLIER: i32 = 100;
+
+const PIECE_VALUES: [i32; 6] = [
+    PAWN_VALUE,
+    KNIGHT_VALUE,
+    BISHOP_VALUE,
+    ROOK_VALUE,
+    QUEEN_VALUE,
+    KING_VALUE,
+];
+
+const fn calculate_mvv_lva_score(victim_idx: usize, attacker_idx: usize) -> i32 {
+    // King cannot be captured
+    if victim_idx >= 5 {
+        return 0;
+    }
+
+    let victim_value = PIECE_VALUES[victim_idx];
+    let attacker_value = PIECE_VALUES[attacker_idx];
+
+    victim_value * ORDERING_MULTIPLIER - attacker_value + ORDERING_OFFSET
+}
+
+pub const MVV_LVA_TABLE: [[i32; 6]; 6] = {
+    let mut table = [[0i32; 6]; 6];
+    let mut attacker_idx = 0;
+    while attacker_idx < 6 {
+        let mut victim_idx = 0;
+        // < 5 because king can be ignored
+        while victim_idx < 5 {
+            table[attacker_idx][victim_idx] = calculate_mvv_lva_score(victim_idx, attacker_idx);
+            victim_idx += 1;
+        }
+        attacker_idx += 1;
+    }
+    table
+};
+use std::sync::{Arc, atomic::AtomicBool};
+
+pub struct SearchInfo {
+    pub total_nodes: usize,
+    pub stop_signal: Arc<AtomicBool>,
+    pub timeout_occurred: bool,
+}
+use crate::prelude::*;
+use std::{
+    arch::asm,
+    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not},
+};
+
+/// the bits the are set represent a position on the board with the bit being the index of the chess position
+/// Counting begins bottom left
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct Bitboard(pub u64);
+
+impl Bitboard {
+    #[inline(always)]
+    pub fn is_position_set(self, position: Position) -> bool {
+        (self & position) != Bitboard(0)
+    }
+
+    #[inline(always)]
+    pub fn pop_lsb_position(&mut self) -> Option<Position> {
+        if self.0 == 0 {
+            None
+        } else {
+            let pos = Position(self.0 & self.0.wrapping_neg());
+            self.0 &= self.0 - 1;
+            Some(pos)
+        }
+    }
+
+    #[inline(always)]
+    pub fn pop_lsb_asm(&mut self) -> Option<Position> {
+        let mut lsb_index: u64;
+        unsafe {
+            asm!(
+                "bsf {0}, {1}",
+                out(reg) lsb_index,
+                in(reg) self.0,
+            );
+        }
+        if lsb_index != 64 {
+            self.0 &= self.0 - 1;
+            Some(Position(lsb_index))
+        } else {
+            None
+        }
+    }
+
+    #[inline(always)]
+    pub fn get_count(&self) -> u32 {
+        self.0.count_ones()
+    }
+
+    /// Iterator for Bitboard, uses pop lsb to always return
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = Position> + '_ {
+        std::iter::from_fn(move || self.pop_lsb_position())
+    }
+
+    #[inline(always)]
+    pub const fn from_idx<const N: usize>(indexes: [usize; N]) -> Self {
+        let mut bitboard = Bitboard(0);
+        let mut i = 0;
+        while i < N {
+            bitboard = Bitboard(bitboard.0 | (1u64 << indexes[i]));
+            i += 1;
+        }
+        bitboard
+    }
+}
+
+impl Not for Bitboard {
+    type Output = Self;
+    #[inline(always)]
+    fn not(self) -> Self::Output {
+        Bitboard(!self.0)
+    }
+}
+
+impl BitOr<Position> for Bitboard {
+    type Output = Self;
+    #[inline(always)]
+    fn bitor(self, rhs: Position) -> Self::Output {
+        Bitboard(self.0 | rhs.0)
+    }
+}
+
+impl BitOrAssign<Position> for Bitboard {
+    #[inline(always)]
+    fn bitor_assign(&mut self, rhs: Position) {
+        self.0 |= rhs.0;
+    }
+}
+
+impl BitOrAssign<u64> for Bitboard {
+    #[inline(always)]
+    fn bitor_assign(&mut self, rhs: u64) {
+        self.0 |= rhs;
+    }
+}
+
+impl BitAnd<Position> for Bitboard {
+    type Output = Self;
+    #[inline(always)]
+    fn bitand(self, rhs: Position) -> Self::Output {
+        Bitboard(self.0 & rhs.0)
+    }
+}
+
+impl BitAndAssign<Position> for Bitboard {
+    #[inline(always)]
+    fn bitand_assign(&mut self, rhs: Position) {
+        self.0 &= rhs.0;
+    }
+}
+
+impl BitOr<Bitboard> for Bitboard {
+    type Output = Self;
+    #[inline(always)]
+    fn bitor(self, rhs: Bitboard) -> Self::Output {
+        Bitboard(self.0 | rhs.0)
+    }
+}
+
+impl BitOrAssign<Bitboard> for Bitboard {
+    #[inline(always)]
+    fn bitor_assign(&mut self, rhs: Bitboard) {
+        self.0 |= rhs.0;
+    }
+}
+
+impl BitAnd for Bitboard {
+    type Output = Self;
+    #[inline(always)]
+    fn bitand(self, rhs: Self) -> Self::Output {
+        Bitboard(self.0 & rhs.0)
+    }
+}
+
+impl BitAndAssign<Bitboard> for Bitboard {
+    #[inline(always)]
+    fn bitand_assign(&mut self, rhs: Bitboard) {
+        self.0 &= rhs.0;
+    }
+}
+use std::ops::Not;
+#[repr(usize)]
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Color {
+    White = 0usize,
+    Black = 1usize,
+}
+
+impl Not for Color {
+    type Output = Self;
+    #[inline(always)]
+    fn not(self) -> Self::Output {
+        match self {
+            Color::Black => Color::White,
+            Color::White => Color::Black,
+        }
+    }
+}
+#[repr(usize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ColorPiece {
+    WhitePawn = 0,
+    BlackPawn = 1,
+    WhiteKnight = 2,
+    BlackKnight = 3,
+    WhiteBishop = 4,
+    BlackBishop = 5,
+    WhiteRook = 6,
+    BlackRook = 7,
+    WhiteQueen = 8,
+    BlackQueen = 9,
+    WhiteKing = 10,
+    BlackKing = 11,
+    Empty = 12,
+}
+
+impl ColorPiece {
+    pub const fn from_idx(idx: usize) -> ColorPiece {
+        match idx {
+            0 => ColorPiece::WhitePawn,
+            1 => ColorPiece::BlackPawn,
+            2 => ColorPiece::WhiteKnight,
+            3 => ColorPiece::BlackKnight,
+            4 => ColorPiece::WhiteBishop,
+            5 => ColorPiece::BlackBishop,
+            6 => ColorPiece::WhiteRook,
+            7 => ColorPiece::BlackRook,
+            8 => ColorPiece::WhiteQueen,
+            9 => ColorPiece::BlackQueen,
+            10 => ColorPiece::WhiteKing,
+            11 => ColorPiece::BlackKing,
+            _ => ColorPiece::Empty,
+        }
+    }
+}
+use crate::prelude::*;
+
+use super::encoded_move::move_flags;
+
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub struct DecodedMove {
+    pub from: IndexPosition,
+    pub to: IndexPosition,
+    pub is_capture: bool,
+    pub is_double_move: bool,
+    pub is_ep_capture: bool,
+    pub is_king_castle: bool,
+    pub is_queen_castle: bool,
+    pub promotion: Option<Piece>,
+}
+
+impl DecodedMove {
+    pub fn to_coords(self) -> String {
+        let from = self.from.to_position().to_coords();
+        let to = self.to.to_position().to_coords();
+
+        match self.promotion {
+            Some(prom) => format!("{}{}{}", from, to, prom.to_lowercase_char()),
+            None => format!("{}{}", from, to),
+        }
+    }
+
+    pub fn from_coords(move_str: String, board: &Board) -> DecodedMove {
+        // 4 or 5 character string are valid (5 because of promotion)
+        assert!(
+            move_str.len() == 4 || move_str.len() == 5,
+            "Invalid move string '{}', expected 4 or 5 chars",
+            move_str
+        );
+
+        let from_str = &move_str[0..4];
+        let to_str = &move_str[2..4];
+
+        let from_pos =
+            Position::from_coords(from_str).expect(&format!("Invalid from-coords '{}'", from_str));
+        let to_pos =
+            Position::from_coords(to_str).expect(&format!("Invalid to-coords '{}'", to_str));
+
+        let from_idx = from_pos.to_index();
+        let to_idx = to_pos.to_index();
+        let from_piece = board.get_piece_at_position(from_idx);
+        let to_piece = board.get_piece_at_position(to_idx);
+
+        let mut is_capture = to_pos.is_enemy(board, board.current_color);
+
+        let (is_queen_castle, is_king_castle) = if from_piece == Piece::King
+            && ((from_pos.to_x() as isize) - (to_pos.to_x() as isize)) == 2
+        {
+            (true, false)
+        } else if from_piece == Piece::King
+            && ((from_pos.to_x() as isize) - (to_pos.to_x() as isize)) == -2
+        {
+            (false, true)
+        } else {
+            (false, false)
+        };
+
+        let is_ep_capture = if from_piece == Piece::Pawn
+            && from_pos.to_y().abs_diff(to_pos.to_y()) == 1
+            && to_piece == Piece::Empty
+        {
+            is_capture = true;
+            true
+        } else {
+            false
+        };
+
+        let promotion = if move_str.len() == 5 {
+            let prom_char = move_str.chars().nth(4).unwrap();
+            Some(
+                Piece::from_char(prom_char)
+                    .expect(&format!("Invalid promotion piece '{}'", prom_char)),
+            )
+        } else {
+            None
+        };
+
+        let is_double_move =
+            if from_piece == Piece::Pawn && from_pos.to_y().abs_diff(to_pos.to_y()) == 2 {
+                true
+            } else {
+                false
+            };
+
+        DecodedMove {
+            from: from_idx,
+            to: to_idx,
+            is_capture: is_capture,
+            is_double_move: is_double_move,
+            is_ep_capture,
+            is_king_castle,
+            is_queen_castle,
+            promotion: promotion,
+        }
+    }
+
+    pub fn encode(&self) -> EncodedMove {
+        let flag = if let Some(piece) = self.promotion {
+            match self.is_capture {
+                true => match piece {
+                    Piece::Queen => move_flags::QUEEN_PROMO_CAPTURE,
+                    Piece::Rook => move_flags::ROOK_PROMO_CAPTURE,
+                    Piece::Bishop => move_flags::BISHOP_PROMO_CAPTURE,
+                    Piece::Knight => move_flags::KNIGHT_PROMO_CAPTURE,
+                    _ => move_flags::QUIET, // should never occur
+                },
+                false => match piece {
+                    Piece::Queen => move_flags::QUEEN_PROMO,
+                    Piece::Rook => move_flags::ROOK_PROMO,
+                    Piece::Bishop => move_flags::BISHOP_PROMO,
+                    Piece::Knight => move_flags::KNIGHT_PROMO,
+                    _ => move_flags::QUIET, // should never occur
+                },
+            }
+        } else if self.is_ep_capture {
+            move_flags::EP_CAPTURE
+        } else if self.is_capture {
+            move_flags::CAPTURE
+        } else if self.is_double_move {
+            move_flags::DOUBLE_MOVE
+        } else if self.is_queen_castle {
+            move_flags::QUEEN_CASTLE
+        } else if self.is_king_castle {
+            move_flags::KING_CASTLE
+        } else {
+            move_flags::QUIET
+        };
+
+        EncodedMove::encode(self.from.to_position(), self.to.to_position(), flag)
+    }
+}
+use crate::prelude::*;
+
+// Bits 1-6: Represent FROM position as index 0 to 63
+// Bits 7-12: Represent TO position as index 0 to 63
+// Bits 13-16: Represent this:
+// Source: https://www.chessprogramming.org/Encoding_Moves
+#[rustfmt::skip]
+pub mod move_flags {
+    pub const QUIET:                u16 = 0b0000000000000000; // 0
+    pub const DOUBLE_MOVE:          u16 = 0b0001000000000000; // 1
+    pub const KING_CASTLE:          u16 = 0b0010000000000000; // 2
+    pub const QUEEN_CASTLE:         u16 = 0b0011000000000000; // 3
+    pub const CAPTURE:              u16 = 0b0100000000000000; // 4
+    pub const EP_CAPTURE:           u16 = 0b0101000000000000; // 5
+    // 6,7 unused
+    pub const KNIGHT_PROMO:         u16 = 0b1000000000000000; // 8
+    pub const BISHOP_PROMO:         u16 = 0b1001000000000000; // 9
+    pub const ROOK_PROMO:           u16 = 0b1010000000000000; // 10
+    pub const QUEEN_PROMO:          u16 = 0b1011000000000000; // 11
+    pub const KNIGHT_PROMO_CAPTURE: u16 = 0b1100000000000000; // 12
+    pub const BISHOP_PROMO_CAPTURE: u16 = 0b1101000000000000; // 13
+    pub const ROOK_PROMO_CAPTURE:   u16 = 0b1110000000000000; // 14
+    pub const QUEEN_PROMO_CAPTURE:  u16 = 0b1111000000000000; // 15
+}
+#[rustfmt::skip]
+pub mod move_flags_nibble {
+    pub const QUIET:                u16 = 0b0000; // 0
+    pub const DOUBLE_MOVE:          u16 = 0b0001; // 1
+    pub const KING_CASTLE:          u16 = 0b0010; // 2
+    pub const QUEEN_CASTLE:         u16 = 0b0011; // 3
+    pub const CAPTURE:              u16 = 0b0100; // 4
+    pub const EP_CAPTURE:           u16 = 0b0101; // 5
+    // 6,7 unused
+    pub const KNIGHT_PROMO:         u16 = 0b1000; // 8
+    pub const BISHOP_PROMO:         u16 = 0b1001; // 9
+    pub const ROOK_PROMO:           u16 = 0b1010; // 10
+    pub const QUEEN_PROMO:          u16 = 0b1011; // 11
+    pub const KNIGHT_PROMO_CAPTURE: u16 = 0b1100; // 12
+    pub const BISHOP_PROMO_CAPTURE: u16 = 0b1101; // 13
+    pub const ROOK_PROMO_CAPTURE:   u16 = 0b1110; // 14
+    pub const QUEEN_PROMO_CAPTURE:  u16 = 0b1111; // 15
+}
+use move_flags_nibble::*;
+
+#[derive(Copy, Clone, PartialEq)]
+pub struct EncodedMove(pub u16);
+
+impl EncodedMove {
+    pub const fn encode(
+        from: Position,
+        to: Position,
+        flag: u16
+    ) -> EncodedMove {
+        let from_idx = from.to_index().0 as u16;
+        let to_idx = to.to_index().0 as u16;
+        EncodedMove(from_idx as u16 | (to_idx) << 6 | flag)
+    }
+
+    pub const fn decode(self) -> DecodedMove {
+        let from = IndexPosition((self.0 & 0b0000000000111111) as usize);
+        let to = IndexPosition(((self.0  & 0b0000111111000000) >> 6) as usize);
+        let flag = self.0 >> 12;
+        let (
+            is_capture,
+            is_double_move,
+            is_ep_capture,
+            is_king_castle,
+            is_queen_castle,
+            promotion
+        ): (bool, bool, bool, bool, bool, Option<Piece>) = 
+            match flag  {
+               QUIET => (false, false, false, false, false, None),
+               DOUBLE_MOVE => (false, true, false, false, false, None),
+               KING_CASTLE => (false, false, false, true, false, None),
+               QUEEN_CASTLE => (false, false, false, false, true, None),
+               CAPTURE => (true, false, false, false, false, None),
+               EP_CAPTURE => (true, false, true, false, false, None),
+               KNIGHT_PROMO => (false, false, false, false, false, Some(Piece::Knight)),
+               BISHOP_PROMO => (false, false, false, false, false, Some(Piece::Bishop)),
+               ROOK_PROMO => (false, false, false, false, false, Some(Piece::Rook)),
+               QUEEN_PROMO => (false, false, false, false, false, Some(Piece::Queen)),
+               KNIGHT_PROMO_CAPTURE => (true, false, false, false, false, Some(Piece::Knight)),
+               BISHOP_PROMO_CAPTURE => (true, false, false, false, false, Some(Piece::Bishop)),
+               ROOK_PROMO_CAPTURE => (true, false, false, false, false, Some(Piece::Rook)),
+               QUEEN_PROMO_CAPTURE => (true, false, false, false, false, Some(Piece::Queen)),
+               _ => panic!("Move decoding failed")
+            };
+
+        DecodedMove { from: from, to: to, is_capture: is_capture, is_double_move: is_double_move, is_ep_capture: is_ep_capture, is_king_castle: is_king_castle, is_queen_castle: is_queen_castle, promotion: promotion }
+                
+    }
+}
+use crate::prelude::*;
+
+const START_POS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
+pub struct EngineState {
+    pub board: Board,
+}
+
+impl EngineState {
+    pub fn new() -> Self {
+        EngineState {
+            board: Board::from_fen(START_POS),
+        }
+    }
+
+    pub fn handle_position(&mut self, args: &[&str]) {
+        let mut iter = args.iter().peekable();
+
+        if let Some(&&token) = iter.peek() {
+            match token {
+                "fen" => {
+                    iter.next(); // Skips fen keyword
+
+                    //collects the parts which belong to the fen
+                    let mut fen_parts = Vec::new();
+                    while let Some(&&s) = iter.peek() {
+                        if s == "moves" {
+                            break;
+                        }
+                        fen_parts.push(*iter.next().unwrap());
+                    }
+                    //joins them back together and creates board with them
+                    let fen = fen_parts.join(" ");
+                    self.board = Board::from_fen(&fen);
+                }
+                "startpos" => {
+                    iter.next();
+                    self.board = Board::from_fen(START_POS);
+                }
+                "index" => {
+                    let fens =
+                        ["r3k2r/p1ppqpb1/Bn2pnp1/3PN3/1p2P3/2N2Q2/PPPB1PpP/R3K2R b KQ - 0 1"]; // 0. sebastian lague alpa beta test
+                    iter.next();
+                    if let Some(&idx_str) = iter.next() {
+                        match idx_str.parse::<usize>() {
+                            Ok(index_val) => {
+                                if index_val >= fens.len() {
+                                    eprintln!("Index to large, FEN not found");
+                                } else {
+                                    self.board = Board::from_fen(fens[index_val]);
+                                }
+                            }
+                            Err(err) => eprintln!("Could not parse index `{}`: {}", idx_str, err),
+                        }
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        // if keyword moves appear then we will execute the following moves on the board
+        if let Some(&"moves") = iter.next() {
+            let moves: Vec<&str> = iter.cloned().collect();
+
+            // makes every move in order the perfectly recreate the input
+            for &mv_str in moves.iter() {
+                let mv = DecodedMove::from_coords(mv_str.to_string(), &self.board);
+                self.board.make_move(&mv);
+            }
+        }
+    }
+}
+use crate::prelude::Position;
+
+#[derive(Copy, Clone, PartialEq, Debug)]
+pub struct IndexPosition(pub usize);
+
+impl IndexPosition {
+    #[inline(always)]
+    pub const fn to_position(self) -> Position {
+        Position(1u64 << self.0)
+    }
+}
+pub mod bitboard;
+pub mod board;
+pub mod color;
+pub mod color_piece;
+pub mod decoded_move;
+pub mod encoded_move;
+pub mod engine_state;
+pub mod index_position;
+pub mod piece;
+pub mod position;
+pub mod unmake_info;
+use crate::prelude::*;
+
+#[repr(usize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Piece {
+    Pawn = 0,
+    Knight = 1,
+    Bishop = 2,
+    Rook = 3,
+    Queen = 4,
+    King = 5,
+    Empty = 6,
+}
+
+impl Piece {
+    /// Returns the correct FIN symbol by matching the piece together with the provided color.
+    pub fn to_fin_char(self, color: Color) -> char {
+        match (self, color) {
+            (Piece::Empty, _) => ' ',
+            (Piece::Pawn, Color::White) => 'P',
+            (Piece::Pawn, Color::Black) => 'p',
+            (Piece::Knight, Color::White) => 'N',
+            (Piece::Knight, Color::Black) => 'n',
+            (Piece::Bishop, Color::White) => 'B',
+            (Piece::Bishop, Color::Black) => 'b',
+            (Piece::Rook, Color::White) => 'R',
+            (Piece::Rook, Color::Black) => 'r',
+            (Piece::Queen, Color::White) => 'Q',
+            (Piece::Queen, Color::Black) => 'q',
+            (Piece::King, Color::White) => 'K',
+            (Piece::King, Color::Black) => 'k',
+        }
+    }
+
+    pub fn to_unicode_char(self, color: Color) -> char {
+        match (self, color) {
+            (Piece::Empty, _) => '.',
+            (Piece::Pawn, Color::Black) => 'â™™',
+            (Piece::Pawn, Color::White) => 'â™Ÿ',
+            (Piece::Knight, Color::Black) => 'â™˜',
+            (Piece::Knight, Color::White) => 'â™ž',
+            (Piece::Bishop, Color::Black) => 'â™—',
+            (Piece::Bishop, Color::White) => 'â™',
+            (Piece::Rook, Color::Black) => 'â™–',
+            (Piece::Rook, Color::White) => 'â™œ',
+            (Piece::Queen, Color::Black) => 'â™•',
+            (Piece::Queen, Color::White) => 'â™›',
+            (Piece::King, Color::Black) => 'â™”',
+            (Piece::King, Color::White) => 'â™š',
+        }
+    }
+
+    pub fn from_char(piece_char: char) -> Option<Piece> {
+        match piece_char {
+            'p' => Some(Piece::Pawn),
+            'n' => Some(Piece::Knight),
+            'b' => Some(Piece::Bishop),
+            'r' => Some(Piece::Rook),
+            'q' => Some(Piece::Queen),
+            'k' => Some(Piece::King),
+            _ => None,
+        }
+    }
+
+    pub fn to_lowercase_char(self) -> char {
+        match self {
+            Piece::Empty => ' ',
+            Piece::Pawn => 'p',
+            Piece::Knight => 'n',
+            Piece::Bishop => 'b',
+            Piece::Rook => 'r',
+            Piece::Queen => 'q',
+            Piece::King => 'k',
+        }
+    }
+
+    pub fn to_color_piece(self, color: Color) -> ColorPiece {
+        ColorPiece::from_idx((self as usize) * 2 + (color as usize))
+    }
+}
+use crate::prelude::*;
+use std::fmt;
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not, Shl};
+
+#[derive(Copy, Clone, PartialEq)]
+pub struct Position(pub u64);
+
+impl fmt::Debug for Position {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let (x, y) = self.to_xy();
+        write!(f, "[{},{}]", x, y)
+    }
+}
+
+pub const POSITION_XY: [(usize, usize); 64] = {
+    let mut lookup_table = [(0, 0); 64];
+    let mut i = 0;
+    while i < 64 {
+        lookup_table[i] = ((i % 8), (i / 8));
+        i += 1;
+    }
+    lookup_table
+};
+
+pub const POSITION_X: [usize; 64] = {
+    let mut lookup_table = [0; 64];
+    let mut i = 0;
+    while i < 64 {
+        lookup_table[i] = i % 8;
+        i += 1;
+    }
+    lookup_table
+};
+
+pub const POSITION_Y: [usize; 64] = {
+    let mut lookup_table = [0; 64];
+    let mut i = 0;
+    while i < 64 {
+        lookup_table[i] = i / 8;
+        i += 1;
+    }
+    lookup_table
+};
+
+impl Position {
+    #[inline(always)]
+    pub const fn to_index(self) -> IndexPosition {
+        IndexPosition(self.0.trailing_zeros() as usize)
+    }
+
+    #[inline(always)]
+    pub const fn to_xy(self) -> (usize, usize) {
+        POSITION_XY[self.to_index().0]
+    }
+
+    #[inline(always)]
+    pub const fn to_x(self) -> usize {
+        POSITION_X[self.to_index().0]
+    }
+
+    #[inline(always)]
+    pub const fn to_y(self) -> usize {
+        POSITION_Y[self.to_index().0]
+    }
+
+    #[inline(always)]
+    pub fn is_position_empty(self, board: &Board) -> bool {
+        board.get_empty_pieces().is_position_set(self)
+    }
+
+    #[inline(always)]
+    pub fn is_friendly(self, board: &Board, color: Color) -> bool {
+        (color == Color::Black && board.black_pieces.is_position_set(self))
+            || (color == Color::White && board.white_pieces.is_position_set(self))
+    }
+
+    #[inline(always)]
+    pub fn is_enemy(self, board: &Board, color: Color) -> bool {
+        (color == Color::White && board.black_pieces.is_position_set(self))
+            || (color == Color::Black && board.white_pieces.is_position_set(self))
+    }
+
+    #[inline(always)]
+    pub const fn get_offset_pos(self, dx: isize, dy: isize) -> Position {
+        let pos_idx = self.to_index().0 as isize;
+        let new_x: isize = pos_idx % 8 + dx;
+        let new_y: isize = pos_idx / 8 + dy;
+        if new_x >= 0 && new_x <= 7 && new_y >= 0 && new_y <= 7 {
+            let new_idx = new_y * 8 + new_x;
+            return Position(1u64 << new_idx);
+        }
+        Position(0)
+    }
+
+    #[inline(always)]
+    pub fn get_first_two_string_chars(s: &str) -> Option<(char, char)> {
+        let mut iter = s.chars();
+        match (iter.next(), iter.next()) {
+            (Some(c1), Some(c2)) => Some((c1, c2)),
+            _ => None,
+        }
+    }
+
+    #[inline(always)]
+    pub fn from_coords(coords: &str) -> Option<Position> {
+        let (c1, c2) = match Position::get_first_two_string_chars(coords) {
+            Some(c1c2) => c1c2,
+            None => return None,
+        };
+
+        let x: isize = match c1 {
+            'a' => 0,
+            'b' => 1,
+            'c' => 2,
+            'd' => 3,
+            'e' => 4,
+            'f' => 5,
+            'g' => 6,
+            'h' => 7,
+            _ => return None,
+        };
+
+        let y: isize = match c2 {
+            '1' => 0,
+            '2' => 1,
+            '3' => 2,
+            '4' => 3,
+            '5' => 4,
+            '6' => 5,
+            '7' => 6,
+            '8' => 7,
+            _ => return None,
+        };
+
+        Some(IndexPosition((y * 8 + x) as usize).to_position())
+    }
+
+    #[inline(always)]
+    pub fn to_coords(self) -> String {
+        let (x, y) = self.to_xy();
+        let file = (b'a' + x as u8) as char;
+        let rank = (b'1' + y as u8) as char;
+        format!("{}{}", file, rank)
+    }
+
+    #[inline(always)]
+    pub const fn from_xy(x: isize, y: isize) -> Position {
+        IndexPosition((x + (y * 8)) as usize).to_position()
+    }
+}
+
+impl Shl<isize> for Position {
+    type Output = Self;
+    #[inline(always)]
+    fn shl(self, shift: isize) -> Self::Output {
+        if shift < 0 {
+            // Interpret negative shift as right shift
+            return Position(self.0 >> ((-shift) as u32));
+        }
+        Position(self.0 << (shift as u32))
+    }
+}
+
+impl BitAnd<Bitboard> for Position {
+    type Output = Self;
+    #[inline(always)]
+    fn bitand(self, rhs: Bitboard) -> Self::Output {
+        Position(self.0 | rhs.0)
+    }
+}
+
+impl BitOr<Position> for Position {
+    type Output = Self;
+    #[inline(always)]
+    fn bitor(self, rhs: Position) -> Self::Output {
+        Position(self.0 | rhs.0)
+    }
+}
+
+impl Not for Position {
+    type Output = Self;
+    #[inline(always)]
+    fn not(self) -> Self::Output {
+        Position(!self.0)
+    }
+}
+
+impl BitAndAssign<Position> for Position {
+    #[inline(always)]
+    fn bitand_assign(&mut self, rhs: Position) {
+        self.0 &= rhs.0;
+    }
+}
+
+impl BitOrAssign<Position> for Position {
+    #[inline(always)]
+    fn bitor_assign(&mut self, rhs: Position) {
+        self.0 |= rhs.0;
+    }
+}
+use crate::prelude::*;
+
+#[derive(Clone, Copy)]
+pub struct UnmakeInfo {
+    pub mv: DecodedMove,
+    pub capture: ColorPiece,
+    pub black_king_castle: bool,
+    pub black_queen_castle: bool,
+    pub white_queen_castle: bool,
+    pub white_king_castle: bool,
+    pub ep_target: Option<Position>,
+    pub halfmove_clock: usize,
+}
+use crate::{prelude::*, pseudo_legal_move_generation, types::unmake_info::UnmakeInfo};
+/// Each piece type gets its own 64bits where
+#[derive(Clone, Copy)]
+pub struct Board {
+    pub white_pieces: Bitboard,
+    pub black_pieces: Bitboard,
+    pub bbs: [Bitboard; 13],
+    pub pieces: [ColorPiece; 64],
+    pub black_king_castle: bool,
+    pub black_queen_castle: bool,
+    pub white_queen_castle: bool,
+    pub white_king_castle: bool,
+    pub ep_target: Option<Position>,
+    pub current_color: Color,
+    pub halfmove_clock: usize,
+    pub total_halfmove_counter: usize,
+    pub unmake_info: Option<UnmakeInfo>,
+}
+
+impl Board {
+    #[inline(always)]
+    pub fn get_pieces_by_color(&self, color: Color) -> Bitboard {
+        match color {
+            Color::Black => self.black_pieces,
+            Color::White => self.white_pieces,
+        }
+    }
+
+    #[inline(always)]
+    pub fn get_non_friendly_pieces(&self, color: Color) -> Bitboard {
+        match color {
+            Color::Black => !self.black_pieces,
+            Color::White => !self.white_pieces,
+        }
+    }
+
+    #[inline(always)]
+    pub fn get_empty_pieces(&self) -> Bitboard {
+        self.bbs[ColorPiece::Empty as usize]
+    }
+
+    #[inline(always)]
+    pub fn get_piece_and_color_at_position(&self, pos: Position) -> (Piece, Color) {
+        if self.bbs[ColorPiece::WhitePawn as usize].is_position_set(pos) {
+            (Piece::Pawn, Color::White)
+        } else if self.bbs[ColorPiece::WhiteKnight as usize].is_position_set(pos) {
+            (Piece::Knight, Color::White)
+        } else if self.bbs[ColorPiece::WhiteBishop as usize].is_position_set(pos) {
+            (Piece::Bishop, Color::White)
+        } else if self.bbs[ColorPiece::WhiteRook as usize].is_position_set(pos) {
+            (Piece::Rook, Color::White)
+        } else if self.bbs[ColorPiece::WhiteQueen as usize].is_position_set(pos) {
+            (Piece::Queen, Color::White)
+        } else if pos == Position(self.bbs[ColorPiece::WhiteKing as usize].0) {
+            (Piece::King, Color::White)
+        } else if self.bbs[ColorPiece::BlackPawn as usize].is_position_set(pos) {
+            (Piece::Pawn, Color::Black)
+        } else if self.bbs[ColorPiece::BlackKnight as usize].is_position_set(pos) {
+            (Piece::Knight, Color::Black)
+        } else if self.bbs[ColorPiece::BlackBishop as usize].is_position_set(pos) {
+            (Piece::Bishop, Color::Black)
+        } else if self.bbs[ColorPiece::BlackRook as usize].is_position_set(pos) {
+            (Piece::Rook, Color::Black)
+        } else if self.bbs[ColorPiece::BlackQueen as usize].is_position_set(pos) {
+            (Piece::Queen, Color::Black)
+        } else if pos == Position(self.bbs[ColorPiece::BlackKing as usize].0) {
+            (Piece::King, Color::Black)
+        } else {
+            // Color does not matter for empty
+            (Piece::Empty, Color::White)
+        }
+    }
+
+    #[inline(always)]
+    pub fn get_piece_at_position(&self, pos: IndexPosition) -> Piece {
+        match self.pieces[pos.0] {
+            ColorPiece::Empty => Piece::Empty,
+            ColorPiece::WhitePawn => Piece::Pawn,
+            ColorPiece::BlackPawn => Piece::Pawn,
+            ColorPiece::WhiteKnight => Piece::Knight,
+            ColorPiece::BlackKnight => Piece::Knight,
+            ColorPiece::WhiteBishop => Piece::Bishop,
+            ColorPiece::BlackBishop => Piece::Bishop,
+            ColorPiece::WhiteRook => Piece::Rook,
+            ColorPiece::BlackRook => Piece::Rook,
+            ColorPiece::WhiteQueen => Piece::Queen,
+            ColorPiece::BlackQueen => Piece::Queen,
+            ColorPiece::WhiteKing => Piece::King,
+            ColorPiece::BlackKing => Piece::King,
+        }
+    }
+
+    #[inline(always)]
+    pub fn get_piece_idx_at_position(&self, pos: Position) -> usize {
+        if self.bbs[ColorPiece::WhitePawn as usize].is_position_set(pos) {
+            return 0;
+        }
+        if self.bbs[ColorPiece::WhiteKnight as usize].is_position_set(pos) {
+            return 1;
+        }
+        if self.bbs[ColorPiece::WhiteBishop as usize].is_position_set(pos) {
+            return 2;
+        }
+        if self.bbs[ColorPiece::WhiteRook as usize].is_position_set(pos) {
+            return 3;
+        }
+        if self.bbs[ColorPiece::WhiteQueen as usize].is_position_set(pos) {
+            return 4;
+        }
+        if pos == Position(self.bbs[ColorPiece::WhiteKing as usize].0) {
+            return 5;
+        }
+
+        if self.bbs[ColorPiece::BlackPawn as usize].is_position_set(pos) {
+            return 0;
+        }
+        if self.bbs[ColorPiece::BlackKnight as usize].is_position_set(pos) {
+            return 1;
+        }
+        if self.bbs[ColorPiece::BlackBishop as usize].is_position_set(pos) {
+            return 2;
+        }
+        if self.bbs[ColorPiece::BlackRook as usize].is_position_set(pos) {
+            return 3;
+        }
+        if self.bbs[ColorPiece::BlackQueen as usize].is_position_set(pos) {
+            return 4;
+        }
+        if pos == Position(self.bbs[ColorPiece::BlackKing as usize].0) {
+            return 5;
+        }
+
+        0
+    }
+
+    #[inline(always)]
+    pub fn get_positions_by_piece_color(&self, color: Color, piece: Piece) -> Bitboard {
+        match color {
+            Color::Black => match piece {
+                Piece::Empty => self.get_empty_pieces(),
+                Piece::Pawn => self.bbs[ColorPiece::BlackPawn as usize],
+                Piece::Knight => self.bbs[ColorPiece::BlackKnight as usize],
+                Piece::Bishop => self.bbs[ColorPiece::BlackBishop as usize],
+                Piece::Rook => self.bbs[ColorPiece::BlackRook as usize],
+                Piece::Queen => self.bbs[ColorPiece::BlackQueen as usize],
+                Piece::King => self.bbs[ColorPiece::BlackKing as usize],
+            },
+            Color::White => match piece {
+                Piece::Empty => self.get_empty_pieces(),
+                Piece::Pawn => self.bbs[ColorPiece::WhitePawn as usize],
+                Piece::Knight => self.bbs[ColorPiece::WhiteKnight as usize],
+                Piece::Bishop => self.bbs[ColorPiece::WhiteBishop as usize],
+                Piece::Rook => self.bbs[ColorPiece::WhiteRook as usize],
+                Piece::Queen => self.bbs[ColorPiece::WhiteQueen as usize],
+                Piece::King => self.bbs[ColorPiece::WhiteKing as usize],
+            },
+        }
+    }
+
+    #[inline(always)]
+    pub fn get_king_pos(&self, color: Color) -> Position {
+        match color {
+            Color::Black => Position(self.bbs[ColorPiece::BlackKing as usize].0),
+            Color::White => Position(self.bbs[ColorPiece::WhiteKing as usize].0),
+        }
+    }
+
+    #[inline(always)]
+    pub fn recalculate_black_white_empty_pieces(&mut self) {
+        self.white_pieces = self.bbs[ColorPiece::WhitePawn as usize]
+            | self.bbs[ColorPiece::WhiteKnight as usize]
+            | self.bbs[ColorPiece::WhiteBishop as usize]
+            | self.bbs[ColorPiece::WhiteRook as usize]
+            | self.bbs[ColorPiece::WhiteQueen as usize]
+            | self.bbs[ColorPiece::WhiteKing as usize];
+
+        self.black_pieces = self.bbs[ColorPiece::BlackPawn as usize]
+            | self.bbs[ColorPiece::BlackKnight as usize]
+            | self.bbs[ColorPiece::BlackBishop as usize]
+            | self.bbs[ColorPiece::BlackRook as usize]
+            | self.bbs[ColorPiece::BlackQueen as usize]
+            | self.bbs[ColorPiece::BlackKing as usize];
+
+        self.bbs[ColorPiece::Empty as usize] = !(self.white_pieces | self.black_pieces);
+    }
+
+    // #[inline(always)]
+    // pub fn get_count_of_piece(&self, color: Color, piece: Piece) -> u32 {
+    //     match color {
+    //         Color::Black => match piece {
+    //             Piece::Empty => self.empty_pieces.get_count(),
+    //             Piece::Pawn => self.black_pawns.get_count(),
+    //             Piece::Knight => self.black_knights.get_count(),
+    //             Piece::Bishop => self.black_bishops.get_count(),
+    //             Piece::Rook => self.black_rooks.get_count(),
+    //             Piece::Queen => self.black_queens.get_count(),
+    //             Piece::King => Bitboard(self.black_king.0).get_count(),
+    //         },
+    //         Color::White => match piece {
+    //             Piece::Empty => self.empty_pieces.get_count(),
+    //             Piece::Pawn => self.white_pawns.get_count(),
+    //             Piece::Knight => self.white_knights.get_count(),
+    //             Piece::Bishop => self.white_bishops.get_count(),
+    //             Piece::Rook => self.white_rooks.get_count(),
+    //             Piece::Queen => self.white_queens.get_count(),
+    //             Piece::King => Bitboard(self.white_king.0).get_count(),
+    //         },
+    //     }
+    // }
+
+    #[inline(always)]
+    pub fn is_in_check(&self) -> bool {
+        let opposite_attacks =
+            pseudo_legal_move_generation::get_all_attacks(self, !self.current_color);
+
+        (opposite_attacks & self.get_king_pos(self.current_color)) != Bitboard(0)
+    }
+}
+use crate::{prelude::*, types::unmake_info::UnmakeInfo};
+
+impl Board {
+    /// Converts a FEN to a Board
+    /// FEN describes the position of all pieces on the board
+    /// lowercase = black and uppercase = white
+    pub fn from_fen(fen: &str) -> Self {
+        let mut board: Board = Board {
+            white_pieces: Bitboard(0),
+            black_pieces: Bitboard(0),
+            bbs: [Bitboard(0); 13],
+            pieces: [ColorPiece::Empty; 64],
+            black_king_castle: true,
+            black_queen_castle: true,
+            white_queen_castle: true,
+            white_king_castle: true,
+            ep_target: None,
+            current_color: Color::Black,
+            total_halfmove_counter: 0,
+            halfmove_clock: 0,
+            unmake_info: None,
+        };
+
+        let mut parts = fen.split_whitespace();
+        let placement = parts.next().expect("Placement invalid");
+        let active_color = parts.next().unwrap_or("w");
+        let castling = parts.next().unwrap_or("-");
+        let ep_target = parts.next().unwrap_or("-");
+        let halfmove = parts.next().unwrap_or("0");
+        let fullmove = parts.next().unwrap_or("1");
+
+        // Set Pieces
+        // fen begins top left
+        let mut index: usize = 56;
+        for c in placement.chars() {
+            match c {
+                '/' => {
+                    index = index.saturating_sub(16);
+                }
+
+                '1'..='8' => {
+                    let skip = c.to_digit(10).unwrap() as usize;
+                    index += skip;
+                }
+
+                ch => {
+                    let bit = Position(1u64 << index as u64);
+                    match ch {
+                        'p' => {
+                            board.bbs[ColorPiece::BlackPawn as usize] |= bit;
+                            board.pieces[index] = ColorPiece::BlackPawn;
+                        }
+                        'n' => {
+                            board.bbs[ColorPiece::BlackKnight as usize] |= bit;
+                            board.pieces[index] = ColorPiece::BlackKnight;
+                        }
+                        'b' => {
+                            board.bbs[ColorPiece::BlackBishop as usize] |= bit;
+                            board.pieces[index] = ColorPiece::BlackBishop;
+                        }
+                        'r' => {
+                            board.bbs[ColorPiece::BlackRook as usize] |= bit;
+                            board.pieces[index] = ColorPiece::BlackRook;
+                        }
+                        'q' => {
+                            board.bbs[ColorPiece::BlackQueen as usize] |= bit;
+                            board.pieces[index] = ColorPiece::BlackQueen;
+                        }
+                        'k' => {
+                            board.bbs[ColorPiece::BlackKing as usize] |= bit;
+                            board.pieces[index] = ColorPiece::BlackKing;
+                        }
+
+                        'P' => {
+                            board.bbs[ColorPiece::WhitePawn as usize] |= bit;
+                            board.pieces[index] = ColorPiece::WhitePawn;
+                        }
+                        'N' => {
+                            board.bbs[ColorPiece::WhiteKnight as usize] |= bit;
+                            board.pieces[index] = ColorPiece::WhiteKnight;
+                        }
+                        'B' => {
+                            board.bbs[ColorPiece::WhiteBishop as usize] |= bit;
+                            board.pieces[index] = ColorPiece::WhiteBishop;
+                        }
+                        'R' => {
+                            board.bbs[ColorPiece::WhiteRook as usize] |= bit;
+                            board.pieces[index] = ColorPiece::WhiteRook;
+                        }
+                        'Q' => {
+                            board.bbs[ColorPiece::WhiteQueen as usize] |= bit;
+                            board.pieces[index] = ColorPiece::WhiteQueen;
+                        }
+                        'K' => {
+                            board.bbs[ColorPiece::WhiteKing as usize] |= bit;
+                            board.pieces[index] = ColorPiece::WhiteKing;
+                        }
+                        _ => {}
+                    }
+                    index += 1;
+                }
+            }
+        }
+
+        // All individual bitboards set now calculate the generell bitboards
+        board.recalculate_black_white_empty_pieces();
+
+        // Set Active Color Part
+        board.current_color = match active_color {
+            "w" => Color::White,
+            "b" => Color::Black,
+            _ => panic!("UngÃ¼ltige aktive Farbe in FEN"),
+        };
+
+        // Set Castling bools
+        board.white_queen_castle = castling.contains('Q');
+        board.white_king_castle = castling.contains('K');
+        board.black_king_castle = castling.contains('q');
+        board.black_queen_castle = castling.contains('k');
+
+        // Set En passant target
+        board.ep_target = if ep_target == "-" {
+            None
+        } else {
+            Position::from_coords(ep_target)
+        };
+
+        board.halfmove_clock = halfmove.parse().expect("Invalid halfmove clock");
+        board.total_halfmove_counter = fullmove.parse().expect("Invalid fullmove counter");
+
+        board
+    }
+}
+use crate::prelude::*;
+impl Board {
+    pub fn generate_fen(&self) -> String {
+        let mut fen = String::new();
+        for y in (0..=7).rev() {
+            let mut empty_counter = 0;
+            for x in 0..=7 {
+                let (piece, color) = self.get_piece_and_color_at_position(Position::from_xy(x, y));
+                if piece == Piece::Empty && x == 7 {
+                    empty_counter += 1;
+                    fen.push_str(&empty_counter.to_string());
+                    empty_counter = 0;
+                } else if piece == Piece::Empty {
+                    empty_counter += 1;
+                } else {
+                    if empty_counter != 0 {
+                        fen.push_str(&empty_counter.to_string());
+                        empty_counter = 0;
+                    }
+
+                    let c = piece.to_fin_char(color);
+                    fen.push(c);
+                }
+            }
+            fen.push('/');
+        }
+        // Remove last /
+        fen.pop();
+        fen.push(' ');
+        let color_char = match self.current_color {
+            Color::White => 'w',
+            Color::Black => 'b',
+        };
+        fen.push(color_char);
+        fen.push(' ');
+        if self.white_king_castle {
+            fen.push('K');
+        }
+        if self.white_queen_castle {
+            fen.push('Q');
+        }
+        if self.black_queen_castle {
+            fen.push('k');
+        }
+        if self.black_king_castle {
+            fen.push('q');
+        }
+
+        if !self.black_king_castle
+            && !self.black_queen_castle
+            && !self.white_queen_castle
+            && !self.white_king_castle
+        {
+            fen.push('-');
+        }
+        fen.push(' ');
+
+        if let Some(ep) = self.ep_target {
+            fen.push_str(&ep.to_coords());
+        } else {
+            fen.push('-');
+        };
+        fen.push(' ');
+
+        fen.push_str(&self.halfmove_clock.to_string());
+        fen.push(' ');
+
+        fen.push_str(&self.total_halfmove_counter.to_string());
+
+        fen
+    }
+}
+use crate::prelude::*;
+use crate::pseudo_legal_move_generation;
+
+impl Board {
+    pub fn get_legal_moves(&self, only_captures: bool) -> Vec<EncodedMove> {
+        let color = self.current_color;
+        let mut moves: Vec<EncodedMove> = Vec::with_capacity(128);
+        let _ = pseudo_legal_move_generation::get_all_moves(&mut moves, self, color);
+
+        // only retain moves where king is not in check after being in check and follows all rules when castling
+        moves.retain(|encoded_mv| {
+            let mv = encoded_mv.decode();
+            if only_captures && !mv.is_capture {
+                return false;
+            }
+
+            let mut bc = self.clone();
+
+            let enemy_king_pos = self.get_king_pos(!color).to_index();
+            if mv.to == enemy_king_pos {
+                // winning move is invalid
+                return false;
+            }
+
+            if mv.is_king_castle || mv.is_queen_castle {
+                let counter_positions = pseudo_legal_move_generation::get_all_attacks(&bc, !color);
+
+                let king_pos = match color {
+                    Color::Black => bc.bbs[ColorPiece::BlackKing as usize],
+                    Color::White => bc.bbs[ColorPiece::WhiteKing as usize],
+                };
+
+                // castling not allowed if king is in check before castling
+                if counter_positions & king_pos != Bitboard(0) {
+                    return false;
+                };
+
+                const WHITE_CASTLE_LEFT_MOVE: (Position, Position) = (
+                    IndexPosition(4).to_position(),
+                    IndexPosition(2).to_position(),
+                );
+                const WHITE_CASTLE_RIGHT_MOVE: (Position, Position) = (
+                    IndexPosition(4).to_position(),
+                    IndexPosition(6).to_position(),
+                );
+                const BLACK_CASTLE_LEFT_MOVE: (Position, Position) = (
+                    IndexPosition(60).to_position(),
+                    IndexPosition(58).to_position(),
+                );
+                const BLACK_CASTLE_RIGHT_MOVE: (Position, Position) = (
+                    IndexPosition(60).to_position(),
+                    IndexPosition(62).to_position(),
+                );
+                match (mv.from.to_position(), mv.to.to_position()) {
+                    WHITE_CASTLE_LEFT_MOVE => {
+                        const MASK_WHITE_LEFT: Bitboard = Bitboard::from_idx([2usize, 3usize]);
+                        if counter_positions & MASK_WHITE_LEFT != Bitboard(0) {
+                            return false;
+                        }
+                    }
+                    WHITE_CASTLE_RIGHT_MOVE => {
+                        const MASK_WHITE_RIGHT: Bitboard = Bitboard::from_idx([5usize, 6usize]);
+                        if counter_positions & MASK_WHITE_RIGHT != Bitboard(0) {
+                            return false;
+                        }
+                    }
+                    BLACK_CASTLE_LEFT_MOVE => {
+                        const MASK_BLACK_LEFT: Bitboard = Bitboard::from_idx([58usize, 59usize]);
+                        if counter_positions & MASK_BLACK_LEFT != Bitboard(0) {
+                            return false;
+                        }
+                    }
+                    BLACK_CASTLE_RIGHT_MOVE => {
+                        const MASK_BLACK_RIGHT: Bitboard = Bitboard::from_idx([61usize, 62usize]);
+                        if counter_positions & MASK_BLACK_RIGHT != Bitboard(0) {
+                            return false;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+
+            // This part gets run if the king is currently in check so it needs to be resolved
+            bc.make_move(&mv);
+
+            // generate counter moves for this move
+            let counter_positions_after_move =
+                pseudo_legal_move_generation::get_all_attacks(&bc, !color);
+
+            let king_pos_after_move = match color {
+                Color::Black => bc.bbs[ColorPiece::BlackKing as usize],
+                Color::White => bc.bbs[ColorPiece::WhiteKing as usize],
+            };
+
+            // Keep move if not in check and throw away if it is
+            if counter_positions_after_move & king_pos_after_move != Bitboard(0) {
+                return false;
+            }
+
+            true
+        });
+
+        moves
+    }
+}
+use crate::prelude::*;
+
+impl Board {
+    pub fn make_move(&mut self, mv: &DecodedMove) {
+        let current_color = self.current_color;
+        let from_idx = mv.from;
+        let to_idx = mv.to;
+        let from_pos = from_idx.to_position();
+        let to_pos = to_idx.to_position();
+
+        let from_piece = self.pieces[from_idx.0];
+        let to_piece = self.pieces[to_idx.0];
+
+        // Remove start piece from bitboard
+        self.bbs[from_piece as usize] &= !from_pos;
+        self.pieces[from_idx.0] = ColorPiece::Empty;
+
+        // Remove target piece from bitboard
+        self.bbs[to_piece as usize] &= !to_pos;
+        self.pieces[to_idx.0] = ColorPiece::Empty;
+
+        // Revoking castling rights
+        const WHITE_ROOK_QUEEN_POS: IndexPosition = IndexPosition(0);
+        const WHITE_ROOK_KING_POS: IndexPosition = IndexPosition(7);
+        const BLACK_ROOK_KING_POS: IndexPosition = IndexPosition(56);
+        const BLACK_ROOK_QUEEN_POS: IndexPosition = IndexPosition(63);
+        const WHITE_KING_POS: IndexPosition = IndexPosition(4);
+        const BLACK_KING_POS: IndexPosition = IndexPosition(60);
+
+        // Revoke castling rights if
+        // - Rook on the relevant side has moved
+        // - King has moved
+        // - Rook on the relevant side was captured
+        if self.white_queen_castle
+            && (from_idx == WHITE_ROOK_QUEEN_POS
+                || from_idx == WHITE_KING_POS
+                || to_idx == WHITE_ROOK_QUEEN_POS)
+        {
+            self.white_queen_castle = false;
+        }
+
+        if self.white_king_castle
+            && (from_idx == WHITE_ROOK_KING_POS
+                || from_idx == WHITE_KING_POS
+                || to_idx == WHITE_ROOK_KING_POS)
+        {
+            self.white_king_castle = false;
+        }
+
+        if self.black_queen_castle
+            && (from_idx == BLACK_ROOK_QUEEN_POS
+                || from_idx == BLACK_KING_POS
+                || to_idx == BLACK_ROOK_QUEEN_POS)
+        {
+            self.black_queen_castle = false;
+        }
+
+        if self.black_king_castle
+            && (from_idx == BLACK_ROOK_KING_POS
+                || from_idx == BLACK_KING_POS
+                || to_idx == BLACK_ROOK_KING_POS)
+        {
+            self.black_king_castle = false;
+        }
+
+        // Castling: King gets moved normally by default logic but rook needs to be moved aswelll
+        if mv.is_queen_castle && current_color == Color::White {
+            // This workaround to perform not needs to be done because rust not trait is not const for whatever reason
+            const ROOK_FROM_POS_INVERSE: Bitboard = Bitboard(!(IndexPosition(0).to_position().0));
+            const ROOK_TO_POS: Position = IndexPosition(3).to_position();
+
+            self.bbs[ColorPiece::WhiteRook as usize] &= ROOK_FROM_POS_INVERSE;
+            self.bbs[ColorPiece::WhiteRook as usize] |= ROOK_TO_POS;
+
+            self.pieces[IndexPosition(0).0] = ColorPiece::Empty;
+            self.pieces[IndexPosition(3).0] = ColorPiece::WhiteRook;
+        } else if mv.is_king_castle && current_color == Color::White {
+            const ROOK_FROM_POS_INVERSE: Bitboard = Bitboard(!(IndexPosition(7).to_position().0));
+            const ROOK_TO_POS: Position = IndexPosition(5).to_position();
+
+            self.bbs[ColorPiece::WhiteRook as usize] &= ROOK_FROM_POS_INVERSE;
+            self.bbs[ColorPiece::WhiteRook as usize] |= ROOK_TO_POS;
+
+            self.pieces[IndexPosition(7).0] = ColorPiece::Empty;
+            self.pieces[IndexPosition(5).0] = ColorPiece::WhiteRook;
+        } else if mv.is_queen_castle && current_color == Color::Black {
+            const ROOK_FROM_POS_INVERSE: Bitboard = Bitboard(!(IndexPosition(56).to_position().0));
+            const ROOK_TO_POS: Position = IndexPosition(59).to_position();
+
+            self.bbs[ColorPiece::BlackRook as usize] &= ROOK_FROM_POS_INVERSE;
+            self.bbs[ColorPiece::BlackRook as usize] |= ROOK_TO_POS;
+
+            self.pieces[IndexPosition(56).0] = ColorPiece::Empty;
+            self.pieces[IndexPosition(59).0] = ColorPiece::BlackRook;
+        } else if mv.is_king_castle && current_color == Color::Black {
+            const ROOK_FROM_POS_INVERSE: Bitboard = Bitboard(!(IndexPosition(63).to_position().0));
+            const ROOK_TO_POS: Position = IndexPosition(61).to_position();
+
+            self.bbs[ColorPiece::BlackRook as usize] &= ROOK_FROM_POS_INVERSE;
+            self.bbs[ColorPiece::BlackRook as usize] |= ROOK_TO_POS;
+
+            self.pieces[IndexPosition(63).0] = ColorPiece::Empty;
+            self.pieces[IndexPosition(61).0] = ColorPiece::BlackRook;
+        }
+
+        // Remove pawn if En-passant happened
+        if mv.is_ep_capture {
+            match current_color {
+                Color::White => {
+                    let pawn_mask = !to_pos.get_offset_pos(0, -1);
+                    self.bbs[ColorPiece::BlackPawn as usize] &= pawn_mask;
+                    self.pieces[to_idx.0 - 8] = ColorPiece::Empty;
+                }
+                Color::Black => {
+                    let pawn_mask = !to_pos.get_offset_pos(0, 1);
+                    self.bbs[ColorPiece::WhitePawn as usize] &= pawn_mask;
+                    self.pieces[to_idx.0 + 8] = ColorPiece::Empty;
+                }
+            }
+        }
+
+        // Set En-passant target
+        self.ep_target = if mv.is_double_move {
+            let offset_dir: isize = match current_color {
+                Color::White => -1,
+                Color::Black => 1,
+            };
+            Some(to_pos.get_offset_pos(0, offset_dir))
+        } else {
+            None
+        };
+
+        // Add the from piece to the to position
+        match mv.promotion {
+            None => {
+                self.bbs[from_piece as usize] |= to_pos;
+                self.pieces[to_idx.0] = from_piece;
+            }
+            Some(piece) => {
+                self.bbs[(piece as usize) * 2 + (current_color as usize)] |= to_pos;
+                self.pieces[to_idx.0] = piece.to_color_piece(current_color);
+            }
+        }
+
+        self.total_halfmove_counter += 1;
+        self.current_color = !current_color;
+        self.recalculate_black_white_empty_pieces();
+    }
+}
+pub mod board;
+pub mod from_fen;
+pub mod generate_fen;
+pub mod legal_move_generation;
+pub mod make_move;
+pub mod unmake_move;
+use crate::prelude::*;
+
+impl Board {
+    pub fn unmake_move(&mut self) {
+        let prev = match self.unmake_info {
+            Some(info) => info,
+            None => {
+                println!("info: Could not undo move because there was no previous move");
+                return;
+            }
+        };
+
+        let mv = prev.mv;
+
+        let color = !self.current_color;
+        let from_idx = mv.from;
+        let to_idx = mv.to;
+        let from_pos = from_idx.to_position();
+        let to_pos = to_idx.to_position();
+
+        let to_piece = prev.capture;
+
+        self.current_color = color;
+        self.total_halfmove_counter -= 1;
+        self.halfmove_clock = prev.halfmove_clock;
+        self.ep_target = prev.ep_target;
+
+        self.white_queen_castle = prev.white_queen_castle;
+        self.white_king_castle = prev.white_king_castle;
+        self.black_queen_castle = prev.black_queen_castle;
+        self.black_king_castle = prev.black_king_castle;
+
+        match mv.promotion {
+            None => {
+                let arrived_piece = self.pieces[to_idx.0];
+                // Add from piece to from pos bitboard
+                self.bbs[arrived_piece as usize] |= from_pos;
+
+                // Remove from piece from to pos bitboard
+                self.bbs[arrived_piece as usize] &= !to_pos;
+
+                // Add to piece back to bitboard
+                self.bbs[to_piece as usize] |= to_pos;
+
+                // Set pieces array to to piece
+                self.pieces[to_idx.0] = to_piece;
+            }
+            Some(_) => {
+                let arrived_piece = self.pieces[to_idx.0];
+                let original_piece = match color {
+                    Color::White => ColorPiece::WhitePawn,
+                    Color::Black => ColorPiece::BlackPawn,
+                };
+                // Add from piece to from pos bitboard
+                self.bbs[original_piece as usize] |= from_pos;
+
+                // Remove from piece from to pos bitboard
+                self.bbs[arrived_piece as usize] &= !to_pos;
+            }
+        }
+
+        // Add to piece back to bitboard
+        self.bbs[to_piece as usize] |= to_pos;
+
+        // Set pieces array to to piece
+        self.pieces[to_idx.0] = to_piece;
+
+        // Undo if En-passant happened
+        if mv.is_ep_capture {
+            match color {
+                Color::White => {
+                    let pawn_pos = to_pos.get_offset_pos(0, -1);
+                    self.bbs[ColorPiece::BlackPawn as usize] |= pawn_pos;
+                    self.pieces[to_idx.0 - 8] = ColorPiece::BlackPawn;
+                }
+                Color::Black => {
+                    let pawn_pos = to_pos.get_offset_pos(0, 1);
+                    self.bbs[ColorPiece::WhitePawn as usize] |= pawn_pos;
+                    self.pieces[to_idx.0 + 8] = ColorPiece::WhitePawn;
+                }
+            }
+        }
+
+        // Castling: King gets moved back normally by default logic but rook needs to be moved back aswelll
+        if mv.is_queen_castle && color == Color::White {
+            // This workaround to perform not needs to be done because rust not trait is not const for whatever reason
+            const ROOK_FROM_POS: Position = IndexPosition(0).to_position();
+            const ROOK_TO_POS_INVERSE: Bitboard = Bitboard(!(IndexPosition(3).to_position().0));
+
+            self.bbs[ColorPiece::WhiteRook as usize] |= ROOK_FROM_POS;
+            self.bbs[ColorPiece::WhiteRook as usize] &= ROOK_TO_POS_INVERSE;
+
+            self.pieces[IndexPosition(0).0] = ColorPiece::WhiteRook;
+            self.pieces[IndexPosition(3).0] = ColorPiece::Empty;
+        } else if mv.is_king_castle && color == Color::White {
+            const ROOK_FROM_POS: Position = IndexPosition(7).to_position();
+            const ROOK_TO_POS_INVERSE: Bitboard = Bitboard(!(IndexPosition(5).to_position().0));
+
+            self.bbs[ColorPiece::WhiteRook as usize] |= ROOK_FROM_POS;
+            self.bbs[ColorPiece::WhiteRook as usize] &= ROOK_TO_POS_INVERSE;
+
+            self.pieces[IndexPosition(7).0] = ColorPiece::WhiteRook;
+            self.pieces[IndexPosition(5).0] = ColorPiece::Empty;
+        } else if mv.is_queen_castle && color == Color::Black {
+            const ROOK_FROM_POS: Position = IndexPosition(56).to_position();
+            const ROOK_TO_POS_INVERSE: Bitboard = Bitboard(!(IndexPosition(59).to_position().0));
+
+            self.bbs[ColorPiece::BlackRook as usize] |= ROOK_FROM_POS;
+            self.bbs[ColorPiece::BlackRook as usize] &= ROOK_TO_POS_INVERSE;
+
+            self.pieces[IndexPosition(56).0] = ColorPiece::BlackRook;
+            self.pieces[IndexPosition(59).0] = ColorPiece::Empty;
+        } else if mv.is_king_castle && color == Color::Black {
+            const ROOK_FROM_POS: Position = IndexPosition(63).to_position();
+            const ROOK_TO_POS_INVERSE: Bitboard = Bitboard(!(IndexPosition(61).to_position().0));
+
+            self.bbs[ColorPiece::BlackRook as usize] |= ROOK_FROM_POS;
+            self.bbs[ColorPiece::BlackRook as usize] &= ROOK_TO_POS_INVERSE;
+
+            self.pieces[IndexPosition(63).0] = ColorPiece::BlackRook;
+            self.pieces[IndexPosition(61).0] = ColorPiece::Empty;
+        }
+
+        self.recalculate_black_white_empty_pieces();
+    }
+}

@@ -54,18 +54,18 @@ impl Position {
     }
 
     #[inline(always)]
-    pub fn to_x(self) -> usize {
+    pub const fn to_x(self) -> usize {
         POSITION_X[self.to_index().0]
     }
 
     #[inline(always)]
-    pub fn to_y(self) -> usize {
+    pub const fn to_y(self) -> usize {
         POSITION_Y[self.to_index().0]
     }
 
     #[inline(always)]
     pub fn is_position_empty(self, board: &Board) -> bool {
-        board.empty_pieces.is_position_set(self)
+        board.get_empty_pieces().is_position_set(self)
     }
 
     #[inline(always)]
@@ -81,7 +81,7 @@ impl Position {
     }
 
     #[inline(always)]
-    pub fn get_offset_pos(self, dx: isize, dy: isize) -> Position {
+    pub const fn get_offset_pos(self, dx: isize, dy: isize) -> Position {
         let pos_idx = self.to_index().0 as isize;
         let new_x: isize = pos_idx % 8 + dx;
         let new_y: isize = pos_idx / 8 + dy;

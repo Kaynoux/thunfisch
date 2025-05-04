@@ -1,4 +1,8 @@
 use crate::prelude::*;
+
+use super::encoded_move::move_flags;
+
+#[derive(Copy, Clone, PartialEq, Debug)]
 pub struct DecodedMove {
     pub from: IndexPosition,
     pub to: IndexPosition,
@@ -57,7 +61,7 @@ impl DecodedMove {
         };
 
         let is_ep_capture = if from_piece == Piece::Pawn
-            && (from_pos.to_y() - to_pos.to_y()) == 1
+            && from_pos.to_y().abs_diff(to_pos.to_y()) == 1
             && to_piece == Piece::Empty
         {
             is_capture = true;
@@ -93,5 +97,40 @@ impl DecodedMove {
             is_queen_castle,
             promotion: promotion,
         }
+    }
+
+    pub fn encode(&self) -> EncodedMove {
+        let flag = if let Some(piece) = self.promotion {
+            match self.is_capture {
+                true => match piece {
+                    Piece::Queen => move_flags::QUEEN_PROMO_CAPTURE,
+                    Piece::Rook => move_flags::ROOK_PROMO_CAPTURE,
+                    Piece::Bishop => move_flags::BISHOP_PROMO_CAPTURE,
+                    Piece::Knight => move_flags::KNIGHT_PROMO_CAPTURE,
+                    _ => move_flags::QUIET, // should never occur
+                },
+                false => match piece {
+                    Piece::Queen => move_flags::QUEEN_PROMO,
+                    Piece::Rook => move_flags::ROOK_PROMO,
+                    Piece::Bishop => move_flags::BISHOP_PROMO,
+                    Piece::Knight => move_flags::KNIGHT_PROMO,
+                    _ => move_flags::QUIET, // should never occur
+                },
+            }
+        } else if self.is_ep_capture {
+            move_flags::EP_CAPTURE
+        } else if self.is_capture {
+            move_flags::CAPTURE
+        } else if self.is_double_move {
+            move_flags::DOUBLE_MOVE
+        } else if self.is_queen_castle {
+            move_flags::QUEEN_CASTLE
+        } else if self.is_king_castle {
+            move_flags::KING_CASTLE
+        } else {
+            move_flags::QUIET
+        };
+
+        EncodedMove::encode(self.from.to_position(), self.to.to_position(), flag)
     }
 }

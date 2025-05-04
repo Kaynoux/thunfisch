@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{prelude::*, types::unmake_info::UnmakeInfo};
 
 impl Board {
     /// Converts a FEN to a Board
@@ -8,17 +8,17 @@ impl Board {
         let mut board: Board = Board {
             white_pieces: Bitboard(0),
             black_pieces: Bitboard(0),
-            empty_pieces: Bitboard(0),
             bbs: [Bitboard(0); 13],
             pieces: [ColorPiece::Empty; 64],
             black_king_castle: true,
             black_queen_castle: true,
             white_queen_castle: true,
             white_king_castle: true,
-            en_passant_target: None,
+            ep_target: None,
             current_color: Color::Black,
-            fullmove_counter: 0,
+            total_halfmove_counter: 0,
             halfmove_clock: 0,
+            unmake_info: None,
         };
 
         let mut parts = fen.split_whitespace();
@@ -119,14 +119,14 @@ impl Board {
         board.black_queen_castle = castling.contains('k');
 
         // Set En passant target
-        board.en_passant_target = if ep_target == "-" {
+        board.ep_target = if ep_target == "-" {
             None
         } else {
             Position::from_coords(ep_target)
         };
 
         board.halfmove_clock = halfmove.parse().expect("Invalid halfmove clock");
-        board.fullmove_counter = fullmove.parse().expect("Invalid fullmove counter");
+        board.total_halfmove_counter = fullmove.parse().expect("Invalid fullmove counter");
 
         board
     }

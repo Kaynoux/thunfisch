@@ -63,33 +63,44 @@ impl Board {
             self.black_king_castle = false;
         }
 
-        // Handling castling
-        const WHITE_QUEEN_CASTLE_POS: Position = IndexPosition(2).to_position();
-        const WHITE_KING_CASTLE_POS: Position = IndexPosition(6).to_position();
-        const BLACK_KING_CASTLE_POS: Position = IndexPosition(58).to_position();
-        const BLACK_QUEEN_CASTLE_POS: Position = IndexPosition(62).to_position();
-
-        // !!! REMOVE AND ADD ROOK IN ARRAY
+        // Castling: King gets moved normally by default logic but rook needs to be moved aswelll
         if mv.is_queen_castle && current_color == Color::White {
-            let inverse_rook_position = !IndexPosition(0).to_position();
-            self.bbs[ColorPiece::WhiteRook as usize] &= inverse_rook_position;
-            let rook_target_position = IndexPosition(3).to_position();
-            self.bbs[ColorPiece::WhiteRook as usize] |= rook_target_position;
+            // This workaround to perform not needs to be done because rust not trait is not const for whatever reason
+            const ROOK_FROM_POS_INVERSE: Bitboard = Bitboard(!(IndexPosition(0).to_position().0));
+            const ROOK_TO_POS: Position = IndexPosition(3).to_position();
+
+            self.bbs[ColorPiece::WhiteRook as usize] &= ROOK_FROM_POS_INVERSE;
+            self.bbs[ColorPiece::WhiteRook as usize] |= ROOK_TO_POS;
+
+            self.pieces[IndexPosition(0).0] = ColorPiece::Empty;
+            self.pieces[IndexPosition(3).0] = ColorPiece::WhiteRook;
         } else if mv.is_king_castle && current_color == Color::White {
-            let inverse_rook_position = !IndexPosition(7).to_position();
-            self.bbs[ColorPiece::WhiteRook as usize] &= inverse_rook_position;
-            let rook_target_position = IndexPosition(5).to_position();
-            self.bbs[ColorPiece::WhiteRook as usize] |= rook_target_position;
+            const ROOK_FROM_POS_INVERSE: Bitboard = Bitboard(!(IndexPosition(7).to_position().0));
+            const ROOK_TO_POS: Position = IndexPosition(5).to_position();
+
+            self.bbs[ColorPiece::WhiteRook as usize] &= ROOK_FROM_POS_INVERSE;
+            self.bbs[ColorPiece::WhiteRook as usize] |= ROOK_TO_POS;
+
+            self.pieces[IndexPosition(7).0] = ColorPiece::Empty;
+            self.pieces[IndexPosition(5).0] = ColorPiece::WhiteRook;
         } else if mv.is_queen_castle && current_color == Color::Black {
-            let inverse_rook_position = !IndexPosition(56).to_position();
-            self.bbs[ColorPiece::BlackRook as usize] &= inverse_rook_position;
-            let rook_target_position = IndexPosition(59).to_position();
-            self.bbs[ColorPiece::BlackRook as usize] |= rook_target_position;
+            const ROOK_FROM_POS_INVERSE: Bitboard = Bitboard(!(IndexPosition(56).to_position().0));
+            const ROOK_TO_POS: Position = IndexPosition(59).to_position();
+
+            self.bbs[ColorPiece::BlackRook as usize] &= ROOK_FROM_POS_INVERSE;
+            self.bbs[ColorPiece::BlackRook as usize] |= ROOK_TO_POS;
+
+            self.pieces[IndexPosition(56).0] = ColorPiece::Empty;
+            self.pieces[IndexPosition(59).0] = ColorPiece::BlackRook;
         } else if mv.is_king_castle && current_color == Color::Black {
-            let inverse_rook_position = !IndexPosition(63).to_position();
-            self.bbs[ColorPiece::BlackRook as usize] &= inverse_rook_position;
-            let rook_target_position = IndexPosition(61).to_position();
-            self.bbs[ColorPiece::BlackRook as usize] |= rook_target_position;
+            const ROOK_FROM_POS_INVERSE: Bitboard = Bitboard(!(IndexPosition(63).to_position().0));
+            const ROOK_TO_POS: Position = IndexPosition(61).to_position();
+
+            self.bbs[ColorPiece::BlackRook as usize] &= ROOK_FROM_POS_INVERSE;
+            self.bbs[ColorPiece::BlackRook as usize] |= ROOK_TO_POS;
+
+            self.pieces[IndexPosition(63).0] = ColorPiece::Empty;
+            self.pieces[IndexPosition(61).0] = ColorPiece::BlackRook;
         }
 
         // Remove pawn if En-passant happened
@@ -98,43 +109,40 @@ impl Board {
                 Color::White => {
                     let pawn_mask = !to_pos.get_offset_pos(0, -1);
                     self.bbs[ColorPiece::BlackPawn as usize] &= pawn_mask;
-                    // !!!REMOVE PAWN ON ARRAY
+                    self.pieces[to_idx.0 - 8] = ColorPiece::Empty;
                 }
                 Color::Black => {
                     let pawn_mask = !to_pos.get_offset_pos(0, 1);
                     self.bbs[ColorPiece::WhitePawn as usize] &= pawn_mask;
-                    // !!!REMOVE PAWN ON ARRAY
+                    self.pieces[to_idx.0 + 8] = ColorPiece::Empty;
                 }
             }
         }
 
         // Set En-passant target
-
-        if mv.is_double_move {
+        self.ep_target = if mv.is_double_move {
             let offset_dir: isize = match current_color {
                 Color::White => -1,
                 Color::Black => 1,
             };
-            self.en_passant_target = Some(to_pos.get_offset_pos(0, offset_dir));
+            Some(to_pos.get_offset_pos(0, offset_dir))
         } else {
-            self.en_passant_target = None;
-        }
+            None
+        };
 
-        // Add the start piece to the target position
-        match (mv.promotion, current_color) {
-            (None, _) => {
+        // Add the from piece to the to position
+        match mv.promotion {
+            None => {
                 self.bbs[from_piece as usize] |= to_pos;
                 self.pieces[to_idx.0] = from_piece;
             }
-            (Some(piece), color) => {
-                self.bbs[(piece as usize) * 2 + (color as usize)] |= to_pos;
-                self.pieces[to_idx.0] = piece.to_color_piece(color);
+            Some(piece) => {
+                self.bbs[(piece as usize) * 2 + (current_color as usize)] |= to_pos;
+                self.pieces[to_idx.0] = piece.to_color_piece(current_color);
             }
         }
 
-        if current_color == Color::White {
-            self.fullmove_counter += 1
-        }
+        self.total_halfmove_counter += 1;
         self.current_color = !current_color;
         self.recalculate_black_white_empty_pieces();
     }

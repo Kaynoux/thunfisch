@@ -4,6 +4,7 @@ mod position_generation;
 mod prelude;
 mod pseudo_legal_move_generation;
 mod search;
+mod test;
 mod types;
 mod uci;
 fn main() {

@@ -55,7 +55,7 @@ impl Board {
         }
         fen.push(' ');
 
-        if let Some(ep) = self.en_passant_target {
+        if let Some(ep) = self.ep_target {
             fen.push_str(&ep.to_coords());
         } else {
             fen.push('-');
@@ -65,7 +65,7 @@ impl Board {
         fen.push_str(&self.halfmove_clock.to_string());
         fen.push(' ');
 
-        fen.push_str(&self.fullmove_counter.to_string());
+        fen.push_str(&self.total_halfmove_counter.to_string());
 
         fen
     }

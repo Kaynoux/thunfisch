@@ -15,14 +15,17 @@ pub fn get_pawn_positions(board: &Board, pos: Position, color: Color) -> Bitboar
     match (color, pos.to_index().0 / 8) {
         (Color::Black, 6) => {
             if board
-                .empty_pieces
+                .get_empty_pieces()
                 .is_position_set(pos.get_offset_pos(0, -1))
             {
                 moves_to_empty |= pos.get_offset_pos(0, -2)
             }
         }
         (Color::White, 1) => {
-            if board.empty_pieces.is_position_set(pos.get_offset_pos(0, 1)) {
+            if board
+                .get_empty_pieces()
+                .is_position_set(pos.get_offset_pos(0, 1))
+            {
                 moves_to_empty |= pos.get_offset_pos(0, 2)
             }
         }
@@ -30,7 +33,7 @@ pub fn get_pawn_positions(board: &Board, pos: Position, color: Color) -> Bitboar
     }
 
     // Positions need to be empty to be valid
-    moves_to_empty &= board.empty_pieces;
+    moves_to_empty &= board.get_empty_pieces();
 
     // Add the to possible Strike moves
     moves_to_enemy |= pos.get_offset_pos(-1, move_direction_y);

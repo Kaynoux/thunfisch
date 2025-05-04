@@ -13,7 +13,7 @@ pub fn print_board(board: &Board, moves: Option<&[EncodedMove]>) {
 
     println!(
         "Current Color: {:?} Halfmove Clock: {} Fullmove Counter: {}",
-        board.current_color, board.halfmove_clock, board.fullmove_counter
+        board.current_color, board.halfmove_clock, board.total_halfmove_counter
     );
     println!("FEN: {}", board.generate_fen());
     // println!("Phase: {}", board.get_game_phase());
@@ -149,9 +149,12 @@ pub fn r_detailed_perft(
     board: &Board,
     depth: usize,
     captures: &mut isize,
-    promotions: &mut isize,
-    castles: &mut isize,
-    en_passants: &mut isize,
+    total_promotions: &mut isize,
+    normal_promotions: &mut isize,
+    capture_promotions: &mut isize,
+    queen_castles: &mut isize,
+    king_castles: &mut isize,
+    ep_captures: &mut isize,
     double_moves: &mut isize,
 ) -> usize {
     if depth == 0 {
@@ -166,9 +169,12 @@ pub fn r_detailed_perft(
             &b2,
             depth - 1,
             captures,
-            promotions,
-            castles,
-            en_passants,
+            total_promotions,
+            normal_promotions,
+            capture_promotions,
+            queen_castles,
+            king_castles,
+            ep_captures,
             double_moves,
         );
 
@@ -178,13 +184,22 @@ pub fn r_detailed_perft(
             *captures += 1;
         }
         if mv.promotion.is_some() {
-            *promotions += 1;
+            *total_promotions += 1;
         }
-        if mv.is_king_castle || mv.is_queen_castle {
-            *castles += 1;
+        if mv.promotion.is_some() && mv.is_capture {
+            *capture_promotions += 1;
+        }
+        if mv.promotion.is_some() && !mv.is_capture {
+            *normal_promotions += 1;
+        }
+        if mv.is_queen_castle {
+            *queen_castles += 1;
+        }
+        if mv.is_king_castle {
+            *king_castles += 1;
         }
         if mv.is_ep_capture {
-            *en_passants += 1;
+            *ep_captures += 1;
         }
         if mv.is_double_move {
             *double_moves += 1;
@@ -195,7 +210,9 @@ pub fn r_detailed_perft(
 
 pub fn debug_perft(board: &Board, depth: usize) {
     let mut captures: isize = 0;
-    let mut promotions: isize = 0;
+    let mut total_promotions: isize = 0;
+    let mut normal_promotions: isize = 0;
+    let mut capture_promotions: isize = 0;
     let mut queen_castles: isize = 0;
     let mut king_castles: isize = 0;
     let mut ep_captures: isize = 0;
@@ -216,8 +233,11 @@ pub fn debug_perft(board: &Board, depth: usize) {
             &b2,
             depth - 1,
             &mut captures,
-            &mut promotions,
+            &mut total_promotions,
+            &mut normal_promotions,
+            &mut capture_promotions,
             &mut queen_castles,
+            &mut king_castles,
             &mut ep_captures,
             &mut double_moves,
         );
@@ -233,7 +253,13 @@ pub fn debug_perft(board: &Board, depth: usize) {
             captures += 1;
         }
         if mv.promotion.is_some() {
-            promotions += 1;
+            total_promotions += 1;
+        }
+        if mv.promotion.is_some() && mv.is_capture {
+            capture_promotions += 1;
+        }
+        if mv.promotion.is_some() && !mv.is_capture {
+            normal_promotions += 1;
         }
         if mv.is_queen_castle {
             queen_castles += 1;
@@ -258,11 +284,18 @@ pub fn debug_perft(board: &Board, depth: usize) {
         nodes_per_seconds.to_formatted_string(&Locale::en)
     );
 
-    for m in moves {}
     println!("Captures: {}", captures);
     println!("En Passants: {}", ep_captures);
-    println!("Castles: {}", queen_castles);
-    println!("Promotions: {}", promotions);
+    println!(
+        "Total Castles: {}  Queen Castles: {}  King Castles: {}",
+        queen_castles + king_castles,
+        queen_castles,
+        king_castles
+    );
+    println!(
+        "Promotions: {}  Normal Promotions: {}  Capture Promotions: {}",
+        total_promotions, normal_promotions, capture_promotions
+    );
     println!("Double moves: {}", double_moves);
 }
 
