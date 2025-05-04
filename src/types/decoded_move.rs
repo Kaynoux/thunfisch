@@ -120,7 +120,7 @@ impl DecodedMove {
         }
 
         if mv_type == MoveType::QueenCastle && color == Color::White {
-            if !board.is_in_check() {
+            if board.is_in_check() {
                 return false;
             }
             let counter_positions = move_generation::get_all_attacks(&board, !color);
@@ -131,7 +131,7 @@ impl DecodedMove {
         }
 
         if mv_type == MoveType::KingCastle && color == Color::White {
-            if !board.is_in_check() {
+            if board.is_in_check() {
                 return false;
             }
             let counter_positions = move_generation::get_all_attacks(&board, !color);
@@ -142,7 +142,7 @@ impl DecodedMove {
         }
 
         if mv_type == MoveType::QueenCastle && color == Color::Black {
-            if !board.is_in_check() {
+            if board.is_in_check() {
                 return false;
             }
             let counter_positions = move_generation::get_all_attacks(&board, !color);
@@ -153,7 +153,7 @@ impl DecodedMove {
         }
 
         if mv_type == MoveType::KingCastle && color == Color::Black {
-            if !board.is_in_check() {
+            if board.is_in_check() {
                 return false;
             }
             let counter_positions = move_generation::get_all_attacks(&board, !color);
