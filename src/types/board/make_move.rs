@@ -22,8 +22,8 @@ impl Board {
         // Revoking castling rights
         const WHITE_ROOK_QUEEN_POS: IndexPosition = IndexPosition(0);
         const WHITE_ROOK_KING_POS: IndexPosition = IndexPosition(7);
-        const BLACK_ROOK_KING_POS: IndexPosition = IndexPosition(56);
-        const BLACK_ROOK_QUEEN_POS: IndexPosition = IndexPosition(63);
+        const BLACK_ROOK_KING_POS: IndexPosition = IndexPosition(63);
+        const BLACK_ROOK_QUEEN_POS: IndexPosition = IndexPosition(56);
         const WHITE_KING_POS: IndexPosition = IndexPosition(4);
         const BLACK_KING_POS: IndexPosition = IndexPosition(60);
 
