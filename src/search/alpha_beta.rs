@@ -10,6 +10,7 @@ use std::sync::{
 
 const MATE_SCORE: i32 = 100000;
 const MAX_QUIESCENCE_SEARCH_DEPTH: usize = 1;
+const DEACTIVATE_QUIESCENCE_SEARCH: bool = true;
 
 /// Modified Mini Max algorithm which always picks the best move for each side until a given depth is reached and the evaluates the outcomes to pick the best move at the first layer
 pub fn alpha_beta(
@@ -22,17 +23,21 @@ pub fn alpha_beta(
 ) -> (Option<EncodedMove>, i32) {
     search_info.total_alpha_beta_nodes += 1;
     if depth == 0 {
-        return (
-            None,
-            quiescence_search::quiescence_search(
-                board,
-                alpha,
-                beta,
-                MAX_QUIESCENCE_SEARCH_DEPTH,
-                stop,
-                search_info,
-            ),
-        );
+        if DEACTIVATE_QUIESCENCE_SEARCH {
+            return (None, board.evaluate());
+        } else {
+            return (
+                None,
+                quiescence_search::quiescence_search(
+                    board,
+                    alpha,
+                    beta,
+                    MAX_QUIESCENCE_SEARCH_DEPTH,
+                    stop,
+                    search_info,
+                ),
+            );
+        }
     }
 
     // if search time is over this statement polls the corresponding bool every 1024 nodes and cancels the node if time is over
