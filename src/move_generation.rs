@@ -414,7 +414,7 @@ pub fn get_en_passant_moves(board: &mut Board, color: Color, moves: &mut Vec<Enc
                     DecodedMove {
                         from: from_l,
                         to: to,
-                        mv_type: MoveType::Capture,
+                        mv_type: MoveType::EpCapture,
                     },
                 );
             }
@@ -425,7 +425,7 @@ pub fn get_en_passant_moves(board: &mut Board, color: Color, moves: &mut Vec<Enc
                     DecodedMove {
                         from: from_r,
                         to: to,
-                        mv_type: MoveType::Capture,
+                        mv_type: MoveType::EpCapture,
                     },
                 );
             }
@@ -442,7 +442,7 @@ pub fn get_en_passant_moves(board: &mut Board, color: Color, moves: &mut Vec<Enc
                     DecodedMove {
                         from: from_l,
                         to: to,
-                        mv_type: MoveType::Capture,
+                        mv_type: MoveType::EpCapture,
                     },
                 );
             }
@@ -453,7 +453,7 @@ pub fn get_en_passant_moves(board: &mut Board, color: Color, moves: &mut Vec<Enc
                     DecodedMove {
                         from: from_r,
                         to: to,
-                        mv_type: MoveType::Capture,
+                        mv_type: MoveType::EpCapture,
                     },
                 );
             }

@@ -9,7 +9,7 @@ use std::sync::{
 };
 
 const MATE_SCORE: i32 = 100000;
-const MAX_QUIESCENCE_SEARCH_DEPTH: usize = 4;
+const MAX_QUIESCENCE_SEARCH_DEPTH: usize = 1;
 
 /// Modified Mini Max algorithm which always picks the best move for each side until a given depth is reached and the evaluates the outcomes to pick the best move at the first layer
 pub fn alpha_beta(
