@@ -18,7 +18,7 @@ impl Board {
             current_color: Color::Black,
             total_halfmove_counter: 0,
             halfmove_clock: 0,
-            unmake_info: None,
+            unmake_info_stack: Vec::new(),
         };
 
         let mut parts = fen.split_whitespace();

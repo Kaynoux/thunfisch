@@ -1,17 +1,11 @@
+use crate::move_generation;
 use crate::prelude::*;
-
-use super::encoded_move::move_flags;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct DecodedMove {
     pub from: IndexPosition,
     pub to: IndexPosition,
-    pub is_capture: bool,
-    pub is_double_move: bool,
-    pub is_ep_capture: bool,
-    pub is_king_castle: bool,
-    pub is_queen_castle: bool,
-    pub promotion: Option<Piece>,
+    pub mv_type: MoveType,
 }
 
 impl DecodedMove {
@@ -19,7 +13,7 @@ impl DecodedMove {
         let from = self.from.to_position().to_coords();
         let to = self.to.to_position().to_coords();
 
-        match self.promotion {
+        match self.mv_type.to_promotion_piece() {
             Some(prom) => format!("{}{}{}", from, to, prom.to_lowercase_char()),
             None => format!("{}{}", from, to),
         }
@@ -32,6 +26,8 @@ impl DecodedMove {
             "Invalid move string '{}', expected 4 or 5 chars",
             move_str
         );
+
+        let mut mv_type = MoveType::Quiet;
 
         let from_str = &move_str[0..4];
         let to_str = &move_str[2..4];
@@ -46,29 +42,25 @@ impl DecodedMove {
         let from_piece = board.get_piece_at_position(from_idx);
         let to_piece = board.get_piece_at_position(to_idx);
 
-        let mut is_capture = to_pos.is_enemy(board, board.current_color);
+        if to_pos.is_enemy(board, board.current_color) {
+            mv_type = MoveType::Capture;
+        }
 
-        let (is_queen_castle, is_king_castle) = if from_piece == Piece::King
-            && ((from_pos.to_x() as isize) - (to_pos.to_x() as isize)) == 2
+        if from_piece == Piece::King && ((from_pos.to_x() as isize) - (to_pos.to_x() as isize)) == 2
         {
-            (true, false)
+            mv_type = MoveType::QueenCastle;
         } else if from_piece == Piece::King
             && ((from_pos.to_x() as isize) - (to_pos.to_x() as isize)) == -2
         {
-            (false, true)
-        } else {
-            (false, false)
-        };
+            mv_type = MoveType::KingCastle;
+        }
 
-        let is_ep_capture = if from_piece == Piece::Pawn
+        if from_piece == Piece::Pawn
             && from_pos.to_y().abs_diff(to_pos.to_y()) == 1
             && to_piece == Piece::Empty
         {
-            is_capture = true;
-            true
-        } else {
-            false
-        };
+            mv_type = MoveType::EpCapture;
+        }
 
         let promotion = if move_str.len() == 5 {
             let prom_char = move_str.chars().nth(4).unwrap();
@@ -80,57 +72,115 @@ impl DecodedMove {
             None
         };
 
-        let is_double_move =
-            if from_piece == Piece::Pawn && from_pos.to_y().abs_diff(to_pos.to_y()) == 2 {
-                true
+        if let Some(prom) = promotion {
+            if mv_type == MoveType::Capture {
+                match prom {
+                    Piece::Queen => mv_type = MoveType::QueenPromoCapture,
+                    Piece::Rook => mv_type = MoveType::RookPromoCapture,
+                    Piece::Bishop => mv_type = MoveType::BishopPromoCapture,
+                    Piece::Knight => mv_type = MoveType::KnightPromoCapture,
+                    _ => {}
+                }
             } else {
-                false
-            };
+                match prom {
+                    Piece::Queen => mv_type = MoveType::QueenPromo,
+                    Piece::Rook => mv_type = MoveType::RookPromo,
+                    Piece::Bishop => mv_type = MoveType::BishopPromo,
+                    Piece::Knight => mv_type = MoveType::KnightPromo,
+                    _ => {}
+                }
+            }
+        }
+
+        if from_piece == Piece::Pawn && from_pos.to_y().abs_diff(to_pos.to_y()) == 2 {
+            mv_type = MoveType::DoubleMove
+        }
 
         DecodedMove {
             from: from_idx,
             to: to_idx,
-            is_capture: is_capture,
-            is_double_move: is_double_move,
-            is_ep_capture,
-            is_king_castle,
-            is_queen_castle,
-            promotion: promotion,
+            mv_type,
         }
     }
 
-    pub fn encode(&self) -> EncodedMove {
-        let flag = if let Some(piece) = self.promotion {
-            match self.is_capture {
-                true => match piece {
-                    Piece::Queen => move_flags::QUEEN_PROMO_CAPTURE,
-                    Piece::Rook => move_flags::ROOK_PROMO_CAPTURE,
-                    Piece::Bishop => move_flags::BISHOP_PROMO_CAPTURE,
-                    Piece::Knight => move_flags::KNIGHT_PROMO_CAPTURE,
-                    _ => move_flags::QUIET, // should never occur
-                },
-                false => match piece {
-                    Piece::Queen => move_flags::QUEEN_PROMO,
-                    Piece::Rook => move_flags::ROOK_PROMO,
-                    Piece::Bishop => move_flags::BISHOP_PROMO,
-                    Piece::Knight => move_flags::KNIGHT_PROMO,
-                    _ => move_flags::QUIET, // should never occur
-                },
+    pub const fn encode(self) -> EncodedMove {
+        let from_idx = self.from.0 as u16;
+        let to_idx = self.to.0 as u16;
+        EncodedMove(from_idx as u16 | (to_idx) << 6 | (self.mv_type as u16))
+    }
+
+    pub fn is_legal(&self, board: &mut Board) -> bool {
+        let mv_type = self.mv_type;
+        let color = board.current_color;
+
+        let enemy_king_pos = board.get_king_pos(!color).to_index();
+        if self.to == enemy_king_pos {
+            // winning move is invalid
+            return false;
+        }
+
+        if mv_type == MoveType::QueenCastle && color == Color::White {
+            if !board.is_in_check() {
+                return false;
             }
-        } else if self.is_ep_capture {
-            move_flags::EP_CAPTURE
-        } else if self.is_capture {
-            move_flags::CAPTURE
-        } else if self.is_double_move {
-            move_flags::DOUBLE_MOVE
-        } else if self.is_queen_castle {
-            move_flags::QUEEN_CASTLE
-        } else if self.is_king_castle {
-            move_flags::KING_CASTLE
-        } else {
-            move_flags::QUIET
+            let counter_positions = move_generation::get_all_attacks(&board, !color);
+            const MASK_WHITE_LEFT: Bitboard = Bitboard::from_idx([2usize, 3usize]);
+            if counter_positions & MASK_WHITE_LEFT != Bitboard(0) {
+                return false;
+            }
+        }
+
+        if mv_type == MoveType::KingCastle && color == Color::White {
+            if !board.is_in_check() {
+                return false;
+            }
+            let counter_positions = move_generation::get_all_attacks(&board, !color);
+            const MASK_WHITE_RIGHT: Bitboard = Bitboard::from_idx([5usize, 6usize]);
+            if counter_positions & MASK_WHITE_RIGHT != Bitboard(0) {
+                return false;
+            }
+        }
+
+        if mv_type == MoveType::QueenCastle && color == Color::Black {
+            if !board.is_in_check() {
+                return false;
+            }
+            let counter_positions = move_generation::get_all_attacks(&board, !color);
+            const MASK_BLACK_LEFT: Bitboard = Bitboard::from_idx([58usize, 59usize]);
+            if counter_positions & MASK_BLACK_LEFT != Bitboard(0) {
+                return false;
+            }
+        }
+
+        if mv_type == MoveType::KingCastle && color == Color::Black {
+            if !board.is_in_check() {
+                return false;
+            }
+            let counter_positions = move_generation::get_all_attacks(&board, !color);
+            const MASK_BLACK_RIGHT: Bitboard = Bitboard::from_idx([61usize, 62usize]);
+            if counter_positions & MASK_BLACK_RIGHT != Bitboard(0) {
+                return false;
+            }
+        }
+
+        // This part gets run if the king is currently in check so it needs to be resolved
+        board.make_move(&self);
+
+        // generate counter moves for this move
+        let counter_positions_after_move = move_generation::get_all_attacks(&board, !color);
+
+        let king_pos_after_move = match color {
+            Color::Black => board.bbs[ColorPiece::BlackKing as usize],
+            Color::White => board.bbs[ColorPiece::WhiteKing as usize],
         };
 
-        EncodedMove::encode(self.from.to_position(), self.to.to_position(), flag)
+        board.unmake_move();
+
+        // Keep move if not in check and throw away if it is
+        if counter_positions_after_move & king_pos_after_move != Bitboard(0) {
+            return false;
+        }
+
+        true
     }
 }

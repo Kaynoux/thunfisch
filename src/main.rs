@@ -1,8 +1,8 @@
 mod debug;
 mod evaluate;
+mod move_generation;
 mod position_generation;
 mod prelude;
-mod pseudo_legal_move_generation;
 mod search;
 mod test;
 mod types;

@@ -6,6 +6,7 @@ pub mod decoded_move;
 pub mod encoded_move;
 pub mod engine_state;
 pub mod index_position;
+pub mod move_type;
 pub mod piece;
 pub mod position;
 pub mod unmake_info;

@@ -59,13 +59,17 @@ pub fn handle_uci_communication() {
                 let best_move = search::iterative_deepening::iterative_deepening(
                     &mut state.board,
                     100,
-                    Duration::new(1, 0),
+                    Duration::new(5, 0),
                 );
 
                 if let Some(best_move) = best_move {
                     println!("bestmove {}", best_move.decode().to_coords());
                 } else {
-                    println!("bestmove (none)");
+                    if state.board.is_in_check() {
+                        println!("Game over: Checkmate!");
+                    } else {
+                        println!("Game over: Stalemate!");
+                    }
                 }
             }
             Some("quit") => break,
@@ -80,17 +84,18 @@ pub fn handle_uci_communication() {
                 let rayon = args.iter().any(|&flag| flag == "--rayon");
 
                 if debug == true {
-                    debug::debug_perft(&state.board, depth);
+                    debug::debug_perft(&mut state.board, depth);
                 } else if rayon == true {
-                    debug::perft_rayon(&state.board, depth);
+                    debug::perft_rayon(&mut state.board, depth);
                 } else {
-                    debug::perft(&state.board, depth);
+                    debug::perft(&mut state.board, depth);
                 }
             }
             Some("fen") => println!("Current Fen: {}", state.board.generate_fen()),
             Some("draw") => debug::print_board(&state.board, None),
             Some("moves") => {
-                debug::print_board(&state.board, Some(&state.board.get_legal_moves(false)))
+                let moves = state.board.get_moves(false);
+                debug::print_board(&state.board, Some(&moves));
             }
             Some("eval") => loop {},
             Some("do") => {

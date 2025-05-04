@@ -1,6 +1,6 @@
-use crate::{prelude::*, pseudo_legal_move_generation, types::unmake_info::UnmakeInfo};
+use crate::{move_generation, prelude::*, types::unmake_info::UnmakeInfo};
 /// Each piece type gets its own 64bits where
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct Board {
     pub white_pieces: Bitboard,
     pub black_pieces: Bitboard,
@@ -14,7 +14,7 @@ pub struct Board {
     pub current_color: Color,
     pub halfmove_clock: usize,
     pub total_halfmove_counter: usize,
-    pub unmake_info: Option<UnmakeInfo>,
+    pub unmake_info_stack: Vec<UnmakeInfo>,
 }
 
 impl Board {
@@ -31,6 +31,14 @@ impl Board {
         match color {
             Color::Black => !self.black_pieces,
             Color::White => !self.white_pieces,
+        }
+    }
+
+    #[inline(always)]
+    pub fn get_enemy_pieces(&self, color: Color) -> Bitboard {
+        match color {
+            Color::Black => self.white_pieces,
+            Color::White => self.black_pieces,
         }
     }
 
@@ -134,10 +142,10 @@ impl Board {
     }
 
     #[inline(always)]
-    pub fn get_positions_by_piece_color(&self, color: Color, piece: Piece) -> Bitboard {
+    pub const fn get_positions_by_piece_color(&self, color: Color, piece: Piece) -> Bitboard {
         match color {
             Color::Black => match piece {
-                Piece::Empty => self.get_empty_pieces(),
+                Piece::Empty => self.bbs[ColorPiece::Empty as usize],
                 Piece::Pawn => self.bbs[ColorPiece::BlackPawn as usize],
                 Piece::Knight => self.bbs[ColorPiece::BlackKnight as usize],
                 Piece::Bishop => self.bbs[ColorPiece::BlackBishop as usize],
@@ -146,7 +154,7 @@ impl Board {
                 Piece::King => self.bbs[ColorPiece::BlackKing as usize],
             },
             Color::White => match piece {
-                Piece::Empty => self.get_empty_pieces(),
+                Piece::Empty => self.bbs[ColorPiece::Empty as usize],
                 Piece::Pawn => self.bbs[ColorPiece::WhitePawn as usize],
                 Piece::Knight => self.bbs[ColorPiece::WhiteKnight as usize],
                 Piece::Bishop => self.bbs[ColorPiece::WhiteBishop as usize],
@@ -210,8 +218,7 @@ impl Board {
 
     #[inline(always)]
     pub fn is_in_check(&self) -> bool {
-        let opposite_attacks =
-            pseudo_legal_move_generation::get_all_attacks(self, !self.current_color);
+        let opposite_attacks = move_generation::get_all_attacks(self, !self.current_color);
 
         (opposite_attacks & self.get_king_pos(self.current_color)) != Bitboard(0)
     }

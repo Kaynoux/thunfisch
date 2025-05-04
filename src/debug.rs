@@ -74,6 +74,7 @@ pub fn print_moves(board: &Board, moves: &Vec<EncodedMove>) {
     ) = (Position(0), false, false, false, false);
     for encoded_mv in moves {
         let mv = encoded_mv.decode();
+        let mv_type = mv.mv_type;
         let (
             current_pos,
             current_is_queen_castle,
@@ -82,10 +83,22 @@ pub fn print_moves(board: &Board, moves: &Vec<EncodedMove>) {
             current_is_ep_capture,
         ) = (
             mv.from.to_position(),
-            mv.is_queen_castle,
-            mv.is_king_castle,
-            mv.promotion.is_some(),
-            mv.is_ep_capture,
+            if mv_type == MoveType::QueenCastle {
+                true
+            } else {
+                false
+            },
+            if mv_type == MoveType::KingCastle {
+                true
+            } else {
+                false
+            },
+            mv_type.is_promotion(),
+            if mv_type == MoveType::EpCapture {
+                true
+            } else {
+                false
+            },
         );
         let (current_color, current_piece) = board.get_piece_and_color_at_position(current_pos);
         if current_pos != prev_pos
@@ -132,25 +145,24 @@ pub fn print_moves(board: &Board, moves: &Vec<EncodedMove>) {
     println!()
 }
 
-pub fn r_perft(board: &Board, depth: usize) -> usize {
+pub fn r_perft(board: &mut Board, depth: usize) -> usize {
     if depth == 0 {
         return 1;
     }
     let mut nodes = 0;
-    let moves = board.get_legal_moves(false);
+    let moves = board.get_moves(false);
     for mv in moves {
-        let mut b2 = board.clone();
-        b2.make_move(&mv.decode());
-        nodes += r_perft(&b2, depth - 1);
+        board.make_move(&mv.decode());
+        nodes += r_perft(board, depth - 1);
+        board.unmake_move();
     }
     nodes
 }
 
 pub fn r_detailed_perft(
-    board: &Board,
+    board: &mut Board,
     depth: usize,
     captures: &mut isize,
-    total_promotions: &mut isize,
     normal_promotions: &mut isize,
     capture_promotions: &mut isize,
     queen_castles: &mut isize,
@@ -162,15 +174,14 @@ pub fn r_detailed_perft(
         return 1;
     }
     let mut nodes = 0;
-    let moves = board.get_legal_moves(false);
+    let moves = board.get_moves(false);
     for encoded_mv in moves {
         let mut b2 = board.clone();
         b2.make_move(&encoded_mv.decode());
         nodes += r_detailed_perft(
-            &b2,
+            &mut b2,
             depth - 1,
             captures,
-            total_promotions,
             normal_promotions,
             capture_promotions,
             queen_castles,
@@ -180,38 +191,52 @@ pub fn r_detailed_perft(
         );
 
         let mv = encoded_mv.decode();
+        let mv_type = mv.mv_type;
 
-        if mv.is_capture {
-            *captures += 1;
-        }
-        if mv.promotion.is_some() {
-            *total_promotions += 1;
-        }
-        if mv.promotion.is_some() && mv.is_capture {
-            *capture_promotions += 1;
-        }
-        if mv.promotion.is_some() && !mv.is_capture {
-            *normal_promotions += 1;
-        }
-        if mv.is_queen_castle {
-            *queen_castles += 1;
-        }
-        if mv.is_king_castle {
-            *king_castles += 1;
-        }
-        if mv.is_ep_capture {
-            *ep_captures += 1;
-        }
-        if mv.is_double_move {
-            *double_moves += 1;
+        match mv_type {
+            MoveType::Quiet => {} // No specific counter for quiet moves here
+            MoveType::DoubleMove => *double_moves += 1,
+            MoveType::KingCastle => *king_castles += 1,
+            MoveType::QueenCastle => *queen_castles += 1,
+            MoveType::Capture => *captures += 1,
+            MoveType::EpCapture => {
+                *ep_captures += 1;
+            }
+            MoveType::KnightPromo => {
+                *normal_promotions += 1;
+            }
+            MoveType::BishopPromo => {
+                *normal_promotions += 1;
+            }
+            MoveType::RookPromo => {
+                *normal_promotions += 1;
+            }
+            MoveType::QueenPromo => {
+                *normal_promotions += 1;
+            }
+            MoveType::KnightPromoCapture => {
+                *captures += 1;
+                *capture_promotions += 1;
+            }
+            MoveType::BishopPromoCapture => {
+                *captures += 1;
+                *capture_promotions += 1;
+            }
+            MoveType::RookPromoCapture => {
+                *captures += 1;
+                *capture_promotions += 1;
+            }
+            MoveType::QueenPromoCapture => {
+                *captures += 1;
+                *capture_promotions += 1;
+            }
         }
     }
     nodes
 }
 
-pub fn debug_perft(board: &Board, depth: usize) {
+pub fn debug_perft(board: &mut Board, depth: usize) {
     let mut captures: isize = 0;
-    let mut total_promotions: isize = 0;
     let mut normal_promotions: isize = 0;
     let mut capture_promotions: isize = 0;
     let mut queen_castles: isize = 0;
@@ -225,16 +250,15 @@ pub fn debug_perft(board: &Board, depth: usize) {
     let start = Instant::now();
     println!("Perft divide depth {}:", depth);
     let mut total_nodes = 0;
-    let moves = board.get_legal_moves(false);
+    let moves = board.get_moves(false);
     for encoded_mv in &moves {
         let mv = encoded_mv.decode();
         let mut b2 = board.clone();
         b2.make_move(&mv);
         let nodes_for_move = r_detailed_perft(
-            &b2,
+            &mut b2,
             depth - 1,
             &mut captures,
-            &mut total_promotions,
             &mut normal_promotions,
             &mut capture_promotions,
             &mut queen_castles,
@@ -244,29 +268,45 @@ pub fn debug_perft(board: &Board, depth: usize) {
         );
         total_nodes += nodes_for_move;
 
-        if mv.is_capture {
-            captures += 1;
-        }
-        if mv.promotion.is_some() {
-            total_promotions += 1;
-        }
-        if mv.promotion.is_some() && mv.is_capture {
-            capture_promotions += 1;
-        }
-        if mv.promotion.is_some() && !mv.is_capture {
-            normal_promotions += 1;
-        }
-        if mv.is_queen_castle {
-            queen_castles += 1;
-        }
-        if mv.is_king_castle {
-            king_castles += 1;
-        }
-        if mv.is_ep_capture {
-            ep_captures += 1;
-        }
-        if mv.is_double_move {
-            double_moves += 1;
+        let mv_type = mv.mv_type;
+
+        match mv_type {
+            MoveType::Quiet => {} // No specific counter for quiet moves here
+            MoveType::DoubleMove => double_moves += 1,
+            MoveType::KingCastle => king_castles += 1,
+            MoveType::QueenCastle => queen_castles += 1,
+            MoveType::Capture => captures += 1,
+            MoveType::EpCapture => {
+                ep_captures += 1;
+            }
+            MoveType::KnightPromo => {
+                normal_promotions += 1;
+            }
+            MoveType::BishopPromo => {
+                normal_promotions += 1;
+            }
+            MoveType::RookPromo => {
+                normal_promotions += 1;
+            }
+            MoveType::QueenPromo => {
+                normal_promotions += 1;
+            }
+            MoveType::KnightPromoCapture => {
+                captures += 1;
+                capture_promotions += 1;
+            }
+            MoveType::BishopPromoCapture => {
+                captures += 1;
+                capture_promotions += 1;
+            }
+            MoveType::RookPromoCapture => {
+                captures += 1;
+                capture_promotions += 1;
+            }
+            MoveType::QueenPromoCapture => {
+                captures += 1;
+                capture_promotions += 1;
+            }
         }
 
         println!(
@@ -296,12 +336,14 @@ pub fn debug_perft(board: &Board, depth: usize) {
     );
     println!(
         "Promotions: {}  Normal Promotions: {}  Capture Promotions: {}",
-        total_promotions, normal_promotions, capture_promotions
+        normal_promotions + capture_promotions,
+        normal_promotions,
+        capture_promotions
     );
     println!("Double moves: {}", double_moves);
 }
 
-pub fn perft(board: &Board, depth: usize) {
+pub fn perft(board: &mut Board, depth: usize) {
     if depth == 0 {
         println!("Perft: Depth=0 Nodes=0 Time=0s Nodes/sec=0");
         return;
@@ -319,7 +361,7 @@ pub fn perft(board: &Board, depth: usize) {
     );
 }
 
-pub fn perft_rayon(board: &Board, depth: usize) {
+pub fn perft_rayon(board: &mut Board, depth: usize) {
     if depth == 0 {
         println!("Perft: Depth=0 Nodes=0 Time=0s Nodes/sec=0");
         return;
@@ -337,17 +379,17 @@ pub fn perft_rayon(board: &Board, depth: usize) {
     );
 }
 
-pub fn r_perft_rayon(board: &Board, depth: usize) -> usize {
+pub fn r_perft_rayon(board: &mut Board, depth: usize) -> usize {
     if depth == 0 {
         return 1;
     }
     board
-        .get_legal_moves(false)
+        .get_moves(false)
         .par_iter()
         .map(|mv| {
             let mut b2 = board.clone();
             b2.make_move(&mv.decode());
-            r_perft_rayon(&b2, depth - 1) // Rückgabe ohne Semikolon
+            r_perft(&mut b2, depth - 1) // Rückgabe ohne Semikolon
         })
         .sum::<usize>()
 }

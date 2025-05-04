@@ -1,13 +1,30 @@
 use crate::prelude::*;
 
 #[inline(always)]
-pub fn get_pawn_positions(board: &Board, pos: Position, color: Color) -> Bitboard {
+pub fn get_pawn_positions(
+    board: &Board,
+    pos: Position,
+    color: Color,
+    only_captures: bool,
+) -> Bitboard {
     let mut moves_to_empty = Bitboard(0);
     let mut moves_to_enemy = Bitboard(0);
     let move_direction_y = match color {
         Color::Black => -1,
         Color::White => 1,
     };
+
+    // Add the to possible Strike moves
+    moves_to_enemy |= pos.get_offset_pos(-1, move_direction_y);
+    moves_to_enemy |= pos.get_offset_pos(1, move_direction_y);
+
+    // Positions need to be enemy to be valid
+    moves_to_enemy &= board.get_pieces_by_color(!color);
+
+    if only_captures {
+        // early return if only enemy pos are needed
+        return moves_to_enemy;
+    }
 
     moves_to_empty |= pos.get_offset_pos(0, move_direction_y);
 
@@ -34,13 +51,6 @@ pub fn get_pawn_positions(board: &Board, pos: Position, color: Color) -> Bitboar
 
     // Positions need to be empty to be valid
     moves_to_empty &= board.get_empty_pieces();
-
-    // Add the to possible Strike moves
-    moves_to_enemy |= pos.get_offset_pos(-1, move_direction_y);
-    moves_to_enemy |= pos.get_offset_pos(1, move_direction_y);
-
-    // Positions need to be enemy to be valid
-    moves_to_enemy &= board.get_pieces_by_color(!color);
 
     moves_to_empty | moves_to_enemy
 }

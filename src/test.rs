@@ -62,8 +62,8 @@ mod tests {
                 if depth >= MAX_DEPTH {
                     break;
                 }
-                let board = Board::from_fen(fen);
-                let calculated_node_count = r_perft_rayon(&board, depth);
+                let mut board = Board::from_fen(fen);
+                let calculated_node_count = r_perft_rayon(&mut board, depth);
                 assert_eq!(
                     *correct_node_count,
                     calculated_node_count,
