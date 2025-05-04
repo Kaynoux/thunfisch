@@ -93,6 +93,12 @@ pub fn handle_uci_communication() {
                 debug::print_board(&state.board, Some(&state.board.get_legal_moves(false)))
             }
             Some("eval") => loop {},
+            Some("do") => {
+                let args: Vec<&str> = parts.collect();
+                let mv_str: &str = args[0];
+                let mv = DecodedMove::from_coords(mv_str.to_string(), &state.board);
+                state.board.make_move(&mv);
+            }
             Some(cmd) => {
                 eprintln!("Unknown command: {}", cmd);
             }

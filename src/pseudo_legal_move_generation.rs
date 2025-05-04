@@ -191,24 +191,25 @@ pub fn get_castle_moves(board: &Board, color: Color, moves: &mut Vec<EncodedMove
             }
         }
         Color::Black => {
-            const MASK_BLACK_KING_CASTLE: Bitboard = Bitboard(1u64 << 57 | 1u64 << 58 | 1u64 << 59);
+            const MASK_BLACK_KING_CASTLE: Bitboard = Bitboard(1u64 << 61 | 1u64 << 62);
             if board.black_king_castle
                 && board.get_empty_pieces() & MASK_BLACK_KING_CASTLE == MASK_BLACK_KING_CASTLE
             {
                 let mv = EncodedMove::encode(
                     IndexPosition(60).to_position(),
-                    IndexPosition(58).to_position(),
+                    IndexPosition(62).to_position(),
                     move_flags::KING_CASTLE,
                 );
                 moves.push(mv);
             }
-            const MASK_BLACK_QUEEN_CASTLE: Bitboard = Bitboard(1u64 << 61 | 1u64 << 62);
+            const MASK_BLACK_QUEEN_CASTLE: Bitboard =
+                Bitboard(1u64 << 57 | 1u64 << 58 | 1u64 << 59);
             if board.black_queen_castle
                 && board.get_empty_pieces() & MASK_BLACK_QUEEN_CASTLE == MASK_BLACK_QUEEN_CASTLE
             {
                 let mv = EncodedMove::encode(
                     IndexPosition(60).to_position(),
-                    IndexPosition(62).to_position(),
+                    IndexPosition(58).to_position(),
                     move_flags::QUEEN_CASTLE,
                 );
                 moves.push(mv);

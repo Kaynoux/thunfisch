@@ -3,6 +3,7 @@ use colored;
 use colored::Colorize;
 use num_format::{Locale, ToFormattedString};
 use rayon::prelude::*;
+use std::collections::HashMap;
 use std::time::Instant;
 
 pub fn print_board(board: &Board, moves: Option<&[EncodedMove]>) {
@@ -242,12 +243,6 @@ pub fn debug_perft(board: &Board, depth: usize) {
             &mut double_moves,
         );
         total_nodes += nodes_for_move;
-        println!(
-            "{}{}: {}",
-            mv.from.to_position().to_coords(),
-            mv.to.to_position().to_coords(),
-            nodes_for_move
-        );
 
         if mv.is_capture {
             captures += 1;
@@ -273,6 +268,13 @@ pub fn debug_perft(board: &Board, depth: usize) {
         if mv.is_double_move {
             double_moves += 1;
         }
+
+        println!(
+            "{}{}: {}",
+            mv.from.to_position().to_coords(),
+            mv.to.to_position().to_coords(),
+            nodes_for_move,
+        );
     }
     let elapsed = start.elapsed();
     let nodes_per_seconds = (total_nodes as f64 / elapsed.as_secs_f64()) as usize;
