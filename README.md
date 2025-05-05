@@ -25,3 +25,5 @@ Perft: Depth=7 Nodes=3,195,901,860 Time=75.035s Nodes/sec=42,592,214
 With move unmaking:
 perft 7 --rayon
 Perft: Depth=7 Nodes=3,195,901,860 Time=47.432s Nodes/sec=67,379,035
+
+scc --include-ext rs .

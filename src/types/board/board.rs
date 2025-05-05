@@ -26,6 +26,8 @@ impl Board {
         }
     }
 
+    self.bbs[ColorPiece::BlackPawn as usize];
+
     #[inline(always)]
     pub fn get_non_friendly_pieces(&self, color: Color) -> Bitboard {
         match color {
