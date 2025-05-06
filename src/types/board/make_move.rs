@@ -6,8 +6,8 @@ impl Board {
         let color = self.current_color;
         let from_idx = mv.from;
         let to_idx = mv.to;
-        let from_pos = from_idx.to_position();
-        let to_pos = to_idx.to_position();
+        let from_pos = from_idx.to_bit();
+        let to_pos = to_idx.to_bit();
 
         let from_piece = self.pieces[from_idx.0];
         let to_piece = self.pieces[to_idx.0];
@@ -29,19 +29,19 @@ impl Board {
 
         // Remove start piece from bitboard
         self.bbs[from_piece as usize] &= !from_pos;
-        self.pieces[from_idx.0] = ColorPiece::Empty;
+        self.pieces[from_idx.0] = Figure::Empty;
 
         // Remove target piece from bitboard
         self.bbs[to_piece as usize] &= !to_pos;
-        self.pieces[to_idx.0] = ColorPiece::Empty;
+        self.pieces[to_idx.0] = Figure::Empty;
 
         // Revoking castling rights
-        const WHITE_ROOK_QUEEN_POS: IndexPosition = IndexPosition(0);
-        const WHITE_ROOK_KING_POS: IndexPosition = IndexPosition(7);
-        const BLACK_ROOK_KING_POS: IndexPosition = IndexPosition(63);
-        const BLACK_ROOK_QUEEN_POS: IndexPosition = IndexPosition(56);
-        const WHITE_KING_POS: IndexPosition = IndexPosition(4);
-        const BLACK_KING_POS: IndexPosition = IndexPosition(60);
+        const WHITE_ROOK_QUEEN_POS: Square = Square(0);
+        const WHITE_ROOK_KING_POS: Square = Square(7);
+        const BLACK_ROOK_KING_POS: Square = Square(63);
+        const BLACK_ROOK_QUEEN_POS: Square = Square(56);
+        const WHITE_KING_POS: Square = Square(4);
+        const BLACK_KING_POS: Square = Square(60);
 
         // Revoke castling rights if
         // - Rook on the relevant side has moved
@@ -84,48 +84,44 @@ impl Board {
         match (mv_type, color) {
             (MoveType::QueenCastle, Color::White) => {
                 // This workaround to perform not needs to be done because rust not trait is not const for whatever reason
-                const ROOK_FROM_POS_INVERSE: Bitboard =
-                    Bitboard(!(IndexPosition(0).to_position().0));
-                const ROOK_TO_POS: Position = IndexPosition(3).to_position();
+                const ROOK_FROM_POS_INVERSE: Bitboard = Bitboard(!(Square(0).to_bit().0));
+                const ROOK_TO_POS: Bit = Square(3).to_bit();
 
-                self.bbs[ColorPiece::WhiteRook as usize] &= ROOK_FROM_POS_INVERSE;
-                self.bbs[ColorPiece::WhiteRook as usize] |= ROOK_TO_POS;
+                self.bbs[Figure::WhiteRook as usize] &= ROOK_FROM_POS_INVERSE;
+                self.bbs[Figure::WhiteRook as usize] |= ROOK_TO_POS;
 
-                self.pieces[IndexPosition(0).0] = ColorPiece::Empty;
-                self.pieces[IndexPosition(3).0] = ColorPiece::WhiteRook;
+                self.pieces[Square(0).0] = Figure::Empty;
+                self.pieces[Square(3).0] = Figure::WhiteRook;
             }
             (MoveType::KingCastle, Color::White) => {
-                const ROOK_FROM_POS_INVERSE: Bitboard =
-                    Bitboard(!(IndexPosition(7).to_position().0));
-                const ROOK_TO_POS: Position = IndexPosition(5).to_position();
+                const ROOK_FROM_POS_INVERSE: Bitboard = Bitboard(!(Square(7).to_bit().0));
+                const ROOK_TO_POS: Bit = Square(5).to_bit();
 
-                self.bbs[ColorPiece::WhiteRook as usize] &= ROOK_FROM_POS_INVERSE;
-                self.bbs[ColorPiece::WhiteRook as usize] |= ROOK_TO_POS;
+                self.bbs[Figure::WhiteRook as usize] &= ROOK_FROM_POS_INVERSE;
+                self.bbs[Figure::WhiteRook as usize] |= ROOK_TO_POS;
 
-                self.pieces[IndexPosition(7).0] = ColorPiece::Empty;
-                self.pieces[IndexPosition(5).0] = ColorPiece::WhiteRook;
+                self.pieces[Square(7).0] = Figure::Empty;
+                self.pieces[Square(5).0] = Figure::WhiteRook;
             }
             (MoveType::QueenCastle, Color::Black) => {
-                const ROOK_FROM_POS_INVERSE: Bitboard =
-                    Bitboard(!(IndexPosition(56).to_position().0));
-                const ROOK_TO_POS: Position = IndexPosition(59).to_position();
+                const ROOK_FROM_POS_INVERSE: Bitboard = Bitboard(!(Square(56).to_bit().0));
+                const ROOK_TO_POS: Bit = Square(59).to_bit();
 
-                self.bbs[ColorPiece::BlackRook as usize] &= ROOK_FROM_POS_INVERSE;
-                self.bbs[ColorPiece::BlackRook as usize] |= ROOK_TO_POS;
+                self.bbs[Figure::BlackRook as usize] &= ROOK_FROM_POS_INVERSE;
+                self.bbs[Figure::BlackRook as usize] |= ROOK_TO_POS;
 
-                self.pieces[IndexPosition(56).0] = ColorPiece::Empty;
-                self.pieces[IndexPosition(59).0] = ColorPiece::BlackRook;
+                self.pieces[Square(56).0] = Figure::Empty;
+                self.pieces[Square(59).0] = Figure::BlackRook;
             }
             (MoveType::KingCastle, Color::Black) => {
-                const ROOK_FROM_POS_INVERSE: Bitboard =
-                    Bitboard(!(IndexPosition(63).to_position().0));
-                const ROOK_TO_POS: Position = IndexPosition(61).to_position();
+                const ROOK_FROM_POS_INVERSE: Bitboard = Bitboard(!(Square(63).to_bit().0));
+                const ROOK_TO_POS: Bit = Square(61).to_bit();
 
-                self.bbs[ColorPiece::BlackRook as usize] &= ROOK_FROM_POS_INVERSE;
-                self.bbs[ColorPiece::BlackRook as usize] |= ROOK_TO_POS;
+                self.bbs[Figure::BlackRook as usize] &= ROOK_FROM_POS_INVERSE;
+                self.bbs[Figure::BlackRook as usize] |= ROOK_TO_POS;
 
-                self.pieces[IndexPosition(63).0] = ColorPiece::Empty;
-                self.pieces[IndexPosition(61).0] = ColorPiece::BlackRook;
+                self.pieces[Square(63).0] = Figure::Empty;
+                self.pieces[Square(61).0] = Figure::BlackRook;
             }
             _ => {}
         }
@@ -135,13 +131,13 @@ impl Board {
             match color {
                 Color::White => {
                     let pawn_mask = !to_pos.get_offset_pos(0, -1);
-                    self.bbs[ColorPiece::BlackPawn as usize] &= pawn_mask;
-                    self.pieces[to_idx.0 - 8] = ColorPiece::Empty;
+                    self.bbs[Figure::BlackPawn as usize] &= pawn_mask;
+                    self.pieces[to_idx.0 - 8] = Figure::Empty;
                 }
                 Color::Black => {
                     let pawn_mask = !to_pos.get_offset_pos(0, 1);
-                    self.bbs[ColorPiece::WhitePawn as usize] &= pawn_mask;
-                    self.pieces[to_idx.0 + 8] = ColorPiece::Empty;
+                    self.bbs[Figure::WhitePawn as usize] &= pawn_mask;
+                    self.pieces[to_idx.0 + 8] = Figure::Empty;
                 }
             }
         }
@@ -167,6 +163,6 @@ impl Board {
 
         self.total_halfmove_counter += 1;
         self.current_color = !color;
-        self.recalculate_black_white_empty_pieces();
+        self.recalculate_genereal_bitboards();
     }
 }

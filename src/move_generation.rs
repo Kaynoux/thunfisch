@@ -53,7 +53,7 @@ impl Board {
         // King
         get_king_moves(
             self,
-            self.get_king_pos(color),
+            self.get_king_bit(color),
             color,
             &mut moves,
             get_king_positions,
@@ -84,15 +84,15 @@ pub fn get_moves_for_piece_type(
     piece: Piece,
     color: Color,
     moves: &mut Vec<EncodedMove>,
-    f: fn(board: &Board, pos: Position, color: Color) -> Bitboard,
+    f: fn(board: &Board, pos: Bit, color: Color) -> Bitboard,
     only_captures: bool,
 ) -> Bitboard {
-    let mut piece_positions = board.get_positions_by_piece_color(color, piece);
+    let mut piece_positions = board.get_bitboard_by_piece_color(color, piece);
     let mut target_positions = Bitboard(0);
 
     while piece_positions != Bitboard(0) {
         let current_pos = piece_positions.pop_lsb_position().unwrap();
-        let from = current_pos.to_index();
+        let from = current_pos.to_square();
 
         let mut target_positions_for_one_piece = f(board, current_pos, color);
 
@@ -105,7 +105,7 @@ pub fn get_moves_for_piece_type(
         while target_positions_for_one_piece != Bitboard(0) {
             let target_pos = target_positions_for_one_piece.pop_lsb_position().unwrap();
 
-            let to = target_pos.to_index();
+            let to = target_pos.to_square();
             match target_pos.is_enemy(board, color) {
                 true => push_if_legal(
                     moves,
@@ -139,11 +139,11 @@ pub fn get_pawn_moves(
     only_captures: bool,
 ) -> Bitboard {
     let mut target_positions = Bitboard(0);
-    let mut pawn_positions = board.get_positions_by_piece_color(color, Piece::Pawn);
+    let mut pawn_positions = board.get_bitboard_by_piece_color(color, Piece::Pawn);
 
     while pawn_positions != Bitboard(0) {
         let current_pos = pawn_positions.pop_lsb_position().unwrap();
-        let from = current_pos.to_index();
+        let from = current_pos.to_square();
 
         let mut target_positions_for_one_piece =
             get_pawn_positions(board, current_pos, color, only_captures);
@@ -157,7 +157,7 @@ pub fn get_pawn_moves(
             let is_double_move = if cy.abs_diff(ty) == 2 { true } else { false };
             let is_capture = target_pos.is_enemy(board, color);
 
-            let to = target_pos.to_index();
+            let to = target_pos.to_square();
 
             if ty == 0 || ty == 7 {
                 match is_capture {
@@ -285,10 +285,10 @@ pub fn get_pawn_moves(
 #[inline(always)]
 pub fn get_king_moves(
     board: &mut Board,
-    current_pos: Position,
+    current_pos: Bit,
     color: Color,
     moves: &mut Vec<EncodedMove>,
-    f: fn(board: &Board, pos: Position, color: Color) -> Bitboard,
+    f: fn(board: &Board, pos: Bit, color: Color) -> Bitboard,
     only_captures: bool,
 ) -> Bitboard {
     let mut target_positions = f(board, current_pos, color);
@@ -297,10 +297,10 @@ pub fn get_king_moves(
         target_positions &= board.get_non_friendly_pieces(color);
     }
 
-    let from = current_pos.to_index();
+    let from = current_pos.to_square();
     while target_positions != Bitboard(0) {
         let target_pos = target_positions.pop_lsb_position().unwrap();
-        let to = target_pos.to_index();
+        let to = target_pos.to_square();
 
         match target_pos.is_enemy(board, color) {
             true => push_if_legal(
@@ -337,8 +337,8 @@ pub fn get_castle_moves(board: &mut Board, color: Color, moves: &mut Vec<Encoded
                     moves,
                     board,
                     DecodedMove {
-                        from: IndexPosition(4),
-                        to: IndexPosition(2),
+                        from: Square(4),
+                        to: Square(2),
                         mv_type: MoveType::QueenCastle,
                     },
                 );
@@ -351,8 +351,8 @@ pub fn get_castle_moves(board: &mut Board, color: Color, moves: &mut Vec<Encoded
                     moves,
                     board,
                     DecodedMove {
-                        from: IndexPosition(4),
-                        to: IndexPosition(6),
+                        from: Square(4),
+                        to: Square(6),
                         mv_type: MoveType::KingCastle,
                     },
                 );
@@ -367,8 +367,8 @@ pub fn get_castle_moves(board: &mut Board, color: Color, moves: &mut Vec<Encoded
                     moves,
                     board,
                     DecodedMove {
-                        from: IndexPosition(60),
-                        to: IndexPosition(62),
+                        from: Square(60),
+                        to: Square(62),
                         mv_type: MoveType::KingCastle,
                     },
                 );
@@ -382,8 +382,8 @@ pub fn get_castle_moves(board: &mut Board, color: Color, moves: &mut Vec<Encoded
                     moves,
                     board,
                     DecodedMove {
-                        from: IndexPosition(60),
-                        to: IndexPosition(58),
+                        from: Square(60),
+                        to: Square(58),
                         mv_type: MoveType::QueenCastle,
                     },
                 );
@@ -399,15 +399,15 @@ pub fn get_en_passant_moves(board: &mut Board, color: Color, moves: &mut Vec<Enc
         None => return,
     };
 
-    let to = ep_target.to_index();
+    let to = ep_target.to_square();
 
     match color {
         Color::White => {
             let position_left = ep_target.get_offset_pos(-1, -1);
-            let from_l = position_left.to_index();
+            let from_l = position_left.to_square();
             let position_right = ep_target.get_offset_pos(1, -1);
-            let from_r = position_right.to_index();
-            if board.bbs[ColorPiece::WhitePawn as usize].is_position_set(position_left) {
+            let from_r = position_right.to_square();
+            if board.bbs[Figure::WhitePawn as usize].is_position_set(position_left) {
                 push_if_legal(
                     moves,
                     board,
@@ -418,7 +418,7 @@ pub fn get_en_passant_moves(board: &mut Board, color: Color, moves: &mut Vec<Enc
                     },
                 );
             }
-            if board.bbs[ColorPiece::WhitePawn as usize].is_position_set(position_right) {
+            if board.bbs[Figure::WhitePawn as usize].is_position_set(position_right) {
                 push_if_legal(
                     moves,
                     board,
@@ -432,10 +432,10 @@ pub fn get_en_passant_moves(board: &mut Board, color: Color, moves: &mut Vec<Enc
         }
         Color::Black => {
             let position_left = ep_target.get_offset_pos(-1, 1);
-            let from_l = position_left.to_index();
+            let from_l = position_left.to_square();
             let position_right = ep_target.get_offset_pos(1, 1);
-            let from_r = position_right.to_index();
-            if board.bbs[ColorPiece::BlackPawn as usize].is_position_set(position_left) {
+            let from_r = position_right.to_square();
+            if board.bbs[Figure::BlackPawn as usize].is_position_set(position_left) {
                 push_if_legal(
                     moves,
                     board,
@@ -446,7 +446,7 @@ pub fn get_en_passant_moves(board: &mut Board, color: Color, moves: &mut Vec<Enc
                     },
                 );
             }
-            if board.bbs[ColorPiece::BlackPawn as usize].is_position_set(position_right) {
+            if board.bbs[Figure::BlackPawn as usize].is_position_set(position_right) {
                 push_if_legal(
                     moves,
                     board,
@@ -465,8 +465,8 @@ pub fn get_en_passant_moves(board: &mut Board, color: Color, moves: &mut Vec<Enc
 pub fn get_all_attacks(board: &Board, color: Color) -> Bitboard {
     let mut attacks = Bitboard(0);
     let mut positions = match color {
-        Color::Black => board.black_pieces,
-        Color::White => board.white_pieces,
+        Color::Black => board.black_positions,
+        Color::White => board.white_positions,
     };
     while positions != Bitboard(0) {
         let current_pos = positions.pop_lsb_position().unwrap();

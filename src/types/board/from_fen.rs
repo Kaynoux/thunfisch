@@ -6,10 +6,11 @@ impl Board {
     /// lowercase = black and uppercase = white
     pub fn from_fen(fen: &str) -> Self {
         let mut board: Board = Board {
-            white_pieces: Bitboard(0),
-            black_pieces: Bitboard(0),
+            white_positions: Bitboard(0),
+            black_positions: Bitboard(0),
+            occupied: Bitboard(0),
             bbs: [Bitboard(0); 13],
-            pieces: [ColorPiece::Empty; 64],
+            pieces: [Figure::Empty; 64],
             black_king_castle: true,
             black_queen_castle: true,
             white_queen_castle: true,
@@ -44,56 +45,56 @@ impl Board {
                 }
 
                 ch => {
-                    let bit = Position(1u64 << index as u64);
+                    let bit = Bit(1u64 << index as u64);
                     match ch {
                         'p' => {
-                            board.bbs[ColorPiece::BlackPawn as usize] |= bit;
-                            board.pieces[index] = ColorPiece::BlackPawn;
+                            board.bbs[Figure::BlackPawn as usize] |= bit;
+                            board.pieces[index] = Figure::BlackPawn;
                         }
                         'n' => {
-                            board.bbs[ColorPiece::BlackKnight as usize] |= bit;
-                            board.pieces[index] = ColorPiece::BlackKnight;
+                            board.bbs[Figure::BlackKnight as usize] |= bit;
+                            board.pieces[index] = Figure::BlackKnight;
                         }
                         'b' => {
-                            board.bbs[ColorPiece::BlackBishop as usize] |= bit;
-                            board.pieces[index] = ColorPiece::BlackBishop;
+                            board.bbs[Figure::BlackBishop as usize] |= bit;
+                            board.pieces[index] = Figure::BlackBishop;
                         }
                         'r' => {
-                            board.bbs[ColorPiece::BlackRook as usize] |= bit;
-                            board.pieces[index] = ColorPiece::BlackRook;
+                            board.bbs[Figure::BlackRook as usize] |= bit;
+                            board.pieces[index] = Figure::BlackRook;
                         }
                         'q' => {
-                            board.bbs[ColorPiece::BlackQueen as usize] |= bit;
-                            board.pieces[index] = ColorPiece::BlackQueen;
+                            board.bbs[Figure::BlackQueen as usize] |= bit;
+                            board.pieces[index] = Figure::BlackQueen;
                         }
                         'k' => {
-                            board.bbs[ColorPiece::BlackKing as usize] |= bit;
-                            board.pieces[index] = ColorPiece::BlackKing;
+                            board.bbs[Figure::BlackKing as usize] |= bit;
+                            board.pieces[index] = Figure::BlackKing;
                         }
 
                         'P' => {
-                            board.bbs[ColorPiece::WhitePawn as usize] |= bit;
-                            board.pieces[index] = ColorPiece::WhitePawn;
+                            board.bbs[Figure::WhitePawn as usize] |= bit;
+                            board.pieces[index] = Figure::WhitePawn;
                         }
                         'N' => {
-                            board.bbs[ColorPiece::WhiteKnight as usize] |= bit;
-                            board.pieces[index] = ColorPiece::WhiteKnight;
+                            board.bbs[Figure::WhiteKnight as usize] |= bit;
+                            board.pieces[index] = Figure::WhiteKnight;
                         }
                         'B' => {
-                            board.bbs[ColorPiece::WhiteBishop as usize] |= bit;
-                            board.pieces[index] = ColorPiece::WhiteBishop;
+                            board.bbs[Figure::WhiteBishop as usize] |= bit;
+                            board.pieces[index] = Figure::WhiteBishop;
                         }
                         'R' => {
-                            board.bbs[ColorPiece::WhiteRook as usize] |= bit;
-                            board.pieces[index] = ColorPiece::WhiteRook;
+                            board.bbs[Figure::WhiteRook as usize] |= bit;
+                            board.pieces[index] = Figure::WhiteRook;
                         }
                         'Q' => {
-                            board.bbs[ColorPiece::WhiteQueen as usize] |= bit;
-                            board.pieces[index] = ColorPiece::WhiteQueen;
+                            board.bbs[Figure::WhiteQueen as usize] |= bit;
+                            board.pieces[index] = Figure::WhiteQueen;
                         }
                         'K' => {
-                            board.bbs[ColorPiece::WhiteKing as usize] |= bit;
-                            board.pieces[index] = ColorPiece::WhiteKing;
+                            board.bbs[Figure::WhiteKing as usize] |= bit;
+                            board.pieces[index] = Figure::WhiteKing;
                         }
                         _ => {}
                     }
@@ -103,7 +104,7 @@ impl Board {
         }
 
         // All individual bitboards set now calculate the generell bitboards
-        board.recalculate_black_white_empty_pieces();
+        board.recalculate_genereal_bitboards();
 
         // Set Active Color Part
         board.current_color = match active_color {
@@ -122,7 +123,7 @@ impl Board {
         board.ep_target = if ep_target == "-" {
             None
         } else {
-            Position::from_coords(ep_target)
+            Bit::from_coords(ep_target)
         };
 
         board.halfmove_clock = halfmove.parse().expect("Invalid halfmove clock");

@@ -44,9 +44,9 @@ fn get_char_board(board: &Board, moves: &[EncodedMove]) -> [(char, &'static str)
     for y in 0usize..=7usize {
         for x in 0usize..=7usize {
             let idx = y * 8 + x;
-            let pos = IndexPosition(idx);
+            let pos = Square(idx);
 
-            let (piece, color) = board.get_piece_and_color_at_position(pos.to_position());
+            let (piece, color) = board.get_piece_and_color_at_position(pos.to_bit());
             let mut text_color = "white";
             if moves
                 .iter()
@@ -71,7 +71,7 @@ pub fn print_moves(board: &Board, moves: &Vec<EncodedMove>) {
         mut prev_is_king_castle,
         mut prev_is_promotion,
         mut prev_is_ep_capture,
-    ) = (Position(0), false, false, false, false);
+    ) = (Bit(0), false, false, false, false);
     for encoded_mv in moves {
         let mv = encoded_mv.decode();
         let mv_type = mv.mv_type;
@@ -82,7 +82,7 @@ pub fn print_moves(board: &Board, moves: &Vec<EncodedMove>) {
             current_is_promotion,
             current_is_ep_capture,
         ) = (
-            mv.from.to_position(),
+            mv.from.to_bit(),
             if mv_type == MoveType::QueenCastle {
                 true
             } else {
@@ -124,7 +124,7 @@ pub fn print_moves(board: &Board, moves: &Vec<EncodedMove>) {
                 "{:?} {:?} {:?} -> ",
                 current_color,
                 current_piece,
-                mv.from.to_position()
+                mv.from.to_bit()
             );
             (
                 prev_pos,
@@ -140,7 +140,7 @@ pub fn print_moves(board: &Board, moves: &Vec<EncodedMove>) {
                 current_is_ep_capture,
             );
         }
-        print!(" {:?},", mv.to.to_position());
+        print!(" {:?},", mv.to.to_bit());
     }
     println!()
 }
@@ -311,8 +311,8 @@ pub fn debug_perft(board: &mut Board, depth: usize) {
 
         println!(
             "{}{}: {}",
-            mv.from.to_position().to_coords(),
-            mv.to.to_position().to_coords(),
+            mv.from.to_bit().to_coords(),
+            mv.to.to_bit().to_coords(),
             nodes_for_move,
         );
     }

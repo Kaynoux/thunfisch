@@ -1,4 +1,5 @@
 use crate::debug;
+use crate::move_generator;
 use crate::move_generator::find_magics;
 use crate::move_generator::magic_array;
 use crate::prelude::*;
@@ -109,14 +110,18 @@ pub fn handle_uci_communication() {
             Some("magics") => {
                 find_magics::print_magics();
             }
-            Some("len_magics") => println!("{}", magic_array::POSITIONS_TABLE.len()),
+            Some("len_magics") => println!("{}", magic_array::TABLE.len()),
             Some("get_magic") => {
                 let args: Vec<&str> = parts.collect();
                 let idx: usize = match args[0].parse() {
                     Ok(d) => d,
                     Err(_) => 0,
                 };
-                println!("{}", magic_array::POSITIONS_TABLE[idx].0);
+                println!("{}", magic_array::TABLE[idx].0);
+            }
+            Some("test") => {
+                let moves = state.board.generate_all_moves();
+                println!("{}", moves.len());
             }
             Some(cmd) => {
                 eprintln!("Unknown command: {}", cmd);

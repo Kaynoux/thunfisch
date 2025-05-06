@@ -3,9 +3,9 @@ use std::fmt;
 use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not, Shl};
 
 #[derive(Copy, Clone, PartialEq)]
-pub struct Position(pub u64);
+pub struct Bit(pub u64);
 
-impl fmt::Debug for Position {
+impl fmt::Debug for Bit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (x, y) = self.to_xy();
         write!(f, "[{},{}]", x, y)
@@ -42,25 +42,25 @@ pub const POSITION_Y: [usize; 64] = {
     lookup_table
 };
 
-impl Position {
+impl Bit {
     #[inline(always)]
-    pub const fn to_index(self) -> IndexPosition {
-        IndexPosition(self.0.trailing_zeros() as usize)
+    pub const fn to_square(self) -> Square {
+        Square(self.0.trailing_zeros() as usize)
     }
 
     #[inline(always)]
     pub const fn to_xy(self) -> (usize, usize) {
-        POSITION_XY[self.to_index().0]
+        POSITION_XY[self.to_square().0]
     }
 
     #[inline(always)]
     pub const fn to_x(self) -> usize {
-        POSITION_X[self.to_index().0]
+        POSITION_X[self.to_square().0]
     }
 
     #[inline(always)]
     pub const fn to_y(self) -> usize {
-        POSITION_Y[self.to_index().0]
+        POSITION_Y[self.to_square().0]
     }
 
     #[inline(always)]
@@ -70,26 +70,26 @@ impl Position {
 
     #[inline(always)]
     pub fn is_friendly(self, board: &Board, color: Color) -> bool {
-        (color == Color::Black && board.black_pieces.is_position_set(self))
-            || (color == Color::White && board.white_pieces.is_position_set(self))
+        (color == Color::Black && board.black_positions.is_position_set(self))
+            || (color == Color::White && board.white_positions.is_position_set(self))
     }
 
     #[inline(always)]
     pub fn is_enemy(self, board: &Board, color: Color) -> bool {
-        (color == Color::White && board.black_pieces.is_position_set(self))
-            || (color == Color::Black && board.white_pieces.is_position_set(self))
+        (color == Color::White && board.black_positions.is_position_set(self))
+            || (color == Color::Black && board.white_positions.is_position_set(self))
     }
 
     #[inline(always)]
-    pub const fn get_offset_pos(self, dx: isize, dy: isize) -> Position {
-        let pos_idx = self.to_index().0 as isize;
+    pub const fn get_offset_pos(self, dx: isize, dy: isize) -> Bit {
+        let pos_idx = self.to_square().0 as isize;
         let new_x: isize = pos_idx % 8 + dx;
         let new_y: isize = pos_idx / 8 + dy;
         if new_x >= 0 && new_x <= 7 && new_y >= 0 && new_y <= 7 {
             let new_idx = new_y * 8 + new_x;
-            return Position(1u64 << new_idx);
+            return Bit(1u64 << new_idx);
         }
-        Position(0)
+        Bit(0)
     }
 
     #[inline(always)]
@@ -102,8 +102,8 @@ impl Position {
     }
 
     #[inline(always)]
-    pub fn from_coords(coords: &str) -> Option<Position> {
-        let (c1, c2) = match Position::get_first_two_string_chars(coords) {
+    pub fn from_coords(coords: &str) -> Option<Bit> {
+        let (c1, c2) = match Bit::get_first_two_string_chars(coords) {
             Some(c1c2) => c1c2,
             None => return None,
         };
@@ -132,7 +132,7 @@ impl Position {
             _ => return None,
         };
 
-        Some(IndexPosition((y * 8 + x) as usize).to_position())
+        Some(Square((y * 8 + x) as usize).to_bit())
     }
 
     #[inline(always)]
@@ -144,57 +144,62 @@ impl Position {
     }
 
     #[inline(always)]
-    pub const fn from_xy(x: isize, y: isize) -> Position {
-        IndexPosition((x + (y * 8)) as usize).to_position()
+    pub const fn from_xy(x: isize, y: isize) -> Bit {
+        Square((x + (y * 8)) as usize).to_bit()
+    }
+
+    #[inline(always)]
+    pub const fn to_positions(&self) -> Bitboard {
+        Bitboard(self.0)
     }
 }
 
-impl Shl<isize> for Position {
+impl Shl<isize> for Bit {
     type Output = Self;
     #[inline(always)]
     fn shl(self, shift: isize) -> Self::Output {
         if shift < 0 {
             // Interpret negative shift as right shift
-            return Position(self.0 >> ((-shift) as u32));
+            return Bit(self.0 >> ((-shift) as u32));
         }
-        Position(self.0 << (shift as u32))
+        Bit(self.0 << (shift as u32))
     }
 }
 
-impl BitAnd<Bitboard> for Position {
+impl BitAnd<Bitboard> for Bit {
     type Output = Self;
     #[inline(always)]
     fn bitand(self, rhs: Bitboard) -> Self::Output {
-        Position(self.0 | rhs.0)
+        Bit(self.0 | rhs.0)
     }
 }
 
-impl BitOr<Position> for Position {
+impl BitOr<Bit> for Bit {
     type Output = Self;
     #[inline(always)]
-    fn bitor(self, rhs: Position) -> Self::Output {
-        Position(self.0 | rhs.0)
+    fn bitor(self, rhs: Bit) -> Self::Output {
+        Bit(self.0 | rhs.0)
     }
 }
 
-impl Not for Position {
+impl Not for Bit {
     type Output = Self;
     #[inline(always)]
     fn not(self) -> Self::Output {
-        Position(!self.0)
+        Bit(!self.0)
     }
 }
 
-impl BitAndAssign<Position> for Position {
+impl BitAndAssign<Bit> for Bit {
     #[inline(always)]
-    fn bitand_assign(&mut self, rhs: Position) {
+    fn bitand_assign(&mut self, rhs: Bit) {
         self.0 &= rhs.0;
     }
 }
 
-impl BitOrAssign<Position> for Position {
+impl BitOrAssign<Bit> for Bit {
     #[inline(always)]
-    fn bitor_assign(&mut self, rhs: Position) {
+    fn bitor_assign(&mut self, rhs: Bit) {
         self.0 |= rhs.0;
     }
 }

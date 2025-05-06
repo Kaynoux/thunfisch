@@ -1,8 +1,11 @@
 pub mod blockers;
 pub mod find_magics;
+pub mod lookup_tables;
 pub mod magic_array;
 pub mod magics;
+pub mod move_generator;
 pub mod normal_targets;
+pub mod pin;
 pub mod rand_xor_shift;
 pub mod shifts;
 pub mod sliding_targets;

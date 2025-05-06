@@ -9,9 +9,9 @@ use crate::prelude::*;
 //. . . . 1 . . .
 //. . . . 1 . . .
 //. . . . . . . .
-pub static ROOK_BLOCKERS: [Bitboard; 64] = {
+pub const ROOK: [Bitboard; 64] = {
     let mut blockers = [Bitboard(0); 64];
-    let mut pos = IndexPosition(0);
+    let mut pos = Square(0);
     while pos.0 < 64 {
         let x = pos.0 % 8;
         let y = pos.0 / 8;
@@ -62,9 +62,9 @@ pub static ROOK_BLOCKERS: [Bitboard; 64] = {
 // . 1 . . . 1 . .
 // . . . . . . 1 .
 // . . . . . . . .
-pub const BISHOP_BLOCKERS: [Bitboard; 64] = {
+pub const BISHOP: [Bitboard; 64] = {
     let mut blockers = [Bitboard(0); 64];
-    let mut pos = IndexPosition(0);
+    let mut pos = Square(0);
     while pos.0 < 64 {
         let x = pos.0 % 8;
         let y = pos.0 / 8;
@@ -113,11 +113,11 @@ pub const BISHOP_BLOCKERS: [Bitboard; 64] = {
 // Queen Mask is just bitwise or of rook and bishops
 pub const QUEEN_BLOCKERS: [Bitboard; 64] = {
     let mut blockers = [Bitboard(0); 64];
-    let mut pos = IndexPosition(0); // Index Position
+    let mut pos = Square(0); // Index Position
     while pos.0 < 64 {
         let mut blocker = Bitboard(0);
-        blocker.0 |= ROOK_BLOCKERS[pos.0].0;
-        blocker.0 |= BISHOP_BLOCKERS[pos.0].0;
+        blocker.0 |= ROOK[pos.0].0;
+        blocker.0 |= BISHOP[pos.0].0;
         blockers[pos.0] = blocker;
         pos.0 += 1;
     }

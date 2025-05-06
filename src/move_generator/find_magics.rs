@@ -9,7 +9,7 @@ pub fn print_magics() {
     let mut rng = RandomXorShiftGenerator::new();
 
     println!("pub const ROOK_MAGICS: [u64; 64] = [");
-    let mut pos = IndexPosition(0);
+    let mut pos = Square(0);
     while pos.0 <= 63 {
         let magic = generate_magic(pos, &mut rng, true);
         print!("{},", magic);
@@ -20,7 +20,7 @@ pub fn print_magics() {
     println!();
 
     println!("pub const BISHOP_MAGICS: [u64; 64] = [");
-    let mut pos1 = IndexPosition(0);
+    let mut pos1 = Square(0);
     while pos1.0 <= 63 {
         let magic = generate_magic(pos1, &mut rng, false);
         print!("{},", magic);
@@ -31,13 +31,10 @@ pub fn print_magics() {
     println!();
 }
 
-pub fn generate_magic(pos: IndexPosition, rng: &mut RandomXorShiftGenerator, is_rook: bool) -> u64 {
+pub fn generate_magic(pos: Square, rng: &mut RandomXorShiftGenerator, is_rook: bool) -> u64 {
     let (blockers, shift) = match is_rook {
-        true => (blockers::ROOK_BLOCKERS[pos.0], shifts::ROOK_SHIFTS[pos.0]),
-        false => (
-            blockers::BISHOP_BLOCKERS[pos.0],
-            shifts::BISHOP_SHIFTS[pos.0],
-        ),
+        true => (blockers::ROOK[pos.0], shifts::ROOK[pos.0]),
+        false => (blockers::BISHOP[pos.0], shifts::BISHOP[pos.0]),
     };
 
     let size = 1usize << blockers.0.count_ones();
@@ -78,7 +75,7 @@ pub fn check_magic_number(
 }
 
 pub fn get_all_target_boards(
-    pos: IndexPosition,
+    pos: Square,
     blocker: Bitboard,
     len: usize,
     is_rook: bool,

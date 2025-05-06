@@ -19,6 +19,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "const_for"
+version = "0.1.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d9c50fcfdf972929aff202c16b80086aa3cfc6a3a820af714096c58c7c1d0582"
+
+[[package]]
 name = "crossbeam-deque"
 version = "0.8.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -102,6 +108,7 @@ name = "rusty-chess-bot"
 version = "0.1.0"
 dependencies = [
  "colored",
+ "const_for",
  "log",
  "num-format",
  "rayon",

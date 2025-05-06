@@ -1,8 +1,8 @@
 use crate::prelude::*;
 
-pub static PAWN_ATTACKS: [[Bitboard; 64]; 2] = {
+pub static PAWN_TARGETS: [[Bitboard; 64]; 2] = {
     let mut table = [[Bitboard(0); 64]; 2];
-    let mut pos = IndexPosition(0);
+    let mut pos = Square(0);
     while pos.0 < 64 {
         let x = pos.0 % 8;
         let y = pos.0 / 8;
@@ -36,7 +36,7 @@ pub static PAWN_ATTACKS: [[Bitboard; 64]; 2] = {
     table
 };
 
-pub static KNIGHT_ATTACKS: [Bitboard; 64] = {
+pub static KNIGHT_TARGETS: [Bitboard; 64] = {
     let mut table = [Bitboard(0); 64];
     let offsets = [
         (-2, -1),
@@ -49,7 +49,7 @@ pub static KNIGHT_ATTACKS: [Bitboard; 64] = {
         (2, 1),
     ];
 
-    let mut pos = IndexPosition(0);
+    let mut pos = Square(0);
     while pos.0 < 64 {
         let x = (pos.0 % 8) as isize;
         let y = (pos.0 / 8) as isize;
@@ -71,7 +71,7 @@ pub static KNIGHT_ATTACKS: [Bitboard; 64] = {
     table
 };
 
-pub static KING_ATTACKS: [Bitboard; 64] = {
+pub static KING_TARGETS: [Bitboard; 64] = {
     let mut table = [Bitboard(0); 64];
     let offsets = [
         (-1, -1),
@@ -84,7 +84,7 @@ pub static KING_ATTACKS: [Bitboard; 64] = {
         (1, 1),
     ];
 
-    let mut pos = IndexPosition(0);
+    let mut pos = Square(0);
     while pos.0 < 64 {
         let x = (pos.0 % 8) as isize;
         let y = (pos.0 / 8) as isize;

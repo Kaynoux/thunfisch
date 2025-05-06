@@ -74,7 +74,7 @@ impl Piece {
         }
     }
 
-    pub fn to_color_piece(self, color: Color) -> ColorPiece {
-        ColorPiece::from_idx((self as usize) * 2 + (color as usize))
+    pub fn to_color_piece(self, color: Color) -> Figure {
+        Figure::from_idx((self as usize) * 2 + (color as usize))
     }
 }

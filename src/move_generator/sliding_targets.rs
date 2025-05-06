@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-pub const fn get_rook_positions(pos: IndexPosition, occ: Bitboard) -> Bitboard {
+pub const fn get_rook_positions(pos: Square, occ: Bitboard) -> Bitboard {
     let mut attacks = Bitboard(0);
     let x = pos.0 % 8;
     let y = pos.0 / 8;
@@ -52,7 +52,7 @@ pub const fn get_rook_positions(pos: IndexPosition, occ: Bitboard) -> Bitboard {
     attacks
 }
 
-pub const fn get_bishop_positions(pos: IndexPosition, occ: Bitboard) -> Bitboard {
+pub const fn get_bishop_positions(pos: Square, occ: Bitboard) -> Bitboard {
     let mut positions = Bitboard(0);
     let x = pos.0 % 8;
     let y = pos.0 / 8;

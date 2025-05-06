@@ -13,7 +13,7 @@ const fn calculate_total_positions() -> usize {
     // Berechne Größe für Rook-Tabellen
     while sq_idx < 64 {
         // Greife auf deine Blocker-Konstante zu
-        let mask = blockers::ROOK_BLOCKERS[sq_idx];
+        let mask = blockers::ROOK[sq_idx];
         let bits = mask.0.count_ones() as usize;
         // Größe für dieses Feld = 2^bits
         let size_for_sq = 1usize << bits;
@@ -29,7 +29,7 @@ const fn calculate_total_positions() -> usize {
     sq_idx = 0;
     while sq_idx < 64 {
         // Greife auf deine Blocker-Konstante zu
-        let mask = blockers::BISHOP_BLOCKERS[sq_idx];
+        let mask = blockers::BISHOP[sq_idx];
         let bits = mask.0.count_ones() as usize;
         let size_for_sq = 1usize << bits;
         total_size = match total_size.checked_add(size_for_sq) {
@@ -48,13 +48,13 @@ const RAW_TABLE: ([Bitboard; TOTAL_POSITIONS], [usize; 64], [usize; 64]) = {
     let mut bishop_offsets = [0usize; 64];
     let mut current_offset: usize = 0;
 
-    let mut pos = IndexPosition(0);
+    let mut pos = Square(0);
     while pos.0 < 64 {
         rook_offsets[pos.0] = current_offset;
-        let blocker = blockers::ROOK_BLOCKERS[pos.0];
+        let blocker = blockers::ROOK[pos.0];
         let blocker_count = blocker.0.count_ones() as usize;
-        let shift = shifts::ROOK_SHIFTS[pos.0];
-        let magic = magics::ROOK_MAGICS[pos.0];
+        let shift = shifts::ROOK[pos.0];
+        let magic = magics::ROOK[pos.0];
 
         let mut subset_idx: usize = 0;
         let mut blockers = Bitboard(0);
@@ -69,13 +69,13 @@ const RAW_TABLE: ([Bitboard; TOTAL_POSITIONS], [usize; 64], [usize; 64]) = {
         pos.0 += 1;
     }
 
-    pos = IndexPosition(0);
+    pos = Square(0);
     while pos.0 < 64 {
         bishop_offsets[pos.0] = current_offset;
-        let blocker = blockers::BISHOP_BLOCKERS[pos.0];
+        let blocker = blockers::BISHOP[pos.0];
         let blocker_count = blocker.0.count_ones() as usize;
-        let shift = shifts::BISHOP_SHIFTS[pos.0];
-        let magic = magics::BISHOP_MAGICS[pos.0];
+        let shift = shifts::BISHOP[pos.0];
+        let magic = magics::BISHOP[pos.0];
 
         let mut subset_idx: usize = 0;
         let mut blockers = Bitboard(0);
@@ -93,6 +93,6 @@ const RAW_TABLE: ([Bitboard; TOTAL_POSITIONS], [usize; 64], [usize; 64]) = {
     (positions, rook_offsets, bishop_offsets)
 };
 
-pub const POSITIONS_TABLE: [Bitboard; TOTAL_POSITIONS] = RAW_TABLE.0;
-pub const ROOK_OFFSETS_DATA: [usize; 64] = RAW_TABLE.1;
-pub const BISHOP_OFFSETS_DATA: [usize; 64] = RAW_TABLE.2;
+pub const TABLE: [Bitboard; TOTAL_POSITIONS] = RAW_TABLE.0;
+pub const ROOK: [usize; 64] = RAW_TABLE.1;
+pub const BISHOP: [usize; 64] = RAW_TABLE.2;

@@ -3,15 +3,15 @@ use crate::prelude::*;
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct DecodedMove {
-    pub from: IndexPosition,
-    pub to: IndexPosition,
+    pub from: Square,
+    pub to: Square,
     pub mv_type: MoveType,
 }
 
 impl DecodedMove {
     pub fn to_coords(self) -> String {
-        let from = self.from.to_position().to_coords();
-        let to = self.to.to_position().to_coords();
+        let from = self.from.to_bit().to_coords();
+        let to = self.to.to_bit().to_coords();
 
         match self.mv_type.to_promotion_piece() {
             Some(prom) => format!("{}{}{}", from, to, prom.to_lowercase_char()),
@@ -33,12 +33,11 @@ impl DecodedMove {
         let to_str = &move_str[2..4];
 
         let from_pos =
-            Position::from_coords(from_str).expect(&format!("Invalid from-coords '{}'", from_str));
-        let to_pos =
-            Position::from_coords(to_str).expect(&format!("Invalid to-coords '{}'", to_str));
+            Bit::from_coords(from_str).expect(&format!("Invalid from-coords '{}'", from_str));
+        let to_pos = Bit::from_coords(to_str).expect(&format!("Invalid to-coords '{}'", to_str));
 
-        let from_idx = from_pos.to_index();
-        let to_idx = to_pos.to_index();
+        let from_idx = from_pos.to_square();
+        let to_idx = to_pos.to_square();
         let from_piece = board.get_piece_at_position(from_idx);
         let to_piece = board.get_piece_at_position(to_idx);
 
@@ -113,7 +112,7 @@ impl DecodedMove {
         let mv_type = self.mv_type;
         let color = board.current_color;
 
-        let enemy_king_pos = board.get_king_pos(!color).to_index();
+        let enemy_king_pos = board.get_king_bit(!color).to_square();
         if self.to == enemy_king_pos {
             // winning move is invalid
             return false;
@@ -170,8 +169,8 @@ impl DecodedMove {
         let counter_positions_after_move = move_generation::get_all_attacks(&board, !color);
 
         let king_pos_after_move = match color {
-            Color::Black => board.bbs[ColorPiece::BlackKing as usize],
-            Color::White => board.bbs[ColorPiece::WhiteKing as usize],
+            Color::Black => board.bbs[Figure::BlackKing as usize],
+            Color::White => board.bbs[Figure::WhiteKing as usize],
         };
 
         board.unmake_move();

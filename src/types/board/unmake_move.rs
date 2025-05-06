@@ -14,8 +14,8 @@ impl Board {
         let color = !self.current_color;
         let from_idx = mv.from;
         let captured_idx = mv.to;
-        let from_pos = from_idx.to_position();
-        let captured_pos = captured_idx.to_position();
+        let from_pos = from_idx.to_bit();
+        let captured_pos = captured_idx.to_bit();
 
         let captured_piece = prev.capture;
         let moved_piece = self.pieces[captured_idx.0];
@@ -32,8 +32,8 @@ impl Board {
 
         let original_piece = if mv_type.is_promotion() {
             match color {
-                Color::White => ColorPiece::WhitePawn,
-                Color::Black => ColorPiece::BlackPawn,
+                Color::White => Figure::WhitePawn,
+                Color::Black => Figure::BlackPawn,
             }
         } else {
             moved_piece
@@ -57,13 +57,13 @@ impl Board {
             match color {
                 Color::White => {
                     let pawn_pos = captured_pos.get_offset_pos(0, -1);
-                    self.bbs[ColorPiece::BlackPawn as usize] |= pawn_pos;
-                    self.pieces[captured_idx.0 - 8] = ColorPiece::BlackPawn;
+                    self.bbs[Figure::BlackPawn as usize] |= pawn_pos;
+                    self.pieces[captured_idx.0 - 8] = Figure::BlackPawn;
                 }
                 Color::Black => {
                     let pawn_pos = captured_pos.get_offset_pos(0, 1);
-                    self.bbs[ColorPiece::WhitePawn as usize] |= pawn_pos;
-                    self.pieces[captured_idx.0 + 8] = ColorPiece::WhitePawn;
+                    self.bbs[Figure::WhitePawn as usize] |= pawn_pos;
+                    self.pieces[captured_idx.0 + 8] = Figure::WhitePawn;
                 }
             }
         }
@@ -72,50 +72,50 @@ impl Board {
         match (mv_type, color) {
             (MoveType::QueenCastle, Color::White) => {
                 // This workaround to perform not needs to be done because rust not trait is not const for whatever reason
-                const ROOK_FROM_POS: Position = IndexPosition(0).to_position();
-                const ROOK_TO_POS_INVERSE: Bitboard = Bitboard(!(IndexPosition(3).to_position().0));
+                const ROOK_FROM_POS: Bit = Square(0).to_bit();
+                const ROOK_TO_POS_INVERSE: Bitboard = Bitboard(!(Square(3).to_bit().0));
 
-                self.bbs[ColorPiece::WhiteRook as usize] |= ROOK_FROM_POS;
-                self.bbs[ColorPiece::WhiteRook as usize] &= ROOK_TO_POS_INVERSE;
+                self.bbs[Figure::WhiteRook as usize] |= ROOK_FROM_POS;
+                self.bbs[Figure::WhiteRook as usize] &= ROOK_TO_POS_INVERSE;
 
-                self.pieces[IndexPosition(0).0] = ColorPiece::WhiteRook;
-                self.pieces[IndexPosition(3).0] = ColorPiece::Empty;
+                self.pieces[Square(0).0] = Figure::WhiteRook;
+                self.pieces[Square(3).0] = Figure::Empty;
             }
             (MoveType::KingCastle, Color::White) => {
-                const ROOK_FROM_POS: Position = IndexPosition(7).to_position();
-                const ROOK_TO_POS_INVERSE: Bitboard = Bitboard(!(IndexPosition(5).to_position().0));
+                const ROOK_FROM_POS: Bit = Square(7).to_bit();
+                const ROOK_TO_POS_INVERSE: Bitboard = Bitboard(!(Square(5).to_bit().0));
 
-                self.bbs[ColorPiece::WhiteRook as usize] |= ROOK_FROM_POS;
-                self.bbs[ColorPiece::WhiteRook as usize] &= ROOK_TO_POS_INVERSE;
+                self.bbs[Figure::WhiteRook as usize] |= ROOK_FROM_POS;
+                self.bbs[Figure::WhiteRook as usize] &= ROOK_TO_POS_INVERSE;
 
-                self.pieces[IndexPosition(7).0] = ColorPiece::WhiteRook;
-                self.pieces[IndexPosition(5).0] = ColorPiece::Empty;
+                self.pieces[Square(7).0] = Figure::WhiteRook;
+                self.pieces[Square(5).0] = Figure::Empty;
             }
             (MoveType::QueenCastle, Color::Black) => {
-                const ROOK_FROM_POS: Position = IndexPosition(56).to_position();
+                const ROOK_FROM_POS: Bit = Square(56).to_bit();
                 const ROOK_TO_POS_INVERSE: Bitboard =
-                    Bitboard(!(IndexPosition(59).to_position().0));
+                    Bitboard(!(Square(59).to_bit().0));
 
-                self.bbs[ColorPiece::BlackRook as usize] |= ROOK_FROM_POS;
-                self.bbs[ColorPiece::BlackRook as usize] &= ROOK_TO_POS_INVERSE;
+                self.bbs[Figure::BlackRook as usize] |= ROOK_FROM_POS;
+                self.bbs[Figure::BlackRook as usize] &= ROOK_TO_POS_INVERSE;
 
-                self.pieces[IndexPosition(56).0] = ColorPiece::BlackRook;
-                self.pieces[IndexPosition(59).0] = ColorPiece::Empty;
+                self.pieces[Square(56).0] = Figure::BlackRook;
+                self.pieces[Square(59).0] = Figure::Empty;
             }
             (MoveType::KingCastle, Color::Black) => {
-                const ROOK_FROM_POS: Position = IndexPosition(63).to_position();
+                const ROOK_FROM_POS: Bit = Square(63).to_bit();
                 const ROOK_TO_POS_INVERSE: Bitboard =
-                    Bitboard(!(IndexPosition(61).to_position().0));
+                    Bitboard(!(Square(61).to_bit().0));
 
-                self.bbs[ColorPiece::BlackRook as usize] |= ROOK_FROM_POS;
-                self.bbs[ColorPiece::BlackRook as usize] &= ROOK_TO_POS_INVERSE;
+                self.bbs[Figure::BlackRook as usize] |= ROOK_FROM_POS;
+                self.bbs[Figure::BlackRook as usize] &= ROOK_TO_POS_INVERSE;
 
-                self.pieces[IndexPosition(63).0] = ColorPiece::BlackRook;
-                self.pieces[IndexPosition(61).0] = ColorPiece::Empty;
+                self.pieces[Square(63).0] = Figure::BlackRook;
+                self.pieces[Square(61).0] = Figure::Empty;
             }
             _ => {}
         }
 
-        self.recalculate_black_white_empty_pieces();
+        self.recalculate_genereal_bitboards();
     }
 }

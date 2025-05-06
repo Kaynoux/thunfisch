@@ -132,7 +132,7 @@ impl Board {
         let mut phase = TOTAL;
         for color_piece in self.pieces.iter() {
             let cp = *color_piece;
-            if cp == ColorPiece::Empty {
+            if cp == Figure::Empty {
                 continue;
             }
             phase -= GAMEPHASE_INC[cp as usize];
@@ -153,7 +153,7 @@ impl Board {
 
         for (position_idx, color_piece) in self.pieces.iter().enumerate() {
             let cp = *color_piece;
-            if cp == ColorPiece::Empty {
+            if cp == Figure::Empty {
                 continue;
             }
 

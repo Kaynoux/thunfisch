@@ -1,12 +1,13 @@
+pub mod bit;
 pub mod bitboard;
 pub mod board;
 pub mod color;
-pub mod color_piece;
 pub mod decoded_move;
+pub mod direction;
 pub mod encoded_move;
 pub mod engine_state;
-pub mod index_position;
+pub mod figure;
 pub mod move_type;
 pub mod piece;
-pub mod position;
+pub mod square;
 pub mod unmake_info;
