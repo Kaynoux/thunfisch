@@ -93,16 +93,6 @@ impl Bitboard {
         bitboard
     }
 
-    #[inline(always)]
-    pub const fn or(&self, other: Bitboard) -> Bitboard {
-        Bitboard(self.0 | other.0)
-    }
-
-    #[inline(always)]
-    pub const fn and(&self, other: Bitboard) -> Bitboard {
-        Bitboard(self.0 & other.0)
-    }
-
     pub const fn is_empty(&self) -> bool {
         self.0 == 0
     }

@@ -81,7 +81,7 @@ impl Board {
         }
     }
 
-    pub fn generate_pin_masks(&self) -> [Bitboard; 64] {
+    pub fn generate_pin_mask(&self) -> Bitboard {
         let mut masks = [Bitboard(0); 64];
         let friendly_color = self.current_color;
         let enemy_color = !friendly_color;

@@ -27,10 +27,12 @@ const DIRECTION_OFFSETS: [(isize, isize); 8] = [
 const fn get_ray_positions_between(from: Square, to: Square) -> Bitboard {
     let from_bb = from.to_bitboard();
     let to_bb = to.to_bitboard();
-    let target_pos_1 = get_rook_targets(from, to_bb).or(get_bishop_targets(from, to_bb));
-    let target_pos_2 = get_rook_targets(to, from_bb).or(get_bishop_targets(to, from_bb));
+    let target_pos_1 =
+        Bitboard(get_rook_targets(from, to_bb).0 | get_bishop_targets(from, to_bb).0);
+    let target_pos_2 =
+        Bitboard(get_rook_targets(to, from_bb).0 | get_bishop_targets(to, from_bb).0);
 
-    target_pos_1.and(target_pos_2)
+    Bitboard(target_pos_1.0 & target_pos_2.0)
 }
 
 pub const RAY_BETWEEN: [[Bitboard; 64]; 64] = {
@@ -55,7 +57,8 @@ pub const RAY_DIRECTION: [[Bitboard; 8]; 64] = {
         while dir_idx < 8 {
             let (dx, dy) = DIRECTION_OFFSETS[dir_idx as usize];
             let to = get_edge_square(from, dx, dy);
-            out[from.i()][dir_idx] = RAY_BETWEEN[from.i()][to.i()].or(to.to_bitboard()); // also add the edge position
+            out[from.i()][dir_idx] =
+                Bitboard(RAY_BETWEEN[from.i()][to.i()].0 | (to.to_bitboard()).0); // also add the edge position
             dir_idx += 1;
         }
         from.next()
