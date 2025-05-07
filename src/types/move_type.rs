@@ -27,10 +27,10 @@ pub enum MoveType {
 impl MoveType {
     pub const fn to_promotion_piece(&self) -> Option<Piece> {
         match self {
-            MoveType::KnightPromo | MoveType::KnightPromoCapture => Some(Piece::Knight),
-            MoveType::BishopPromo | MoveType::BishopPromoCapture => Some(Piece::Bishop),
-            MoveType::RookPromo | MoveType::RookPromoCapture => Some(Piece::Rook),
-            MoveType::QueenPromo | MoveType::QueenPromoCapture => Some(Piece::Queen),
+            MoveType::KnightPromo | MoveType::KnightPromoCapture => Some(Knight),
+            MoveType::BishopPromo | MoveType::BishopPromoCapture => Some(Bishop),
+            MoveType::RookPromo | MoveType::RookPromoCapture => Some(Rook),
+            MoveType::QueenPromo | MoveType::QueenPromoCapture => Some(Queen),
             _ => None,
         }
     }

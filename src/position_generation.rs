@@ -14,7 +14,7 @@ pub fn get_pawn_positions(board: &Board, pos: Bit, color: Color, only_captures: 
     moves_to_enemy |= pos.get_offset_pos(1, move_direction_y);
 
     // Positions need to be enemy to be valid
-    moves_to_enemy &= board.get_pieces_by_color(!color);
+    moves_to_enemy &= board.get_pieces(!color);
 
     if only_captures {
         // early return if only enemy pos are needed
@@ -26,18 +26,12 @@ pub fn get_pawn_positions(board: &Board, pos: Bit, color: Color, only_captures: 
     // Add possible move by 2 when pawn has not moved in the match and position in front is empty
     match (color, pos.to_square().0 / 8) {
         (Color::Black, 6) => {
-            if board
-                .get_empty_pieces()
-                .is_position_set(pos.get_offset_pos(0, -1))
-            {
+            if board.get_empty().is_position_set(pos.get_offset_pos(0, -1)) {
                 moves_to_empty |= pos.get_offset_pos(0, -2)
             }
         }
         (Color::White, 1) => {
-            if board
-                .get_empty_pieces()
-                .is_position_set(pos.get_offset_pos(0, 1))
-            {
+            if board.get_empty().is_position_set(pos.get_offset_pos(0, 1)) {
                 moves_to_empty |= pos.get_offset_pos(0, 2)
             }
         }
@@ -45,7 +39,7 @@ pub fn get_pawn_positions(board: &Board, pos: Bit, color: Color, only_captures: 
     }
 
     // Positions need to be empty to be valid
-    moves_to_empty &= board.get_empty_pieces();
+    moves_to_empty &= board.get_empty();
 
     moves_to_empty | moves_to_enemy
 }
@@ -53,7 +47,7 @@ pub fn get_pawn_positions(board: &Board, pos: Bit, color: Color, only_captures: 
 #[inline(always)]
 pub fn get_pawn_attack_positions(board: &Board, pos: Bit, color: Color) -> Bitboard {
     let mut moves_to_enemy = Bitboard(0);
-    let non_friendly_pieces = board.get_non_friendly_pieces(color);
+    let non_friendly_pieces = board.get_pieces(!color);
     let move_direction_y = match color {
         Color::Black => -1,
         Color::White => 1,
@@ -69,7 +63,7 @@ pub fn get_pawn_attack_positions(board: &Board, pos: Bit, color: Color) -> Bitbo
 #[inline(always)]
 pub fn get_king_positions(board: &Board, pos: Bit, color: Color) -> Bitboard {
     let mut moves = Bitboard(0);
-    let non_friendly_pieces = board.get_non_friendly_pieces(color);
+    let non_friendly_pieces = board.get_pieces(!color);
     moves |= pos.get_offset_pos(-1, 1);
     moves |= pos.get_offset_pos(0, 1);
     moves |= pos.get_offset_pos(1, 1);
@@ -84,7 +78,7 @@ pub fn get_king_positions(board: &Board, pos: Bit, color: Color) -> Bitboard {
 #[inline(always)]
 pub fn get_knight_positions(board: &Board, pos: Bit, color: Color) -> Bitboard {
     let mut moves = Bitboard(0);
-    let non_friendly_pieces = board.get_non_friendly_pieces(color);
+    let non_friendly_pieces = board.get_pieces(!color);
     moves |= pos.get_offset_pos(-2, 1);
     moves |= pos.get_offset_pos(-1, 2);
     moves |= pos.get_offset_pos(1, 2);
@@ -105,7 +99,7 @@ pub fn get_sliding_positions(
     dy: isize,
 ) -> Bitboard {
     let mut moves = Bitboard(0);
-    let non_friendly_pieces = board.get_non_friendly_pieces(color);
+    let non_friendly_pieces = board.get_pieces(!color);
     let mut current_dx = 0isize;
     let mut current_dy = 0isize;
     loop {

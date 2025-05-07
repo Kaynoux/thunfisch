@@ -65,7 +65,7 @@ impl Bit {
 
     #[inline(always)]
     pub fn is_position_empty(self, board: &Board) -> bool {
-        board.get_empty_pieces().is_position_set(self)
+        board.get_empty().is_position_set(self)
     }
 
     #[inline(always)]

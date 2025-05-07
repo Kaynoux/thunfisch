@@ -25,8 +25,8 @@
 //                     pseudo_legal_move_generation::get_all_attacks(&self, !color);
 
 //                 let king_pos = match color {
-//                     Color::Black => self.bbs[ColorPiece::BlackKing as usize],
-//                     Color::White => self.bbs[ColorPiece::WhiteKing as usize],
+//                     Color::Black => self.bbs[ColorBlackKing as usize],
+//                     Color::White => self.bbs[ColorWhiteKing as usize],
 //                 };
 
 //                 // castling not allowed if king is in check before castling
@@ -87,8 +87,8 @@
 //                 pseudo_legal_move_generation::get_all_attacks(&self, !color);
 
 //             let king_pos_after_move = match color {
-//                 Color::Black => self.bbs[ColorPiece::BlackKing as usize],
-//                 Color::White => self.bbs[ColorPiece::WhiteKing as usize],
+//                 Color::Black => self.bbs[ColorBlackKing as usize],
+//                 Color::White => self.bbs[ColorWhiteKing as usize],
 //             };
 
 //             self.unmake_move();

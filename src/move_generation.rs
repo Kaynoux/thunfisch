@@ -13,7 +13,7 @@ impl Board {
         // Knight
         get_moves_for_piece_type(
             self,
-            Piece::Knight,
+            Knight,
             color,
             &mut moves,
             get_knight_positions,
@@ -23,7 +23,7 @@ impl Board {
         // Bishop
         get_moves_for_piece_type(
             self,
-            Piece::Bishop,
+            Bishop,
             color,
             &mut moves,
             get_bishop_positions,
@@ -33,7 +33,7 @@ impl Board {
         // Rook
         get_moves_for_piece_type(
             self,
-            Piece::Rook,
+            Rook,
             color,
             &mut moves,
             get_rook_positions,
@@ -43,7 +43,7 @@ impl Board {
         // Queen
         get_moves_for_piece_type(
             self,
-            Piece::Queen,
+            Queen,
             color,
             &mut moves,
             get_queen_positions,
@@ -53,7 +53,7 @@ impl Board {
         // King
         get_king_moves(
             self,
-            self.get_king_bit(color),
+            self.get_king(color),
             color,
             &mut moves,
             get_king_positions,
@@ -97,7 +97,7 @@ pub fn get_moves_for_piece_type(
         let mut target_positions_for_one_piece = f(board, current_pos, color);
 
         if only_captures {
-            target_positions_for_one_piece &= board.get_non_friendly_pieces(color);
+            target_positions_for_one_piece &= board.get_pieces(!color);
         }
 
         target_positions |= target_positions_for_one_piece;
@@ -139,7 +139,7 @@ pub fn get_pawn_moves(
     only_captures: bool,
 ) -> Bitboard {
     let mut target_positions = Bitboard(0);
-    let mut pawn_positions = board.get_bitboard_by_piece_color(color, Piece::Pawn);
+    let mut pawn_positions = board.get_bitboard_by_piece_color(color, Pawn);
 
     while pawn_positions != Bitboard(0) {
         let current_pos = pawn_positions.pop_lsb_position().unwrap();
@@ -294,7 +294,7 @@ pub fn get_king_moves(
     let mut target_positions = f(board, current_pos, color);
 
     if only_captures {
-        target_positions &= board.get_non_friendly_pieces(color);
+        target_positions &= board.get_pieces(!color);
     }
 
     let from = current_pos.to_square();
@@ -331,7 +331,7 @@ pub fn get_castle_moves(board: &mut Board, color: Color, moves: &mut Vec<Encoded
         Color::White => {
             const MASK_WHITE_QUEEN_CASTLE: Bitboard = Bitboard(1u64 << 1 | 1u64 << 2 | 1u64 << 3);
             if board.white_queen_castle
-                && board.get_empty_pieces() & MASK_WHITE_QUEEN_CASTLE == MASK_WHITE_QUEEN_CASTLE
+                && board.get_empty() & MASK_WHITE_QUEEN_CASTLE == MASK_WHITE_QUEEN_CASTLE
             {
                 push_if_legal(
                     moves,
@@ -345,7 +345,7 @@ pub fn get_castle_moves(board: &mut Board, color: Color, moves: &mut Vec<Encoded
             }
             const MASK_WHITE_KING_CASTLE: Bitboard = Bitboard(1u64 << 5 | 1u64 << 6);
             if board.white_king_castle
-                && board.get_empty_pieces() & MASK_WHITE_KING_CASTLE == MASK_WHITE_KING_CASTLE
+                && board.get_empty() & MASK_WHITE_KING_CASTLE == MASK_WHITE_KING_CASTLE
             {
                 push_if_legal(
                     moves,
@@ -361,7 +361,7 @@ pub fn get_castle_moves(board: &mut Board, color: Color, moves: &mut Vec<Encoded
         Color::Black => {
             const MASK_BLACK_KING_CASTLE: Bitboard = Bitboard(1u64 << 61 | 1u64 << 62);
             if board.black_king_castle
-                && board.get_empty_pieces() & MASK_BLACK_KING_CASTLE == MASK_BLACK_KING_CASTLE
+                && board.get_empty() & MASK_BLACK_KING_CASTLE == MASK_BLACK_KING_CASTLE
             {
                 push_if_legal(
                     moves,
@@ -376,7 +376,7 @@ pub fn get_castle_moves(board: &mut Board, color: Color, moves: &mut Vec<Encoded
             const MASK_BLACK_QUEEN_CASTLE: Bitboard =
                 Bitboard(1u64 << 57 | 1u64 << 58 | 1u64 << 59);
             if board.black_queen_castle
-                && board.get_empty_pieces() & MASK_BLACK_QUEEN_CASTLE == MASK_BLACK_QUEEN_CASTLE
+                && board.get_empty() & MASK_BLACK_QUEEN_CASTLE == MASK_BLACK_QUEEN_CASTLE
             {
                 push_if_legal(
                     moves,
@@ -472,12 +472,12 @@ pub fn get_all_attacks(board: &Board, color: Color) -> Bitboard {
         let current_pos = positions.pop_lsb_position().unwrap();
         let (piece, color) = board.get_piece_and_color_at_position(current_pos);
         attacks |= match piece {
-            Piece::Pawn => get_pawn_attack_positions(board, current_pos, color),
-            Piece::Knight => get_knight_positions(board, current_pos, color),
-            Piece::Bishop => get_bishop_positions(board, current_pos, color),
-            Piece::Rook => get_rook_positions(board, current_pos, color),
-            Piece::Queen => get_queen_positions(board, current_pos, color),
-            Piece::King => get_king_positions(board, current_pos, color),
+            Pawn => get_pawn_attack_positions(board, current_pos, color),
+            Knight => get_knight_positions(board, current_pos, color),
+            Bishop => get_bishop_positions(board, current_pos, color),
+            Rook => get_rook_positions(board, current_pos, color),
+            Queen => get_queen_positions(board, current_pos, color),
+            King => get_king_positions(board, current_pos, color),
             _ => Bitboard(0),
         };
     }

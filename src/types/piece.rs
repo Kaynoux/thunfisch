@@ -16,61 +16,61 @@ impl Piece {
     /// Returns the correct FIN symbol by matching the piece together with the provided color.
     pub fn to_fin_char(self, color: Color) -> char {
         match (self, color) {
-            (Piece::Empty, _) => ' ',
-            (Piece::Pawn, Color::White) => 'P',
-            (Piece::Pawn, Color::Black) => 'p',
-            (Piece::Knight, Color::White) => 'N',
-            (Piece::Knight, Color::Black) => 'n',
-            (Piece::Bishop, Color::White) => 'B',
-            (Piece::Bishop, Color::Black) => 'b',
-            (Piece::Rook, Color::White) => 'R',
-            (Piece::Rook, Color::Black) => 'r',
-            (Piece::Queen, Color::White) => 'Q',
-            (Piece::Queen, Color::Black) => 'q',
-            (Piece::King, Color::White) => 'K',
-            (Piece::King, Color::Black) => 'k',
+            (Empty, _) => ' ',
+            (Pawn, Color::White) => 'P',
+            (Pawn, Color::Black) => 'p',
+            (Knight, Color::White) => 'N',
+            (Knight, Color::Black) => 'n',
+            (Bishop, Color::White) => 'B',
+            (Bishop, Color::Black) => 'b',
+            (Rook, Color::White) => 'R',
+            (Rook, Color::Black) => 'r',
+            (Queen, Color::White) => 'Q',
+            (Queen, Color::Black) => 'q',
+            (King, Color::White) => 'K',
+            (King, Color::Black) => 'k',
         }
     }
 
     pub fn to_unicode_char(self, color: Color) -> char {
         match (self, color) {
-            (Piece::Empty, _) => '.',
-            (Piece::Pawn, Color::Black) => '♙',
-            (Piece::Pawn, Color::White) => '♟',
-            (Piece::Knight, Color::Black) => '♘',
-            (Piece::Knight, Color::White) => '♞',
-            (Piece::Bishop, Color::Black) => '♗',
-            (Piece::Bishop, Color::White) => '♝',
-            (Piece::Rook, Color::Black) => '♖',
-            (Piece::Rook, Color::White) => '♜',
-            (Piece::Queen, Color::Black) => '♕',
-            (Piece::Queen, Color::White) => '♛',
-            (Piece::King, Color::Black) => '♔',
-            (Piece::King, Color::White) => '♚',
+            (Empty, _) => '.',
+            (Pawn, Color::Black) => '♙',
+            (Pawn, Color::White) => '♟',
+            (Knight, Color::Black) => '♘',
+            (Knight, Color::White) => '♞',
+            (Bishop, Color::Black) => '♗',
+            (Bishop, Color::White) => '♝',
+            (Rook, Color::Black) => '♖',
+            (Rook, Color::White) => '♜',
+            (Queen, Color::Black) => '♕',
+            (Queen, Color::White) => '♛',
+            (King, Color::Black) => '♔',
+            (King, Color::White) => '♚',
         }
     }
 
     pub fn from_char(piece_char: char) -> Option<Piece> {
         match piece_char {
-            'p' => Some(Piece::Pawn),
-            'n' => Some(Piece::Knight),
-            'b' => Some(Piece::Bishop),
-            'r' => Some(Piece::Rook),
-            'q' => Some(Piece::Queen),
-            'k' => Some(Piece::King),
+            'p' => Some(Pawn),
+            'n' => Some(Knight),
+            'b' => Some(Bishop),
+            'r' => Some(Rook),
+            'q' => Some(Queen),
+            'k' => Some(King),
             _ => None,
         }
     }
 
     pub fn to_lowercase_char(self) -> char {
         match self {
-            Piece::Empty => ' ',
-            Piece::Pawn => 'p',
-            Piece::Knight => 'n',
-            Piece::Bishop => 'b',
-            Piece::Rook => 'r',
-            Piece::Queen => 'q',
-            Piece::King => 'k',
+            Empty => ' ',
+            Pawn => 'p',
+            Knight => 'n',
+            Bishop => 'b',
+            Rook => 'r',
+            Queen => 'q',
+            King => 'k',
         }
     }
 

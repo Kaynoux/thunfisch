@@ -28,4 +28,12 @@ impl Square {
     pub const fn from_xy(x: usize, y: usize) -> Square {
         Square(y * 8 + x)
     }
+
+    pub const fn y(self) -> usize {
+        self.0 / 8
+    }
+
+    pub const fn x(self) -> usize {
+        self.0 & 7 // equivalent to % 8 for positiv numbers
+    }
 }

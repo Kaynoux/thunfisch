@@ -1,5 +1,6 @@
 use crate::prelude::*;
 use std::fmt;
+use std::ops::BitXor;
 use std::{
     arch::asm,
     ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not},
@@ -38,6 +39,7 @@ impl fmt::Debug for Bitboard {
 }
 
 impl Bitboard {
+    pub const EMPTY: Bitboard = Bitboard(0);
     #[inline(always)]
     pub fn is_position_set(self, position: Bit) -> bool {
         (self & position) != Bitboard(0)
@@ -167,6 +169,14 @@ impl BitAnd<Bit> for Bitboard {
     #[inline(always)]
     fn bitand(self, rhs: Bit) -> Self::Output {
         Bitboard(self.0 & rhs.0)
+    }
+}
+
+impl BitXor<Bitboard> for Bitboard {
+    type Output = Self;
+    #[inline(always)]
+    fn bitxor(self, rhs: Bitboard) -> Self::Output {
+        Bitboard(self.0 ^ rhs.0)
     }
 }
 

@@ -20,7 +20,7 @@ pub struct Board {
 
 impl Board {
     #[inline(always)]
-    pub fn get_pieces_by_color(&self, color: Color) -> Bitboard {
+    pub fn get_pieces(&self, color: Color) -> Bitboard {
         match color {
             Color::Black => self.black_positions,
             Color::White => self.white_positions,
@@ -28,74 +28,58 @@ impl Board {
     }
 
     #[inline(always)]
-    pub fn get_non_friendly_pieces(&self, color: Color) -> Bitboard {
-        match color {
-            Color::Black => !self.black_positions,
-            Color::White => !self.white_positions,
-        }
-    }
-
-    #[inline(always)]
-    pub fn get_enemy_pieces(&self, color: Color) -> Bitboard {
-        match color {
-            Color::Black => self.white_positions,
-            Color::White => self.black_positions,
-        }
-    }
-
-    #[inline(always)]
-    pub fn get_empty_pieces(&self) -> Bitboard {
+    pub fn get_empty(&self) -> Bitboard {
         self.bbs[Figure::Empty as usize]
     }
 
     #[inline(always)]
     pub fn get_piece_and_color_at_position(&self, pos: Bit) -> (Piece, Color) {
         if self.bbs[Figure::WhitePawn as usize].is_position_set(pos) {
-            (Piece::Pawn, Color::White)
+            (Pawn, Color::White)
         } else if self.bbs[Figure::WhiteKnight as usize].is_position_set(pos) {
-            (Piece::Knight, Color::White)
+            (Knight, Color::White)
         } else if self.bbs[Figure::WhiteBishop as usize].is_position_set(pos) {
-            (Piece::Bishop, Color::White)
+            (Bishop, Color::White)
         } else if self.bbs[Figure::WhiteRook as usize].is_position_set(pos) {
-            (Piece::Rook, Color::White)
+            (Rook, Color::White)
         } else if self.bbs[Figure::WhiteQueen as usize].is_position_set(pos) {
-            (Piece::Queen, Color::White)
+            (Queen, Color::White)
         } else if pos == Bit(self.bbs[Figure::WhiteKing as usize].0) {
-            (Piece::King, Color::White)
+            (King, Color::White)
         } else if self.bbs[Figure::BlackPawn as usize].is_position_set(pos) {
-            (Piece::Pawn, Color::Black)
+            (Pawn, Color::Black)
         } else if self.bbs[Figure::BlackKnight as usize].is_position_set(pos) {
-            (Piece::Knight, Color::Black)
+            (Knight, Color::Black)
         } else if self.bbs[Figure::BlackBishop as usize].is_position_set(pos) {
-            (Piece::Bishop, Color::Black)
+            (Bishop, Color::Black)
         } else if self.bbs[Figure::BlackRook as usize].is_position_set(pos) {
-            (Piece::Rook, Color::Black)
+            (Rook, Color::Black)
         } else if self.bbs[Figure::BlackQueen as usize].is_position_set(pos) {
-            (Piece::Queen, Color::Black)
+            (Queen, Color::Black)
         } else if pos == Bit(self.bbs[Figure::BlackKing as usize].0) {
-            (Piece::King, Color::Black)
+            (King, Color::Black)
         } else {
             // Color does not matter for empty
-            (Piece::Empty, Color::White)
+            (Empty, Color::White)
         }
     }
 
     #[inline(always)]
     pub fn get_piece_at_position(&self, pos: Square) -> Piece {
         match self.pieces[pos.0] {
-            Figure::Empty => Piece::Empty,
-            Figure::WhitePawn => Piece::Pawn,
-            Figure::BlackPawn => Piece::Pawn,
-            Figure::WhiteKnight => Piece::Knight,
-            Figure::BlackKnight => Piece::Knight,
-            Figure::WhiteBishop => Piece::Bishop,
-            Figure::BlackBishop => Piece::Bishop,
-            Figure::WhiteRook => Piece::Rook,
-            Figure::BlackRook => Piece::Rook,
-            Figure::WhiteQueen => Piece::Queen,
-            Figure::BlackQueen => Piece::Queen,
-            Figure::WhiteKing => Piece::King,
-            Figure::BlackKing => Piece::King,
+            Figure::Empty => Empty,
+            Figure::WhitePawn => Pawn,
+            Figure::BlackPawn => Pawn,
+            Figure::WhiteKnight => Knight,
+            Figure::BlackKnight => Knight,
+            Figure::WhiteBishop => Bishop,
+            Figure::BlackBishop => Bishop,
+            Figure::WhiteRook => Rook,
+            Figure::BlackRook => Rook,
+            Figure::WhiteQueen => Queen,
+            Figure::BlackQueen => Queen,
+            Figure::WhiteKing => King,
+            Figure::BlackKing => King,
         }
     }
 
@@ -146,28 +130,28 @@ impl Board {
     pub const fn get_bitboard_by_piece_color(&self, color: Color, piece: Piece) -> Bitboard {
         match color {
             Color::Black => match piece {
-                Piece::Empty => self.bbs[Figure::Empty as usize],
-                Piece::Pawn => self.bbs[Figure::BlackPawn as usize],
-                Piece::Knight => self.bbs[Figure::BlackKnight as usize],
-                Piece::Bishop => self.bbs[Figure::BlackBishop as usize],
-                Piece::Rook => self.bbs[Figure::BlackRook as usize],
-                Piece::Queen => self.bbs[Figure::BlackQueen as usize],
-                Piece::King => self.bbs[Figure::BlackKing as usize],
+                Empty => self.bbs[Figure::Empty as usize],
+                Pawn => self.bbs[Figure::BlackPawn as usize],
+                Knight => self.bbs[Figure::BlackKnight as usize],
+                Bishop => self.bbs[Figure::BlackBishop as usize],
+                Rook => self.bbs[Figure::BlackRook as usize],
+                Queen => self.bbs[Figure::BlackQueen as usize],
+                King => self.bbs[Figure::BlackKing as usize],
             },
             Color::White => match piece {
-                Piece::Empty => self.bbs[Figure::Empty as usize],
-                Piece::Pawn => self.bbs[Figure::WhitePawn as usize],
-                Piece::Knight => self.bbs[Figure::WhiteKnight as usize],
-                Piece::Bishop => self.bbs[Figure::WhiteBishop as usize],
-                Piece::Rook => self.bbs[Figure::WhiteRook as usize],
-                Piece::Queen => self.bbs[Figure::WhiteQueen as usize],
-                Piece::King => self.bbs[Figure::WhiteKing as usize],
+                Empty => self.bbs[Figure::Empty as usize],
+                Pawn => self.bbs[Figure::WhitePawn as usize],
+                Knight => self.bbs[Figure::WhiteKnight as usize],
+                Bishop => self.bbs[Figure::WhiteBishop as usize],
+                Rook => self.bbs[Figure::WhiteRook as usize],
+                Queen => self.bbs[Figure::WhiteQueen as usize],
+                King => self.bbs[Figure::WhiteKing as usize],
             },
         }
     }
 
     #[inline(always)]
-    pub fn get_king_bit(&self, color: Color) -> Bit {
+    pub fn get_king(&self, color: Color) -> Bit {
         match color {
             Color::Black => Bit(self.bbs[Figure::BlackKing as usize].0),
             Color::White => Bit(self.bbs[Figure::WhiteKing as usize].0),
@@ -191,29 +175,29 @@ impl Board {
             | self.bbs[Figure::BlackKing as usize];
 
         self.occupied = self.white_positions | self.black_positions;
-        self.bbs[Figure::Empty as usize] = !!self.occupied;
+        self.bbs[Figure::Empty as usize] = !self.occupied;
     }
 
     // #[inline(always)]
     // pub fn get_count_of_piece(&self, color: Color, piece: Piece) -> u32 {
     //     match color {
     //         Color::Black => match piece {
-    //             Piece::Empty => self.empty_pieces.get_count(),
-    //             Piece::Pawn => self.black_pawns.get_count(),
-    //             Piece::Knight => self.black_knights.get_count(),
-    //             Piece::Bishop => self.black_bishops.get_count(),
-    //             Piece::Rook => self.black_rooks.get_count(),
-    //             Piece::Queen => self.black_queens.get_count(),
-    //             Piece::King => Bitboard(self.black_king.0).get_count(),
+    //             Empty => self.empty_pieces.get_count(),
+    //             Pawn => self.black_pawns.get_count(),
+    //             Knight => self.black_knights.get_count(),
+    //             Bishop => self.black_bishops.get_count(),
+    //             Rook => self.black_rooks.get_count(),
+    //             Queen => self.black_queens.get_count(),
+    //             King => Bitboard(self.black_king.0).get_count(),
     //         },
     //         Color::White => match piece {
-    //             Piece::Empty => self.empty_pieces.get_count(),
-    //             Piece::Pawn => self.white_pawns.get_count(),
-    //             Piece::Knight => self.white_knights.get_count(),
-    //             Piece::Bishop => self.white_bishops.get_count(),
-    //             Piece::Rook => self.white_rooks.get_count(),
-    //             Piece::Queen => self.white_queens.get_count(),
-    //             Piece::King => Bitboard(self.white_king.0).get_count(),
+    //             Empty => self.empty_pieces.get_count(),
+    //             Pawn => self.white_pawns.get_count(),
+    //             Knight => self.white_knights.get_count(),
+    //             Bishop => self.white_bishops.get_count(),
+    //             Rook => self.white_rooks.get_count(),
+    //             Queen => self.white_queens.get_count(),
+    //             King => Bitboard(self.white_king.0).get_count(),
     //         },
     //     }
     // }
@@ -222,6 +206,6 @@ impl Board {
     pub fn is_in_check(&self) -> bool {
         let opposite_attacks = move_generation::get_all_attacks(self, !self.current_color);
 
-        (opposite_attacks & self.get_king_bit(self.current_color)) != Bitboard(0)
+        (opposite_attacks & self.get_king(self.current_color)) != Bitboard(0)
     }
 }

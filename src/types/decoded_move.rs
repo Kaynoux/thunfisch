@@ -45,19 +45,15 @@ impl DecodedMove {
             mv_type = MoveType::Capture;
         }
 
-        if from_piece == Piece::King && ((from_pos.to_x() as isize) - (to_pos.to_x() as isize)) == 2
-        {
+        if from_piece == King && ((from_pos.to_x() as isize) - (to_pos.to_x() as isize)) == 2 {
             mv_type = MoveType::QueenCastle;
-        } else if from_piece == Piece::King
+        } else if from_piece == King
             && ((from_pos.to_x() as isize) - (to_pos.to_x() as isize)) == -2
         {
             mv_type = MoveType::KingCastle;
         }
 
-        if from_piece == Piece::Pawn
-            && from_pos.to_y().abs_diff(to_pos.to_y()) == 1
-            && to_piece == Piece::Empty
-        {
+        if from_piece == Pawn && from_pos.to_y().abs_diff(to_pos.to_y()) == 1 && to_piece == Empty {
             mv_type = MoveType::EpCapture;
         }
 
@@ -74,24 +70,24 @@ impl DecodedMove {
         if let Some(prom) = promotion {
             if mv_type == MoveType::Capture {
                 match prom {
-                    Piece::Queen => mv_type = MoveType::QueenPromoCapture,
-                    Piece::Rook => mv_type = MoveType::RookPromoCapture,
-                    Piece::Bishop => mv_type = MoveType::BishopPromoCapture,
-                    Piece::Knight => mv_type = MoveType::KnightPromoCapture,
+                    Queen => mv_type = MoveType::QueenPromoCapture,
+                    Rook => mv_type = MoveType::RookPromoCapture,
+                    Bishop => mv_type = MoveType::BishopPromoCapture,
+                    Knight => mv_type = MoveType::KnightPromoCapture,
                     _ => {}
                 }
             } else {
                 match prom {
-                    Piece::Queen => mv_type = MoveType::QueenPromo,
-                    Piece::Rook => mv_type = MoveType::RookPromo,
-                    Piece::Bishop => mv_type = MoveType::BishopPromo,
-                    Piece::Knight => mv_type = MoveType::KnightPromo,
+                    Queen => mv_type = MoveType::QueenPromo,
+                    Rook => mv_type = MoveType::RookPromo,
+                    Bishop => mv_type = MoveType::BishopPromo,
+                    Knight => mv_type = MoveType::KnightPromo,
                     _ => {}
                 }
             }
         }
 
-        if from_piece == Piece::Pawn && from_pos.to_y().abs_diff(to_pos.to_y()) == 2 {
+        if from_piece == Pawn && from_pos.to_y().abs_diff(to_pos.to_y()) == 2 {
             mv_type = MoveType::DoubleMove
         }
 
@@ -112,7 +108,7 @@ impl DecodedMove {
         let mv_type = self.mv_type;
         let color = board.current_color;
 
-        let enemy_king_pos = board.get_king_bit(!color).to_square();
+        let enemy_king_pos = board.get_king(!color).to_square();
         if self.to == enemy_king_pos {
             // winning move is invalid
             return false;

@@ -6,11 +6,11 @@ impl Board {
             let mut empty_counter = 0;
             for x in 0..=7 {
                 let (piece, color) = self.get_piece_and_color_at_position(Bit::from_xy(x, y));
-                if piece == Piece::Empty && x == 7 {
+                if piece == Empty && x == 7 {
                     empty_counter += 1;
                     fen.push_str(&empty_counter.to_string());
                     empty_counter = 0;
-                } else if piece == Piece::Empty {
+                } else if piece == Empty {
                     empty_counter += 1;
                 } else {
                     if empty_counter != 0 {

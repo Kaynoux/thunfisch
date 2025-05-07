@@ -1,7 +1,6 @@
 use crate::debug;
 use crate::move_generator;
-use crate::move_generator::find_magics;
-use crate::move_generator::magic_array;
+
 use crate::prelude::*;
 use crate::search;
 use std::io::{self, BufRead, Write};
@@ -106,18 +105,6 @@ pub fn handle_uci_communication() {
                 let mv_str: &str = args[0];
                 let mv = DecodedMove::from_coords(mv_str.to_string(), &state.board);
                 state.board.make_move(&mv);
-            }
-            Some("magics") => {
-                find_magics::print_magics();
-            }
-            Some("len_magics") => println!("{}", magic_array::TABLE.len()),
-            Some("get_magic") => {
-                let args: Vec<&str> = parts.collect();
-                let idx: usize = match args[0].parse() {
-                    Ok(d) => d,
-                    Err(_) => 0,
-                };
-                println!("{}", magic_array::TABLE[idx].0);
             }
             Some("test") => {
                 let moves = state.board.generate_all_moves();

@@ -21,40 +21,40 @@ pub fn order_moves(moves: &mut Vec<EncodedMove>, board: &Board) {
             MoveType::QueenCastle => 0i32,
             MoveType::EpCapture => {
                 let attacker_idx = (board.pieces[mv.from.0] as usize) / 2;
-                MVV_LVA_TABLE[attacker_idx][Piece::Pawn as usize] + CAPTURE_BONUS
+                MVV_LVA_TABLE[attacker_idx][Pawn as usize] + CAPTURE_BONUS
             }
             MoveType::QueenPromoCapture => {
                 let attacker_idx = (board.pieces[mv.from.0] as usize) / 2;
                 let victim_idx = (board.pieces[mv.to.0] as usize) / 2;
                 MVV_LVA_TABLE[attacker_idx][victim_idx]
                     + CAPTURE_BONUS
-                    + MVV_LVA_TABLE[Piece::Pawn as usize][Piece::Queen as usize]
+                    + MVV_LVA_TABLE[Pawn as usize][Queen as usize]
             }
             MoveType::RookPromoCapture => {
                 let attacker_idx = (board.pieces[mv.from.0] as usize) / 2;
                 let victim_idx = (board.pieces[mv.to.0] as usize) / 2;
                 MVV_LVA_TABLE[attacker_idx][victim_idx]
                     + CAPTURE_BONUS
-                    + MVV_LVA_TABLE[Piece::Pawn as usize][Piece::Rook as usize]
+                    + MVV_LVA_TABLE[Pawn as usize][Rook as usize]
             }
             MoveType::BishopPromoCapture => {
                 let attacker_idx = (board.pieces[mv.from.0] as usize) / 2;
                 let victim_idx = (board.pieces[mv.to.0] as usize) / 2;
                 MVV_LVA_TABLE[attacker_idx][victim_idx]
                     + CAPTURE_BONUS
-                    + MVV_LVA_TABLE[Piece::Pawn as usize][Piece::Bishop as usize]
+                    + MVV_LVA_TABLE[Pawn as usize][Bishop as usize]
             }
             MoveType::KnightPromoCapture => {
                 let attacker_idx = (board.pieces[mv.from.0] as usize) / 2;
                 let victim_idx = (board.pieces[mv.to.0] as usize) / 2;
                 MVV_LVA_TABLE[attacker_idx][victim_idx]
                     + CAPTURE_BONUS
-                    + MVV_LVA_TABLE[Piece::Pawn as usize][Piece::Knight as usize]
+                    + MVV_LVA_TABLE[Pawn as usize][Knight as usize]
             }
-            MoveType::QueenPromo => MVV_LVA_TABLE[Piece::Pawn as usize][Piece::Queen as usize],
-            MoveType::RookPromo => MVV_LVA_TABLE[Piece::Pawn as usize][Piece::Queen as usize],
-            MoveType::BishopPromo => MVV_LVA_TABLE[Piece::Pawn as usize][Piece::Queen as usize],
-            MoveType::KnightPromo => MVV_LVA_TABLE[Piece::Pawn as usize][Piece::Queen as usize],
+            MoveType::QueenPromo => MVV_LVA_TABLE[Pawn as usize][Queen as usize],
+            MoveType::RookPromo => MVV_LVA_TABLE[Pawn as usize][Queen as usize],
+            MoveType::BishopPromo => MVV_LVA_TABLE[Pawn as usize][Queen as usize],
+            MoveType::KnightPromo => MVV_LVA_TABLE[Pawn as usize][Queen as usize],
         };
 
         // sort descending by highest value first

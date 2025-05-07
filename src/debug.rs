@@ -6,21 +6,20 @@ use rayon::prelude::*;
 use std::collections::HashMap;
 use std::time::Instant;
 
-pub fn print_board(board: &Board, moves: Option<&[EncodedMove]>) {
-    let moves_slice = moves.unwrap_or(&[]);
-    let char_board: [(char, &str); 64] = get_char_board(board, moves_slice);
-    let mut y: i32 = 7;
-    let mut x: i32 = 0;
-
+pub fn print_board(board: &Board, moves: Option<&Vec<EncodedMove>>) {
     println!(
         "Current Color: {:?} Halfmove Clock: {} Fullmove Counter: {}",
         board.current_color, board.halfmove_clock, board.total_halfmove_counter
     );
     println!("FEN: {}", board.generate_fen());
     // println!("Phase: {}", board.get_game_phase());
-    if moves.is_some() {
-        println!("Moves Possible: {}", moves_slice.len());
+    if let Some(m) = moves {
+        println!("Moves Possible: {}", m.len());
     }
+
+    let char_board: [(char, &str); 64] = get_char_board(board, moves);
+    let mut y: i32 = 7;
+    let mut x: i32 = 0;
 
     while y >= 0 {
         print!("{} | ", y);
@@ -39,7 +38,7 @@ pub fn print_board(board: &Board, moves: Option<&[EncodedMove]>) {
     println!("-------------------");
 }
 
-fn get_char_board(board: &Board, moves: &[EncodedMove]) -> [(char, &'static str); 64] {
+fn get_char_board(board: &Board, moves: Option<&Vec<EncodedMove>>) -> [(char, &'static str); 64] {
     let mut char_board = [(' ', "white"); 64];
     for y in 0usize..=7usize {
         for x in 0usize..=7usize {
@@ -48,14 +47,16 @@ fn get_char_board(board: &Board, moves: &[EncodedMove]) -> [(char, &'static str)
 
             let (piece, color) = board.get_piece_and_color_at_position(pos.to_bit());
             let mut text_color = "white";
-            if moves
-                .iter()
-                .any(|chess_move| chess_move.decode().from == pos)
-            {
-                text_color = "green";
+            if let Some(m) = moves {
+                if m.iter().any(|chess_move| chess_move.decode().from == pos) {
+                    text_color = "green";
+                }
             }
-            if moves.iter().any(|chess_move| chess_move.decode().to == pos) {
-                text_color = "red";
+
+            if let Some(m) = moves {
+                if m.iter().any(|chess_move| chess_move.decode().to == pos) {
+                    text_color = "red";
+                }
             }
             char_board[idx] = (Piece::to_unicode_char(piece, color), text_color);
         }
