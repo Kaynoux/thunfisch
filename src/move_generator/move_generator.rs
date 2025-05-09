@@ -5,8 +5,10 @@ use crate::move_generator::sliding_targets;
 use crate::position_generation::get_king_positions;
 use crate::prelude::*;
 
+use super::between::IN_BETWEEN;
 use super::normal_targets::KING_TARGETS;
 use super::normal_targets::KNIGHT_TARGETS;
+use super::normal_targets::PAWN_ATTACK_TARGETS;
 use super::sliding_targets::get_bishop_targets;
 use super::sliding_targets::get_rook_targets;
 impl Board {
@@ -28,17 +30,42 @@ impl Board {
         let king_pos = self.get_king(self.current_color);
     }
 
-    pub fn calc_check_mask(&self) -> Bitboard {
+    pub fn calc_check_mask(&self) -> (Bitboard, usize) {
         let friendly = self.current_color;
-        let mut attackers =
-            self.get_all_attackers_to(self.get_king(friendly).to_square(), !friendly);
+        let enemy = !friendly;
+        let mut normal_attackers = Bitboard::EMPTY;
+        let mut sliding_attackers = Bitboard::EMPTY;
+        let occ = self.occupied;
+        let king = self.get_king(friendly).to_square();
 
-        if attackers.is_empty() {
-            return Bitboard::FULL;
+        let enemy_pawns = self.get_pieces_by_color(enemy, Pawn);
+        let enemy_knights = self.get_pieces_by_color(enemy, Knight);
+        let enemy_bishops_queens = self.get_pieces_by_color(enemy, Bishop);
+        let enemy_rooks_queens = self.get_pieces_by_color(enemy, Rook);
+        // enemy king is ignored because it cannot give check
+
+        normal_attackers |= PAWN_ATTACK_TARGETS[friendly as usize][king] & enemy_pawns;
+        normal_attackers |= KNIGHT_TARGETS[king] & enemy_knights;
+        normal_attackers |= KING_TARGETS[king] & enemy_knights; // not needed for checkmaask but 
+        sliding_attackers |= get_bishop_targets(king, occ) & enemy_bishops_queens;
+        sliding_attackers |= get_rook_targets(king, occ) & enemy_rooks_queens;
+
+        // No check all positions are valid fill the board
+        if (normal_attackers | sliding_attackers).is_empty() {
+            return (Bitboard::FULL, 0);
         }
+        let mut check_counter = 0usize;
         let mut checkmask = Bitboard::EMPTY;
-        for attacker in attackers.iter_mut() {}
-        checkmask
+        for attacker in normal_attackers.iter_mut() {
+            checkmask |= attacker;
+            check_counter += 1;
+        }
+
+        for attacker in sliding_attackers.iter_mut() {
+            checkmask |= IN_BETWEEN[king][attacker.to_square()] | attacker;
+            check_counter += 1;
+        }
+        (checkmask, check_counter)
     }
 
     pub fn generate_quiet_moves(&self, moves: &mut Vec<EncodedMove>, color: Color) {
@@ -51,6 +78,8 @@ impl Board {
         let frienldy_king = self.get_king(color).to_square();
         // println!("Occupied");
         // println!("{:?}", occupied);
+
+        // test pin and checkmask = 5rk1/7b/8/r1PP1K2/8/5P2/8/5q2 w - - 0 1
         let (hv_pinmask, diag_pinmask) = pinmask::generate_pin_masks(self);
         let pinmask = hv_pinmask | diag_pinmask;
         println!("Pin Mask");
@@ -63,7 +92,9 @@ impl Board {
         // wenn check count 1 dann normale moves mit checkmask und king evasion moves extr
 
         // check mask berechnen
-        check_mask = calc_check_mask();
+        let (check_mask, check_counter) = self.calc_check_mask();
+        println!("Check counter: {}", check_counter);
+        println!("{:?}", check_mask);
 
         calc_quiet_pawn_moves(moves, self, color, hv_pinmask, diag_pinmask, check_mask);
 
@@ -173,20 +204,23 @@ impl Board {
     /// Gets a bitboard which contains all positions from enemy pieces which attack the given square
     /// This is very fast because with the execption of pawns all moves are symmetrical
     pub fn get_all_attackers_to(&self, to: Square, attacker: Color) -> Bitboard {
-        let mut attackers = Bitboard::EMPTY;
+        let mut normal_attackers = Bitboard::EMPTY;
+        let mut sliding_attackers = Bitboard::EMPTY;
         let occ = self.occupied;
 
+        let enemy_pawns = self.get_pieces_by_color(attacker, Pawn);
         let enemy_knights = self.get_pieces_by_color(attacker, Knight);
         let enemy_bishops_queens = self.get_pieces_by_color(attacker, Bishop);
         let enemy_rooks_queens = self.get_pieces_by_color(attacker, Rook);
         let enemy_king = self.get_pieces_by_color(attacker, King);
 
-        attackers |= KNIGHT_TARGETS[to.i()] & enemy_knights;
-        attackers |= get_bishop_targets(to, occ) & enemy_bishops_queens;
-        attackers |= get_rook_targets(to, occ) & enemy_rooks_queens;
-        attackers |= KING_TARGETS[to.i()] & enemy_king;
+        normal_attackers |= PAWN_ATTACK_TARGETS[!attacker as usize][to.i()] & enemy_pawns;
+        normal_attackers |= KNIGHT_TARGETS[to.i()] & enemy_knights;
+        normal_attackers |= KING_TARGETS[to.i()] & enemy_king; // not needed for checkmaask but 
+        sliding_attackers |= get_bishop_targets(to, occ) & enemy_bishops_queens;
+        sliding_attackers |= get_rook_targets(to, occ) & enemy_rooks_queens;
 
-        attackers
+        sliding_attackers
     }
 }
 

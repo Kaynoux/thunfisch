@@ -23,11 +23,11 @@ pub static PAWN_ATTACK_TARGETS: [[Bitboard; 64]; 2] = {
         if y > 0 {
             // no left attack on x = 0
             if x > 0 {
-                table[0][pos.0].0 |= 1 << ((y - 1) * 8 + (x - 1));
+                table[1][pos.0].0 |= 1 << ((y - 1) * 8 + (x - 1));
             }
             // no right attack on x = 7
             if x < 7 {
-                table[0][pos.0].0 |= 1 << ((y - 1) * 8 + (x + 1));
+                table[1][pos.0].0 |= 1 << ((y - 1) * 8 + (x + 1));
             }
         }
         pos.0 += 1;
