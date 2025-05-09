@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-pub static PAWN_TARGETS: [[Bitboard; 64]; 2] = {
+pub static PAWN_ATTACK_TARGETS: [[Bitboard; 64]; 2] = {
     let mut table = [[Bitboard(0); 64]; 2];
     let mut pos = Square(0);
     while pos.0 < 64 {
@@ -105,3 +105,11 @@ pub static KING_TARGETS: [Bitboard; 64] = {
 
     table
 };
+
+/// Retruns a valid single target pos
+pub fn pawn_quiet_single_target(from: Bit, color: Color) -> Bit {
+    match color {
+        Color::White => from << 8,
+        Color::Black => from >> 8,
+    }
+}

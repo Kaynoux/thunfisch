@@ -127,7 +127,7 @@ impl Board {
     }
 
     #[inline(always)]
-    pub const fn get_bitboard_by_piece_color(&self, color: Color, piece: Piece) -> Bitboard {
+    pub const fn get_pieces_by_color(&self, color: Color, piece: Piece) -> Bitboard {
         match color {
             Color::Black => match piece {
                 Empty => self.bbs[Figure::Empty as usize],

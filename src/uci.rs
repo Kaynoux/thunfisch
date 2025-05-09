@@ -107,7 +107,7 @@ pub fn handle_uci_communication() {
                 state.board.make_move(&mv);
             }
             Some("test") => {
-                let moves = state.board.generate_all_moves();
+                let moves = state.board.calc_all_moves();
                 println!("{}", moves.len());
             }
             Some(cmd) => {

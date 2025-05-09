@@ -40,6 +40,7 @@ impl fmt::Debug for Bitboard {
 
 impl Bitboard {
     pub const EMPTY: Bitboard = Bitboard(0);
+    pub const FULL: Bitboard = Bitboard(u64::MAX);
     #[inline(always)]
     pub fn is_position_set(self, position: Bit) -> bool {
         (self & position) != Bitboard(0)
@@ -131,6 +132,10 @@ impl Bitboard {
             let leading_zeros = self.0.leading_zeros();
             Bit(1u64 << (63 - leading_zeros))
         }
+    }
+
+    pub const fn count(self) -> usize {
+        self.0.count_ones() as usize
     }
 }
 

@@ -1,5 +1,5 @@
 use crate::prelude::*;
-
+#[repr(transparent)]
 #[derive(Copy, Clone, PartialEq)]
 pub struct EncodedMove(pub u16);
 

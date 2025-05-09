@@ -38,3 +38,6 @@ naming convetions
 
 - Piece
 - Figure
+
+- https://lichess.org/editor/8/8/8/1K1pP1q1/8/8/8/8_w_-_-_0_1?color=white
+- ep pinmask edge case aus der hölle

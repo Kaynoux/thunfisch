@@ -14,7 +14,7 @@ pub fn print_board(board: &Board, moves: Option<&Vec<EncodedMove>>) {
     println!("FEN: {}", board.generate_fen());
     // println!("Phase: {}", board.get_game_phase());
     if let Some(m) = moves {
-        println!("Moves Possible: {}", m.len());
+        print_moves(board, m);
     }
 
     let char_board: [(char, &str); 64] = get_char_board(board, moves);
@@ -64,86 +64,29 @@ fn get_char_board(board: &Board, moves: Option<&Vec<EncodedMove>>) -> [(char, &'
     char_board
 }
 
-pub fn print_moves(board: &Board, moves: &Vec<EncodedMove>) {
-    println!("Potential Moves:");
-    let (
-        mut prev_pos,
-        mut prev_is_queen_castle,
-        mut prev_is_king_castle,
-        mut prev_is_promotion,
-        mut prev_is_ep_capture,
-    ) = (Bit(0), false, false, false, false);
-    for encoded_mv in moves {
-        let mv = encoded_mv.decode();
-        let mv_type = mv.mv_type;
-        let (
-            current_pos,
-            current_is_queen_castle,
-            current_is_king_castle,
-            current_is_promotion,
-            current_is_ep_capture,
-        ) = (
-            mv.from.to_bit(),
-            if mv_type == MoveType::QueenCastle {
-                true
-            } else {
-                false
-            },
-            if mv_type == MoveType::KingCastle {
-                true
-            } else {
-                false
-            },
-            mv_type.is_promotion(),
-            if mv_type == MoveType::EpCapture {
-                true
-            } else {
-                false
-            },
-        );
-        let (current_color, current_piece) = board.get_piece_and_color_at_position(current_pos);
-        if current_pos != prev_pos
-            || current_is_queen_castle != prev_is_queen_castle
-            || current_is_king_castle != prev_is_king_castle
-            || current_is_promotion != prev_is_promotion
-            || current_is_ep_capture != prev_is_ep_capture
-        {
-            println!();
-            if current_is_queen_castle {
-                print!("Queen Castle: ")
-            }
-            if current_is_king_castle {
-                print!("King Castle: ")
-            }
-            if current_is_promotion {
-                print!("Promotion: ")
-            }
-            if current_is_ep_capture {
-                print!("En-Passant: ")
-            }
-            print!(
-                "{:?} {:?} {:?} -> ",
-                current_color,
-                current_piece,
-                mv.from.to_bit()
-            );
-            (
-                prev_pos,
-                prev_is_queen_castle,
-                prev_is_king_castle,
-                prev_is_promotion,
-                prev_is_ep_capture,
-            ) = (
-                current_pos,
-                current_is_queen_castle,
-                current_is_king_castle,
-                current_is_promotion,
-                current_is_ep_capture,
-            );
-        }
-        print!(" {:?},", mv.to.to_bit());
+pub fn group_moves_by_type(moves: &[EncodedMove]) -> HashMap<MoveType, Vec<EncodedMove>> {
+    let mut map = HashMap::new();
+    for &enc in moves {
+        let mv = enc.decode();
+        map.entry(mv.mv_type).or_insert_with(Vec::new).push(enc);
     }
-    println!()
+    map
+}
+
+pub fn print_moves(board: &Board, moves: &Vec<EncodedMove>) {
+    println!("total moves = {}", moves.len());
+    let moves_by_type = group_moves_by_type(moves);
+    let quiet_moves: &[EncodedMove] = match moves_by_type.get(&MoveType::Quiet) {
+        Some(moves) => moves,
+        None => &[],
+    };
+    let double_moves: &[EncodedMove] = match moves_by_type.get(&MoveType::DoubleMove) {
+        Some(moves) => moves,
+        None => &[],
+    };
+
+    println!("quiet moves = {}", quiet_moves.len());
+    println!("double moves = {}", double_moves.len());
 }
 
 pub fn r_perft(board: &mut Board, depth: usize) -> usize {

@@ -87,7 +87,7 @@ pub fn get_moves_for_piece_type(
     f: fn(board: &Board, pos: Bit, color: Color) -> Bitboard,
     only_captures: bool,
 ) -> Bitboard {
-    let mut piece_positions = board.get_bitboard_by_piece_color(color, piece);
+    let mut piece_positions = board.get_pieces_by_color(color, piece);
     let mut target_positions = Bitboard(0);
 
     while piece_positions != Bitboard(0) {
@@ -139,7 +139,7 @@ pub fn get_pawn_moves(
     only_captures: bool,
 ) -> Bitboard {
     let mut target_positions = Bitboard(0);
-    let mut pawn_positions = board.get_bitboard_by_piece_color(color, Pawn);
+    let mut pawn_positions = board.get_pieces_by_color(color, Pawn);
 
     while pawn_positions != Bitboard(0) {
         let current_pos = pawn_positions.pop_lsb_position().unwrap();

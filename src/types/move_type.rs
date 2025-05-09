@@ -4,7 +4,7 @@ use crate::prelude::*;
 // Bits 13-16: Represent this:
 // Source: https://www.chessprogramming.org/Encoding_Moves
 #[repr(u16)]
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[rustfmt::skip]
 pub enum MoveType {
     Quiet =             0b0000_0000_0000_0000, // 0

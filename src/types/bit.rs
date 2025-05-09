@@ -1,6 +1,6 @@
 use crate::prelude::*;
 use std::fmt;
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not, Shl};
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not, Shl, Shr};
 
 #[derive(Copy, Clone, PartialEq)]
 pub struct Bit(pub u64);
@@ -149,7 +149,7 @@ impl Bit {
     }
 
     #[inline(always)]
-    pub const fn to_positions(&self) -> Bitboard {
+    pub const fn to_bb(&self) -> Bitboard {
         Bitboard(self.0)
     }
 }
@@ -166,11 +166,23 @@ impl Shl<isize> for Bit {
     }
 }
 
+impl Shr<isize> for Bit {
+    type Output = Self;
+    #[inline(always)]
+    fn shr(self, shift: isize) -> Self::Output {
+        if shift < 0 {
+            // Interpret negative shift as left shift
+            return Bit(self.0 << ((-shift) as u32));
+        }
+        Bit(self.0 >> (shift as u32))
+    }
+}
+
 impl BitAnd<Bitboard> for Bit {
     type Output = Self;
     #[inline(always)]
     fn bitand(self, rhs: Bitboard) -> Self::Output {
-        Bit(self.0 | rhs.0)
+        Bit(self.0 & rhs.0)
     }
 }
 
