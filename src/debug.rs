@@ -126,7 +126,7 @@ pub fn r_perft(board: &mut Board, depth: usize) -> usize {
         return 1;
     }
     let mut nodes = 0;
-    let moves = board.get_moves(false);
+    let moves = board.generate_moves();
     for mv in moves {
         board.make_move(&mv.decode());
         nodes += r_perft(board, depth - 1);
@@ -150,7 +150,7 @@ pub fn r_detailed_perft(
         return 1;
     }
     let mut nodes = 0;
-    let moves = board.get_moves(false);
+    let moves = board.generate_moves();
     for encoded_mv in moves {
         let mut b2 = board.clone();
         b2.make_move(&encoded_mv.decode());
@@ -211,7 +211,7 @@ pub fn r_detailed_perft(
     nodes
 }
 
-pub fn debug_perft(board: &mut Board, depth: usize) {
+pub fn perft_debug(board: &mut Board, depth: usize) {
     let mut captures: isize = 0;
     let mut normal_promotions: isize = 0;
     let mut capture_promotions: isize = 0;
@@ -226,7 +226,7 @@ pub fn debug_perft(board: &mut Board, depth: usize) {
     let start = Instant::now();
     println!("Perft divide depth {}:", depth);
     let mut total_nodes = 0;
-    let moves = board.get_moves(false);
+    let moves = board.generate_moves();
     for encoded_mv in &moves {
         let mv = encoded_mv.decode();
         let mut b2 = board.clone();
@@ -360,7 +360,7 @@ pub fn r_perft_rayon(board: &mut Board, depth: usize) -> usize {
         return 1;
     }
     board
-        .get_moves(false)
+        .generate_moves()
         .par_iter()
         .map(|mv| {
             let mut b2 = board.clone();
@@ -368,4 +368,35 @@ pub fn r_perft_rayon(board: &mut Board, depth: usize) -> usize {
             r_perft(&mut b2, depth - 1) // Rückgabe ohne Semikolon
         })
         .sum::<usize>()
+}
+
+pub fn perft_test(board: &mut Board, depth: usize) {
+    let mut total_nodes = 0;
+    let moves = board.generate_moves();
+    for encoded_mv in &moves {
+        let mv = encoded_mv.decode();
+        let mut b2 = board.clone();
+        b2.make_move(&mv);
+        let nodes_for_move = r_perft(&mut b2, depth - 1);
+        total_nodes += nodes_for_move;
+
+        println!("{} {}", mv.to_coords(), nodes_for_move,);
+    }
+    println!();
+    println!("Nodes searched: {}", total_nodes);
+}
+
+pub fn perft_perftree(board: &mut Board, depth: usize) {
+    let mut total_nodes = 0;
+    let moves = board.generate_moves();
+    for encoded_mv in &moves {
+        let mv = encoded_mv.decode();
+        let mut b2 = board.clone();
+        b2.make_move(&mv);
+        let nodes_for_move = r_perft(&mut b2, depth - 1);
+        total_nodes += nodes_for_move;
+
+        println!("{} {}", mv.to_coords(), nodes_for_move,);
+    }
+    println!("{}", total_nodes);
 }

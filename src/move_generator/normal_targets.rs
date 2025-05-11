@@ -113,3 +113,11 @@ pub fn pawn_quiet_single_target(from: Bit, color: Color) -> Bit {
         Color::Black => from >> 8,
     }
 }
+
+/// Retruns a valid double target pos
+pub fn pawn_quiet_double_target(from: Bit, color: Color) -> Bit {
+    match color {
+        Color::White => from << 16,
+        Color::Black => from >> 16,
+    }
+}

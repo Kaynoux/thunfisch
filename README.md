@@ -6,6 +6,22 @@
 
 `samply record ./target/release/rusty-chess-bot`
 
+`uv run autoperft.py stockfish ./target/release/rusty-chess-bot --fen "8/PPPk4/8/8/8/8/4Kppp/8 w - - 0 1" --max_depth 6`
+
+8/PPPk4/8/8/8/8/4Kppp/8 w - - 0 1
+
+perftree ./perft-test.sh
+
+"2B5/PP1k4/8/8/8/8/4Kppp/8 b - - 0 1"
+
+`uv run autoperft.py stockfish ./target/release/rusty-chess-bot --fen "Q7/1PPk4/8/8/8/8/4Kppp/8 b - - 0 1" --max_depth 1`
+
+`uv run autoperft.py stockfish ./target/release/rusty-chess-bot --fen "2B5/PP1k4/8/8/8/8/4Kppp/8 b - - 0 1" --max_depth 1`
+
+`uv run autoperft.py stockfish ./target/release/rusty-chess-bot --fen "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1"  --max_depth 4`
+
+" --max_depth 6`
+
 test fens:
 sebastian league search test r3k2r/p1ppqpb1/Bn2pnp1/3PN3/1p2P3/2N2Q2/PPPB1PpP/R3K2R b KQ - 0 1
 

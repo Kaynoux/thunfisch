@@ -1,7 +1,9 @@
 pub mod between;
+pub mod generator;
 pub mod lookup_tables;
 pub mod magics;
-pub mod move_generator;
+pub mod masks;
+pub mod moves;
 pub mod normal_targets;
 pub mod pinmask;
 pub mod sliding_targets;

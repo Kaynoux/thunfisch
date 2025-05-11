@@ -28,6 +28,14 @@ impl Board {
     }
 
     #[inline(always)]
+    pub fn get_pieces_without_king(&self, color: Color) -> Bitboard {
+        match color {
+            Color::Black => self.black_positions & !self.get_king(Color::Black),
+            Color::White => self.white_positions & !self.get_king(Color::White),
+        }
+    }
+
+    #[inline(always)]
     pub fn get_empty(&self) -> Bitboard {
         self.bbs[Figure::Empty as usize]
     }

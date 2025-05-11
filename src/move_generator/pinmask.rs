@@ -5,7 +5,7 @@ use crate::prelude::*;
 /// Calculates two Pin mask one for horizotal and vertical (hv) and one for diagnoals (diag)
 /// Explained here unter section pinmask: https://www.codeproject.com/Articles/5313417/Worlds-fastest-Bitboard-Chess-Movegenerator
 /// https://www.chessprogramming.org/Pin
-pub fn generate_pin_masks(board: &mut Board) -> (Bitboard, Bitboard) {
+pub fn generate_pin_masks(board: &Board) -> (Bitboard, Bitboard) {
     let mut pin_hv = Bitboard::EMPTY;
     let mut pin_diag = Bitboard::EMPTY;
 
