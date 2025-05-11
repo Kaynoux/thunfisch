@@ -44,7 +44,7 @@ Perft: Depth=7 Nodes=3,195,901,860 Time=47.432s Nodes/sec=67,379,035
 
 New move generation:
 go perft 7 --rayon
-Perft: Depth=7 Nodes=3,195,901,860 Time=16.088s Nodes/sec=198,653,799
+Perft: Depth=7 Nodes=3,195,901,860 Time=12.206s Nodes/sec=261,825,410
 
 scc --include-ext rs .
 
