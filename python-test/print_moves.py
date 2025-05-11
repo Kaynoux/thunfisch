@@ -38,7 +38,7 @@ def get_legal_moves_in_custom_format(fen):
 
 # --- Beispielverwendung ---
 # fen_string = "rnbqkbnr/pppp2pp/8/4pP2/8/7P/PPPP2P1/RNBQKBNR w KQkq e6 0 2"
-fen_string = "r3k2r/p1Ppqpb1/bn2pnp1/4N3/1p2P3/2N2Q2/PPPBBPpP/R3K2R w KQkq - 0 1"
+fen_string = "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - 0 1"
 
 legal_moves_list = get_legal_moves_in_custom_format(fen_string)
 
@@ -48,4 +48,4 @@ if legal_moves_list:
 
     # Gib die Züge als eine einzelne, durch Leerzeichen getrennte Zeichenkette aus
     # (oft praktisch zum Kopieren als Testdaten)
-    print('","'.join(legal_moves_list))
+    print(", ".join(legal_moves_list))

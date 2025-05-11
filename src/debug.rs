@@ -76,17 +76,49 @@ pub fn group_moves_by_type(moves: &[EncodedMove]) -> HashMap<MoveType, Vec<Encod
 pub fn print_moves(board: &Board, moves: &Vec<EncodedMove>) {
     println!("total moves = {}", moves.len());
     let moves_by_type = group_moves_by_type(moves);
-    let quiet_moves: &[EncodedMove] = match moves_by_type.get(&MoveType::Quiet) {
-        Some(moves) => moves,
-        None => &[],
-    };
-    let double_moves: &[EncodedMove] = match moves_by_type.get(&MoveType::DoubleMove) {
-        Some(moves) => moves,
-        None => &[],
-    };
 
-    println!("quiet moves = {}", quiet_moves.len());
-    println!("double moves = {}", double_moves.len());
+    let all_move_types = [
+        MoveType::Quiet,
+        MoveType::DoubleMove,
+        MoveType::KingCastle,
+        MoveType::QueenCastle,
+        MoveType::Capture,
+        MoveType::EpCapture,
+        MoveType::KnightPromo,
+        MoveType::BishopPromo,
+        MoveType::RookPromo,
+        MoveType::QueenPromo,
+        MoveType::KnightPromoCapture,
+        MoveType::BishopPromoCapture,
+        MoveType::RookPromoCapture,
+        MoveType::QueenPromoCapture,
+    ];
+
+    for move_type_variant in all_move_types.iter() {
+        let current_moves: &[EncodedMove] = match moves_by_type.get(move_type_variant) {
+            Some(mvs) => mvs,
+            None => &[], // Leerer Slice, falls dieser Typ nicht vorkommt
+        };
+
+        if !current_moves.is_empty() {
+            print!("{:?} Moves = {}: ", move_type_variant, current_moves.len());
+            for (i, mv) in current_moves.iter().enumerate() {
+                print!("{}", mv.decode().to_coords());
+                if i < current_moves.len() - 1 {
+                    print!(", ");
+                }
+            }
+            println!();
+        }
+    }
+
+    for (i, mv) in moves.iter().enumerate() {
+        print!("{}", mv.decode().to_coords());
+        if i < moves.len() - 1 {
+            print!(", ");
+        }
+    }
+    println!();
 }
 
 pub fn r_perft(board: &mut Board, depth: usize) -> usize {

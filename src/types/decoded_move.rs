@@ -1,7 +1,7 @@
 use crate::move_generation;
 use crate::prelude::*;
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq)]
 pub struct DecodedMove {
     pub from: Square,
     pub to: Square,

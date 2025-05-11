@@ -107,8 +107,9 @@ pub fn handle_uci_communication() {
                 state.board.make_move(&mv);
             }
             Some("test") => {
-                let moves = state.board.calc_all_moves();
-                println!("{}", moves.len());
+                let moves = state.board.generate_moves(state.board.current_color);
+                crate::debug::print_board(&state.board, Some(&moves));
+                crate::debug::print_moves(&state.board, &moves);
             }
             Some(cmd) => {
                 eprintln!("Unknown command: {}", cmd);
