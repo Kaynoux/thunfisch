@@ -105,7 +105,7 @@ pub fn handle_uci_communication() {
             Some("fen") => println!("Current Fen: {}", state.board.generate_fen()),
             Some("draw") => debug::print_board(&state.board, None),
             Some("moves") => {
-                let moves = state.board.generate_moves();
+                let moves = state.board.generate_moves(false);
                 debug::print_board(&state.board, Some(&moves));
             }
             Some("eval") => loop {},
@@ -116,7 +116,7 @@ pub fn handle_uci_communication() {
                 state.board.make_move(&mv);
             }
             Some("test") => {
-                let moves = state.board.generate_moves();
+                let moves = state.board.generate_moves(false);
                 crate::debug::print_board(&state.board, Some(&moves));
                 crate::debug::print_moves(&state.board, &moves);
             }

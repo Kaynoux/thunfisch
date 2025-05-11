@@ -126,7 +126,7 @@ pub fn r_perft(board: &mut Board, depth: usize) -> usize {
         return 1;
     }
     let mut nodes = 0;
-    let moves = board.generate_moves();
+    let moves = board.generate_moves(false);
     for mv in moves {
         board.make_move(&mv.decode());
         nodes += r_perft(board, depth - 1);
@@ -150,7 +150,7 @@ pub fn r_detailed_perft(
         return 1;
     }
     let mut nodes = 0;
-    let moves = board.generate_moves();
+    let moves = board.generate_moves(false);
     for encoded_mv in moves {
         let mut b2 = board.clone();
         b2.make_move(&encoded_mv.decode());
@@ -226,7 +226,7 @@ pub fn perft_debug(board: &mut Board, depth: usize) {
     let start = Instant::now();
     println!("Perft divide depth {}:", depth);
     let mut total_nodes = 0;
-    let moves = board.generate_moves();
+    let moves = board.generate_moves(false);
     for encoded_mv in &moves {
         let mv = encoded_mv.decode();
         let mut b2 = board.clone();
@@ -360,7 +360,7 @@ pub fn r_perft_rayon(board: &mut Board, depth: usize) -> usize {
         return 1;
     }
     board
-        .generate_moves()
+        .generate_moves(false)
         .par_iter()
         .map(|mv| {
             let mut b2 = board.clone();
@@ -372,7 +372,7 @@ pub fn r_perft_rayon(board: &mut Board, depth: usize) -> usize {
 
 pub fn perft_test(board: &mut Board, depth: usize) {
     let mut total_nodes = 0;
-    let moves = board.generate_moves();
+    let moves = board.generate_moves(false);
     for encoded_mv in &moves {
         let mv = encoded_mv.decode();
         let mut b2 = board.clone();
@@ -388,7 +388,7 @@ pub fn perft_test(board: &mut Board, depth: usize) {
 
 pub fn perft_perftree(board: &mut Board, depth: usize) {
     let mut total_nodes = 0;
-    let moves = board.generate_moves();
+    let moves = board.generate_moves(false);
     for encoded_mv in &moves {
         let mv = encoded_mv.decode();
         let mut b2 = board.clone();

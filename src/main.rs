@@ -1,8 +1,6 @@
 mod debug;
 mod evaluate;
-mod move_generation;
 mod move_generator;
-mod position_generation;
 mod prelude;
 mod search;
 mod test;

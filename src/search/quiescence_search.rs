@@ -38,9 +38,9 @@ pub fn quiescence_search(
     }
 
     let mut moves: Vec<EncodedMove> = if board.is_in_check() {
-        board.generate_moves()
+        board.generate_moves(false)
     } else {
-        board.generate_moves() // !!! ONLY CAPTURE BUT NOT THERE YET
+        board.generate_moves(true)
     };
 
     move_ordering::order_moves(&mut moves, board);

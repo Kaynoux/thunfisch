@@ -4,7 +4,7 @@ use super::pinmask;
 use crate::prelude::*;
 
 impl Board {
-    pub fn generate_moves(&mut self) -> Vec<EncodedMove> {
+    pub fn generate_moves(&mut self, special_moves_only: bool) -> Vec<EncodedMove> {
         let friendly = self.current_color;
         let mut quiet_moves: Vec<EncodedMove> = Vec::new();
         let mut special_moves: Vec<EncodedMove> = Vec::new();
@@ -81,7 +81,18 @@ impl Board {
         // all_moves.extend_from_slice(&special_moves);
         // all_moves.extend_from_slice(&quiet_moves);
 
-        quiet_moves.extend_from_slice(&special_moves);
-        quiet_moves
+        if special_moves_only {
+            return special_moves;
+        }
+        special_moves.extend_from_slice(&quiet_moves);
+        special_moves
+    }
+
+    pub fn is_in_check(&self) -> bool {
+        let check_count = masks::calc_check_mask(self).1;
+        if check_count == 0 {
+            return false;
+        }
+        true
     }
 }

@@ -1,4 +1,4 @@
-use crate::{move_generation, prelude::*, types::unmake_info::UnmakeInfo};
+use crate::{prelude::*, types::unmake_info::UnmakeInfo};
 /// Each piece type gets its own 64bits where
 #[derive(Clone)]
 pub struct Board {
@@ -184,36 +184,5 @@ impl Board {
 
         self.occupied = self.white_positions | self.black_positions;
         self.bbs[Figure::Empty as usize] = !self.occupied;
-    }
-
-    // #[inline(always)]
-    // pub fn get_count_of_piece(&self, color: Color, piece: Piece) -> u32 {
-    //     match color {
-    //         Color::Black => match piece {
-    //             Empty => self.empty_pieces.get_count(),
-    //             Pawn => self.black_pawns.get_count(),
-    //             Knight => self.black_knights.get_count(),
-    //             Bishop => self.black_bishops.get_count(),
-    //             Rook => self.black_rooks.get_count(),
-    //             Queen => self.black_queens.get_count(),
-    //             King => Bitboard(self.black_king.0).get_count(),
-    //         },
-    //         Color::White => match piece {
-    //             Empty => self.empty_pieces.get_count(),
-    //             Pawn => self.white_pawns.get_count(),
-    //             Knight => self.white_knights.get_count(),
-    //             Bishop => self.white_bishops.get_count(),
-    //             Rook => self.white_rooks.get_count(),
-    //             Queen => self.white_queens.get_count(),
-    //             King => Bitboard(self.white_king.0).get_count(),
-    //         },
-    //     }
-    // }
-
-    #[inline(always)]
-    pub fn is_in_check(&self) -> bool {
-        let opposite_attacks = move_generation::get_all_attacks(self, !self.current_color);
-
-        (opposite_attacks & self.get_king(self.current_color)) != Bitboard(0)
     }
 }

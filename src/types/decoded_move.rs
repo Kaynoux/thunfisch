@@ -1,4 +1,3 @@
-use crate::move_generation;
 use crate::prelude::*;
 
 #[derive(Copy, Clone, PartialEq)]
@@ -102,80 +101,5 @@ impl DecodedMove {
         let from_idx = self.from.0 as u16;
         let to_idx = self.to.0 as u16;
         EncodedMove(from_idx as u16 | (to_idx) << 6 | (self.mv_type as u16))
-    }
-
-    pub fn is_legal(&self, board: &mut Board) -> bool {
-        let mv_type = self.mv_type;
-        let color = board.current_color;
-
-        let enemy_king_pos = board.get_king(!color).to_square();
-        if self.to == enemy_king_pos {
-            // winning move is invalid
-            return false;
-        }
-
-        if mv_type == MoveType::QueenCastle && color == Color::White {
-            if board.is_in_check() {
-                return false;
-            }
-            let counter_positions = move_generation::get_all_attacks(&board, !color);
-            const MASK_WHITE_LEFT: Bitboard = Bitboard::from_idx([2usize, 3usize]);
-            if counter_positions & MASK_WHITE_LEFT != Bitboard(0) {
-                return false;
-            }
-        }
-
-        if mv_type == MoveType::KingCastle && color == Color::White {
-            if board.is_in_check() {
-                return false;
-            }
-            let counter_positions = move_generation::get_all_attacks(&board, !color);
-            const MASK_WHITE_RIGHT: Bitboard = Bitboard::from_idx([5usize, 6usize]);
-            if counter_positions & MASK_WHITE_RIGHT != Bitboard(0) {
-                return false;
-            }
-        }
-
-        if mv_type == MoveType::QueenCastle && color == Color::Black {
-            if board.is_in_check() {
-                return false;
-            }
-            let counter_positions = move_generation::get_all_attacks(&board, !color);
-            const MASK_BLACK_LEFT: Bitboard = Bitboard::from_idx([58usize, 59usize]);
-            if counter_positions & MASK_BLACK_LEFT != Bitboard(0) {
-                return false;
-            }
-        }
-
-        if mv_type == MoveType::KingCastle && color == Color::Black {
-            if board.is_in_check() {
-                return false;
-            }
-            let counter_positions = move_generation::get_all_attacks(&board, !color);
-            const MASK_BLACK_RIGHT: Bitboard = Bitboard::from_idx([61usize, 62usize]);
-            if counter_positions & MASK_BLACK_RIGHT != Bitboard(0) {
-                return false;
-            }
-        }
-
-        // This part gets run if the king is currently in check so it needs to be resolved
-        board.make_move(&self);
-
-        // generate counter moves for this move
-        let counter_positions_after_move = move_generation::get_all_attacks(&board, !color);
-
-        let king_pos_after_move = match color {
-            Color::Black => board.bbs[Figure::BlackKing as usize],
-            Color::White => board.bbs[Figure::WhiteKing as usize],
-        };
-
-        board.unmake_move();
-
-        // Keep move if not in check and throw away if it is
-        if counter_positions_after_move & king_pos_after_move != Bitboard(0) {
-            return false;
-        }
-
-        true
     }
 }
