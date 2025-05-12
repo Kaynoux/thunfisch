@@ -46,6 +46,10 @@ impl Bitboard {
         (self & position) != Bitboard(0)
     }
 
+    pub fn toggle(&mut self, square: Square) {
+        self.0 ^= 1 << square.i();
+    }
+
     #[inline(always)]
     pub fn pop_lsb_position(&mut self) -> Option<Bit> {
         if self.0 == 0 {

@@ -128,8 +128,12 @@ pub fn handle_uci_communication() {
                 println!("{:?}", check_mask);
             }
             Some("attackmask") => {
-                let attackmask =
-                    masks::calculate_attackmask(&board, board.occupied, !board.current_color, None);
+                let attackmask = masks::calculate_attackmask(
+                    &board,
+                    board.occupied(),
+                    !board.current_color(),
+                    None,
+                );
                 println!("Attack Mask:");
                 println!("{:?}", attackmask);
             }

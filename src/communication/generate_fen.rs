@@ -5,7 +5,7 @@ impl Board {
         for y in (0..=7).rev() {
             let mut empty_counter = 0;
             for x in 0..=7 {
-                let (piece, color) = self.get_piece_and_color_at_position(Bit::from_xy(x, y));
+                let (piece, color) = self.piece_and_color_at_position(Bit::from_xy(x, y));
                 if piece == Empty && x == 7 {
                     empty_counter += 1;
                     fen.push_str(&empty_counter.to_string());
@@ -27,9 +27,9 @@ impl Board {
         // Remove last /
         fen.pop();
         fen.push(' ');
-        let color_char = match self.current_color {
-            Color::White => 'w',
-            Color::Black => 'b',
+        let color_char = match self.current_color() {
+            White => 'w',
+            Black => 'b',
         };
         fen.push(color_char);
         fen.push(' ');

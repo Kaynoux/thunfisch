@@ -4,21 +4,44 @@
 
 use crate::prelude::*;
 
-pub fn get_piece_key(color: Color, piece: Piece, square: Square) -> u64 {
+pub fn piece_key(color: Color, piece: Piece, square: Square) -> u64 {
     let piece_idx = piece as usize * 2 + color.to_polyglot();
     POLYGLOT_KEYS[piece_idx * 64 + square.i()]
 }
 
-pub const fn get_castling_rights_key(idx: usize) -> u64 {
+pub const fn castling_rights_key(idx: usize) -> u64 {
     POLYGLOT_KEYS[768 + idx]
 }
 
-pub fn get_ep_key(y: usize) -> u64 {
+pub fn ep_key(y: usize) -> u64 {
     POLYGLOT_KEYS[772 + y]
 }
 
-pub const fn get_white_move_key() -> u64 {
+pub const fn white_move_key() -> u64 {
     POLYGLOT_KEYS[780]
+}
+
+pub fn generate_castling_hash(board: &Board) -> u64 {
+    const HASH_WHITE_KING_CASTLE: u64 = castling_rights_key(0);
+    const HASH_WHITE_QUEEN_CASTLE: u64 = castling_rights_key(1);
+    const HASH_BLACK_KING_CASTLE: u64 = castling_rights_key(2);
+    const HASH_BLACK_QUEEN_CASTLE: u64 = castling_rights_key(3);
+    let mut hash = 0;
+
+    if board.white_queen_castle() {
+        hash ^= HASH_WHITE_QUEEN_CASTLE
+    }
+    if board.white_king_castle() {
+        hash ^= HASH_WHITE_KING_CASTLE
+    }
+    if board.black_queen_castle() {
+        hash ^= HASH_WHITE_QUEEN_CASTLE
+    }
+    if board.black_king_castle() {
+        hash ^= HASH_WHITE_KING_CASTLE
+    }
+
+    hash
 }
 
 /// Source for these keys: https://python-chess.readthedocs.io/en/latest/_modules/chess/polyglot.html

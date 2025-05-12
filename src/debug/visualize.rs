@@ -11,7 +11,9 @@ use std::time::Instant;
 pub fn print_board(board: &Board, moves: Option<&ArrayVec<EncodedMove, ARRAY_LENGTH>>) {
     println!(
         "Current Color: {:?} Halfmove Clock: {} Fullmove Counter: {}",
-        board.current_color, board.halfmove_clock, board.total_halfmove_counter
+        board.current_color(),
+        board.halfmove_clock(),
+        board.total_halfmove_counter()
     );
     println!("FEN: {}", board.generate_fen());
     // println!("Phase: {}", board.get_game_phase());
@@ -50,7 +52,7 @@ fn get_char_board(
             let idx = y * 8 + x;
             let pos = Square(idx);
 
-            let (piece, color) = board.get_piece_and_color_at_position(pos.to_bit());
+            let (piece, color) = board.piece_and_color_at_position(pos.to_bit());
             let mut text_color = "white";
             if let Some(m) = moves {
                 if m.iter().any(|chess_move| chess_move.decode().from == pos) {

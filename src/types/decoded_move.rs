@@ -37,10 +37,10 @@ impl DecodedMove {
 
         let from_idx = from_pos.to_square();
         let to_idx = to_pos.to_square();
-        let from_piece = board.get_piece_at_position(from_idx);
-        let to_piece = board.get_piece_at_position(to_idx);
+        let from_piece = board.piece_at_position(from_idx);
+        let to_piece = board.piece_at_position(to_idx);
 
-        if to_pos.is_enemy(board, board.current_color) {
+        if to_pos.is_enemy(board, board.current_color()) {
             mv_type = MoveType::Capture;
         }
 

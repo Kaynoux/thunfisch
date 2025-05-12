@@ -9,18 +9,17 @@ pub fn generate_pin_masks(board: &Board) -> (Bitboard, Bitboard) {
     let mut pin_hv = Bitboard::EMPTY;
     let mut pin_diag = Bitboard::EMPTY;
 
-    let friendly = board.current_color;
+    let friendly = board.current_color();
     let enemy = !friendly;
-    let king_bb = board.get_king(friendly);
+    let king_bb = board.king(friendly);
     let king_sq = king_bb.to_square();
-    let occ = board.occupied;
-    let friendly_bb = board.get_pieces(friendly);
+    let occ = board.occupied();
+    let friendly_bb = board.color_bbs(friendly);
 
     // all enemy rooks and queens
-    let enemy_rq = board.get_pieces_by_color(enemy, Rook) | board.get_pieces_by_color(enemy, Queen);
+    let enemy_rq = board.figure_bb(enemy, Rook) | board.figure_bb(enemy, Queen);
     // all enemy bishops and queens
-    let enemy_bq =
-        board.get_pieces_by_color(enemy, Bishop) | board.get_pieces_by_color(enemy, Queen);
+    let enemy_bq = board.figure_bb(enemy, Bishop) | board.figure_bb(enemy, Queen);
 
     // which sliders can see the own king through xray
     let mut hv_sliders = get_rook_xray_targets(king_sq, occ, friendly_bb) & enemy_rq;

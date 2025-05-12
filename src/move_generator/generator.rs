@@ -12,7 +12,7 @@ impl Board {
         &mut self,
         special_moves_only: bool,
     ) -> ArrayVec<EncodedMove, ARRAY_LENGTH> {
-        let friendly = self.current_color;
+        let friendly = self.current_color();
         let mut quiet_moves = ArrayVec::<EncodedMove, ARRAY_LENGTH>::new();
         //let mut special_moves = ArrayVec::<EncodedMove, 128>::new();
         // test pin and checkmask = 5rk1/7b/8/r1PP1K2/8/5P2/8/5q2 w - - 0 1

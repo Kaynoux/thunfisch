@@ -7,19 +7,17 @@ use super::sliding_targets::get_rook_targets;
 use crate::prelude::*;
 
 pub fn calc_check_mask(board: &Board) -> (Bitboard, usize) {
-    let friendly = board.current_color;
+    let friendly = board.current_color();
     let enemy = !friendly;
     let mut checkmask = Bitboard::EMPTY;
     let mut sliding_attackers = Bitboard::EMPTY;
-    let occ = board.occupied;
-    let king = board.get_king(friendly).to_square();
+    let occ = board.occupied();
+    let king = board.king(friendly).to_square();
 
-    let enemy_pawns = board.get_pieces_by_color(enemy, Pawn);
-    let enemy_knights = board.get_pieces_by_color(enemy, Knight);
-    let enemy_bishops_queens =
-        board.get_pieces_by_color(enemy, Bishop) | board.get_pieces_by_color(enemy, Queen);
-    let enemy_rooks_queens =
-        board.get_pieces_by_color(enemy, Rook) | board.get_pieces_by_color(enemy, Queen);
+    let enemy_pawns = board.figure_bb(enemy, Pawn);
+    let enemy_knights = board.figure_bb(enemy, Knight);
+    let enemy_bishops_queens = board.figure_bb(enemy, Bishop) | board.figure_bb(enemy, Queen);
+    let enemy_rooks_queens = board.figure_bb(enemy, Rook) | board.figure_bb(enemy, Queen);
     // enemy king is ignored because it cannot give check
 
     // friendly here is correct because we are pretending our king is a pawn and is attacking
@@ -53,16 +51,15 @@ pub fn calculate_attackmask(
 ) -> Bitboard {
     let mut attacks = Bitboard::EMPTY;
 
-    let mut enemy_pawns = board.get_pieces_by_color(attacker, Pawn);
+    let mut enemy_pawns = board.figure_bb(attacker, Pawn);
     if let Some(bit) = removed_pawn {
         enemy_pawns &= !bit; // Handle ep edge case
     }
-    let mut enemy_knights = board.get_pieces_by_color(attacker, Knight);
+    let mut enemy_knights = board.figure_bb(attacker, Knight);
     let mut enemy_bishops_queens =
-        board.get_pieces_by_color(attacker, Bishop) | board.get_pieces_by_color(attacker, Queen);
-    let mut enemy_rooks_queens =
-        board.get_pieces_by_color(attacker, Rook) | board.get_pieces_by_color(attacker, Queen);
-    let enemy_king = board.get_king(attacker);
+        board.figure_bb(attacker, Bishop) | board.figure_bb(attacker, Queen);
+    let mut enemy_rooks_queens = board.figure_bb(attacker, Rook) | board.figure_bb(attacker, Queen);
+    let enemy_king = board.king(attacker);
 
     for pawn in enemy_pawns.iter_mut() {
         attacks |= PAWN_ATTACK_TARGETS[attacker as usize][pawn.to_square()];

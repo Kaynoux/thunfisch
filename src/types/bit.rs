@@ -65,19 +65,19 @@ impl Bit {
 
     #[inline(always)]
     pub fn is_position_empty(self, board: &Board) -> bool {
-        board.get_empty().is_position_set(self)
+        board.empty().is_position_set(self)
     }
 
     #[inline(always)]
     pub fn is_friendly(self, board: &Board, color: Color) -> bool {
-        (color == Color::Black && board.black_positions.is_position_set(self))
-            || (color == Color::White && board.white_positions.is_position_set(self))
+        (color == Black && board.color_bbs(Black).is_position_set(self))
+            || (color == White && board.color_bbs(White).is_position_set(self))
     }
 
     #[inline(always)]
     pub fn is_enemy(self, board: &Board, color: Color) -> bool {
-        (color == Color::White && board.black_positions.is_position_set(self))
-            || (color == Color::Black && board.white_positions.is_position_set(self))
+        (color == White && board.color_bbs(Black).is_position_set(self))
+            || (color == Black && board.color_bbs(White).is_position_set(self))
     }
 
     #[inline(always)]

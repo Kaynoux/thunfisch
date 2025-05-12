@@ -37,28 +37,28 @@ impl MoveType {
 
     pub const fn to_promotion_color_piece(&self, color: Color) -> Option<Figure> {
         match (self, color) {
-            (MoveType::KnightPromo | MoveType::KnightPromoCapture, Color::White) => {
+            (MoveType::KnightPromo | MoveType::KnightPromoCapture, White) => {
                 Some(Figure::WhiteKnight)
             }
-            (MoveType::BishopPromo | MoveType::BishopPromoCapture, Color::White) => {
+            (MoveType::BishopPromo | MoveType::BishopPromoCapture, White) => {
                 Some(Figure::WhiteBishop)
             }
-            (MoveType::RookPromo | MoveType::RookPromoCapture, Color::White) => {
+            (MoveType::RookPromo | MoveType::RookPromoCapture, White) => {
                 Some(Figure::WhiteRook)
             }
-            (MoveType::QueenPromo | MoveType::QueenPromoCapture, Color::White) => {
+            (MoveType::QueenPromo | MoveType::QueenPromoCapture, White) => {
                 Some(Figure::WhiteQueen)
             }
-            (MoveType::KnightPromo | MoveType::KnightPromoCapture, Color::Black) => {
+            (MoveType::KnightPromo | MoveType::KnightPromoCapture, Black) => {
                 Some(Figure::BlackKnight)
             }
-            (MoveType::BishopPromo | MoveType::BishopPromoCapture, Color::Black) => {
+            (MoveType::BishopPromo | MoveType::BishopPromoCapture, Black) => {
                 Some(Figure::BlackBishop)
             }
-            (MoveType::RookPromo | MoveType::RookPromoCapture, Color::Black) => {
+            (MoveType::RookPromo | MoveType::RookPromoCapture, Black) => {
                 Some(Figure::BlackRook)
             }
-            (MoveType::QueenPromo | MoveType::QueenPromoCapture, Color::Black) => {
+            (MoveType::QueenPromo | MoveType::QueenPromoCapture, Black) => {
                 Some(Figure::BlackQueen)
             }
             _ => None,

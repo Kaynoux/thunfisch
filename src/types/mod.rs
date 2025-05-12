@@ -4,7 +4,6 @@ pub mod board;
 pub mod color;
 pub mod decoded_move;
 pub mod encoded_move;
-pub mod engine_state;
 pub mod figure;
 pub mod move_type;
 pub mod piece;

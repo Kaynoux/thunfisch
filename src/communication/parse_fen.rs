@@ -5,23 +5,7 @@ impl Board {
     /// FEN describes the position of all pieces on the board
     /// lowercase = black and uppercase = white
     pub fn from_fen(fen: &str) -> Self {
-        let mut board: Board = Board {
-            white_positions: Bitboard(0),
-            black_positions: Bitboard(0),
-            occupied: Bitboard(0),
-            bbs: [Bitboard(0); 13],
-            pieces: [Figure::Empty; 64],
-            black_king_castle: true,
-            black_queen_castle: true,
-            white_queen_castle: true,
-            white_king_castle: true,
-            ep_target: None,
-            current_color: Color::Black,
-            total_halfmove_counter: 0,
-            halfmove_clock: 0,
-            unmake_info_stack: Vec::new(),
-        };
-
+        let mut board = Board::EMPTY;
         let mut parts = fen.split_whitespace();
         let placement = parts.next().expect("Placement invalid");
         let active_color = parts.next().unwrap_or("w");
@@ -107,9 +91,9 @@ impl Board {
         board.recalculate_genereal_bitboards();
 
         // Set Active Color Part
-        board.current_color = match active_color {
-            "w" => Color::White,
-            "b" => Color::Black,
+        board.current_color() = match active_color {
+            "w" => White,
+            "b" => Black,
             _ => panic!("Ungültige aktive Farbe in FEN"),
         };
 
@@ -126,8 +110,8 @@ impl Board {
             Bit::from_coords(ep_target)
         };
 
-        board.halfmove_clock = halfmove.parse().expect("Invalid halfmove clock");
-        board.total_halfmove_counter = fullmove.parse().expect("Invalid fullmove counter");
+        board.set_halfmove_clock(halfmove.parse().expect("Invalid halfmove clock"));
+        board.set_total_halfmove_counter(fullmove.parse().expect("Invalid fullmove counter"));
 
         board
     }

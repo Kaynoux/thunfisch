@@ -127,7 +127,7 @@ impl Board {
     /// Gamephase is calculated by getting the amount of each piece type and using predefined values, e.g. a Queen is captured then the game phase increases mroe than if a pawn is captured
     pub fn get_game_phase(&self) -> i32 {
         let mut phase = TOTAL;
-        for color_piece in self.pieces.iter() {
+        for color_piece in self.all_figures().iter() {
             let cp = *color_piece;
             if cp == Figure::Empty {
                 continue;
@@ -148,7 +148,7 @@ impl Board {
         let mut mg = [0i32; 2];
         let mut eg = [0i32; 2];
 
-        for (position_idx, color_piece) in self.pieces.iter().enumerate() {
+        for (position_idx, color_piece) in self.all_figures().iter().enumerate() {
             let cp = *color_piece;
             if cp == Figure::Empty {
                 continue;
@@ -162,9 +162,9 @@ impl Board {
         let eg_score = eg[white] - eg[black];
         let gamephase = self.get_game_phase() as i32;
 
-        let current_color_multiplier = match self.current_color {
-            Color::White => 1,
-            Color::Black => -1,
+        let current_color_multiplier = match self.current_color() {
+            White => 1,
+            Black => -1,
         };
 
         (mg_score * (256 - gamephase) + eg_score * gamephase >> 8) * current_color_multiplier

@@ -27,12 +27,13 @@ fn test_en_passant_execution() {
         "EP Test: White pawn's original square e5 should be empty"
     );
     assert_eq!(
-        board.current_color,
-        Color::Black,
+        board.current_color(),
+        Black,
         "EP Test: Color to move should be Black"
     );
     assert_eq!(
-        board.ep_target, None,
+        board.ep_target(),
+        None,
         "EP Test: En passant target should be cleared"
     );
 }

@@ -14,22 +14,22 @@ pub fn generate_pawn_moves(
     diag_pinmask: Bitboard,
     check_mask: Bitboard,
 ) {
-    let empty = board.get_empty();
-    let enemy = board.get_pieces_without_king(!friendly);
+    let empty = board.empty();
+    let enemy = board.color_bbs_without_king(!friendly);
 
     // pawns on the second last row need to promote
     let promotion_row = match friendly {
-        Color::White => Bitboard(0xFF000000000000),
-        Color::Black => Bitboard(0xFF00),
+        White => Bitboard(0xFF000000000000),
+        Black => Bitboard(0xFF00),
     };
 
     // pawns on the second row can double push
     let double_row = match friendly {
-        Color::White => Bitboard(0xff00),
-        Color::Black => Bitboard(0xff000000000000),
+        White => Bitboard(0xff00),
+        Black => Bitboard(0xff000000000000),
     };
 
-    let all_pawns = board.get_pieces_by_color(friendly, Pawn);
+    let all_pawns = board.figure_bb(friendly, Pawn);
     let pawns_promotion = all_pawns & promotion_row;
     let pawns_double = all_pawns & double_row;
     let normal_pawns = all_pawns & !promotion_row;
@@ -190,7 +190,7 @@ pub fn generate_knight_moves(
     check_mask: Bitboard,
 ) {
     // test-fen https://lichess.org/editor/8/8/8/3n4/8/2N5/8/8_w_-_-_0_1?color=white
-    let mut knights = board.get_pieces_by_color(friendly, Knight);
+    let mut knights = board.figure_bb(friendly, Knight);
     for from_bit in knights.iter_mut() {
         let from = from_bit.to_square();
         if pinmask.is_position_set(from_bit) {
@@ -199,13 +199,13 @@ pub fn generate_knight_moves(
         let potential_targets = normal_targets::KNIGHT_TARGETS[from.i()];
         let targets = potential_targets & check_mask; // & checkmask
 
-        let mut quiet_targets = targets & board.get_empty();
+        let mut quiet_targets = targets & board.empty();
         for to_bit in quiet_targets.iter_mut() {
             let to = to_bit.to_square();
             quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
         }
 
-        let mut capture_targets = targets & board.get_pieces_without_king(!friendly);
+        let mut capture_targets = targets & board.color_bbs_without_king(!friendly);
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
             quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
@@ -223,11 +223,11 @@ pub fn generate_bishop_moves(
     check_mask: Bitboard,
 ) {
     //test-fen https://lichess.org/editor/8/8/8/3b4/8/2B5/8/8_w_-_-_0_1?color=white
-    let empty = board.get_empty();
-    let enemy = board.get_pieces_without_king(!friendly);
-    let occupied = board.occupied;
+    let empty = board.empty();
+    let enemy = board.color_bbs_without_king(!friendly);
+    let occupied = board.occupied();
 
-    let bishops = board.get_pieces_by_color(friendly, Bishop);
+    let bishops = board.figure_bb(friendly, Bishop);
     let mut bishops_not_pinned = bishops & !diag_pinmask & !hv_pinmask;
     let mut bishops_diag_pinned = bishops & diag_pinmask & !hv_pinmask;
 
@@ -278,11 +278,11 @@ pub fn generate_rook_moves(
     check_mask: Bitboard,
 ) {
     // test-fen https://lichess.org/editor/8/8/8/3r4/8/2R5/8/8_w_-_-_0_1?color=white
-    let empty = board.get_empty();
-    let enemy = board.get_pieces_without_king(!friendly);
-    let occupied = board.occupied;
+    let empty = board.empty();
+    let enemy = board.color_bbs_without_king(!friendly);
+    let occupied = board.occupied();
 
-    let rooks = board.get_pieces_by_color(friendly, Rook);
+    let rooks = board.figure_bb(friendly, Rook);
     let mut rooks_not_pinned = rooks & !hv_pinmask & !diag_pinmask;
     let mut rooks_hv_pinned = rooks & hv_pinmask & !diag_pinmask;
 
@@ -333,11 +333,11 @@ pub fn generate_queen_moves(
     check_mask: Bitboard,
 ) {
     // test-fen https://lichess.org/editor/8/8/8/3q4/8/2Q5/8/8_w_-_-_0_1?color=white
-    let empty = board.get_empty();
-    let enemy = board.get_pieces_without_king(!friendly);
-    let occupied = board.occupied;
+    let empty = board.empty();
+    let enemy = board.color_bbs_without_king(!friendly);
+    let occupied = board.occupied();
 
-    let queens = board.get_pieces_by_color(friendly, Queen);
+    let queens = board.figure_bb(friendly, Queen);
     let mut quuens_not_pinned = queens & !hv_pinmask & !diag_pinmask;
     let mut queens_hv_pinned = queens & hv_pinmask & !diag_pinmask;
     let mut queens_diag_pinned = queens & !hv_pinmask & diag_pinmask;
@@ -404,21 +404,21 @@ pub fn generate_king_move(
     friendly: Color,
     board: &Board,
 ) {
-    let from_bit = board.get_king(friendly);
+    let from_bit = board.king(friendly);
     let from = from_bit.to_square();
-    let occupied_without_king = board.occupied & !from_bit;
+    let occupied_without_king = board.occupied() & !from_bit;
     let attackmask = masks::calculate_attackmask(board, occupied_without_king, !friendly, None);
 
     let potential_targets = normal_targets::KING_TARGETS[from.i()];
     let targets = potential_targets & !attackmask;
 
-    let mut quiet_targets = targets & board.get_empty();
+    let mut quiet_targets = targets & board.empty();
     for to_bit in quiet_targets.iter_mut() {
         let to = to_bit.to_square();
         quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
     }
 
-    let mut capture_targets = targets & board.get_pieces_without_king(!friendly);
+    let mut capture_targets = targets & board.color_bbs_without_king(!friendly);
     for to_bit in capture_targets.iter_mut() {
         let to = to_bit.to_square();
         quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
@@ -434,14 +434,14 @@ pub fn generate_castle_moves(
     if check_counter != 0 {
         return;
     }
-    let attackmask = masks::calculate_attackmask(board, board.occupied, !friendly, None);
-    let occupied = board.occupied;
+    let attackmask = masks::calculate_attackmask(board, board.occupied(), !friendly, None);
+    let occupied = board.occupied();
     match friendly {
-        Color::White => {
+        White => {
             const NEED_TO_BE_EMPTY_QUEEN: Bitboard = Bitboard::from_idx([1, 2, 3]);
             const NEED_TO_BE_NOT_ATTACKED_QUEEN: Bitboard = Bitboard::from_idx([2, 3]);
 
-            if board.white_queen_castle
+            if board.white_queen_castle()
                 && NEED_TO_BE_EMPTY_QUEEN & occupied == Bitboard::EMPTY
                 && attackmask & NEED_TO_BE_NOT_ATTACKED_QUEEN == Bitboard::EMPTY
             {
@@ -454,7 +454,7 @@ pub fn generate_castle_moves(
             const NEED_TO_BE_EMPTY_KING: Bitboard = Bitboard::from_idx([5, 6]);
             const NEED_TO_BE_NOT_ATTACKED_KING: Bitboard = Bitboard::from_idx([5, 6]);
 
-            if board.white_king_castle
+            if board.white_king_castle()
                 && NEED_TO_BE_EMPTY_KING & occupied == Bitboard::EMPTY
                 && attackmask & NEED_TO_BE_NOT_ATTACKED_KING == Bitboard::EMPTY
             {
@@ -465,11 +465,11 @@ pub fn generate_castle_moves(
                 ));
             }
         }
-        Color::Black => {
+        Black => {
             const NEED_TO_BE_EMPTY_QUEEN: Bitboard = Bitboard::from_idx([57, 58, 59]);
             const NEED_TO_BE_NOT_ATTACKED_QUEEN: Bitboard = Bitboard::from_idx([58, 59]);
 
-            if board.black_queen_castle
+            if board.black_queen_castle()
                 && NEED_TO_BE_EMPTY_QUEEN & occupied == Bitboard::EMPTY
                 && attackmask & NEED_TO_BE_NOT_ATTACKED_QUEEN == Bitboard::EMPTY
             {
@@ -482,7 +482,7 @@ pub fn generate_castle_moves(
             const NEED_TO_BE_EMPTY_KING: Bitboard = Bitboard::from_idx([61, 62]);
             const NEED_TO_BE_NOT_ATTACKED_KING: Bitboard = Bitboard::from_idx([61, 62]);
 
-            if board.black_king_castle
+            if board.black_king_castle()
                 && NEED_TO_BE_EMPTY_KING & occupied == Bitboard::EMPTY
                 && attackmask & NEED_TO_BE_NOT_ATTACKED_KING == Bitboard::EMPTY
             {
@@ -503,24 +503,24 @@ pub fn generate_ep_moves(
     hv_pinmask: Bitboard,
     diag_pinmask: Bitboard,
 ) {
-    if let Some(ep_target_bit) = board.ep_target {
+    if let Some(ep_target_bit) = board.ep_target() {
         let ep_target = ep_target_bit.to_square();
         let captured_pawn_bit = match friendly {
-            Color::White => ep_target_bit >> 8,
-            Color::Black => ep_target_bit << 8,
+            White => ep_target_bit >> 8,
+            Black => ep_target_bit << 8,
         };
 
-        let all_pawns = board.get_pieces_by_color(friendly, Pawn);
+        let all_pawns = board.figure_bb(friendly, Pawn);
 
         let pawns_not_pinned = all_pawns & !hv_pinmask & !diag_pinmask;
-        let enemy = !board.current_color;
+        let enemy = !board.current_color();
 
         // Using !friendly to get the inverse position from the ep target to our pawns
         // so we can check where actually a pawn from us is there
         let mut possible_not_pinned_pawns: Bitboard =
             normal_targets::PAWN_ATTACK_TARGETS[!friendly as usize][ep_target] & pawns_not_pinned;
         for pawn in possible_not_pinned_pawns.iter_mut() {
-            let occupied_after_ep = (board.occupied & !pawn & !captured_pawn_bit) | ep_target_bit;
+            let occupied_after_ep = (board.occupied() & !pawn & !captured_pawn_bit) | ep_target_bit;
             let attackmask_after_ep = masks::calculate_attackmask(
                 board,
                 occupied_after_ep,
@@ -529,7 +529,7 @@ pub fn generate_ep_moves(
             );
 
             // if not Ep would open open up a check from slider after being deleted
-            if attackmask_after_ep & board.get_king(friendly) == Bitboard::EMPTY {
+            if attackmask_after_ep & board.king(friendly) == Bitboard::EMPTY {
                 quiet_moves.push(EncodedMove::encode(
                     pawn.to_square(),
                     ep_target,
@@ -545,7 +545,7 @@ pub fn generate_ep_moves(
                 & pawns_diag_pinned;
             for pawn in possible_diag_pinned_pawns.iter_mut() {
                 let occupied_after_ep =
-                    (board.occupied & !pawn & !captured_pawn_bit) | ep_target_bit;
+                    (board.occupied() & !pawn & !captured_pawn_bit) | ep_target_bit;
                 let attackmask_after_ep = masks::calculate_attackmask(
                     board,
                     occupied_after_ep,
@@ -553,7 +553,7 @@ pub fn generate_ep_moves(
                     Some(captured_pawn_bit),
                 );
                 // if not Ep would open open up a check from slider after being deleted
-                if attackmask_after_ep & board.get_king(friendly) == Bitboard::EMPTY {
+                if attackmask_after_ep & board.king(friendly) == Bitboard::EMPTY {
                     quiet_moves.push(EncodedMove::encode(
                         pawn.to_square(),
                         ep_target,
