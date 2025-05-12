@@ -401,7 +401,8 @@ pub fn perft_perftree(board: &mut Board, depth: usize) {
         let nodes_for_move = r_perft(&mut b2, depth - 1);
         total_nodes += nodes_for_move;
 
-        println!("{} {}", mv.to_coords(), nodes_for_move,);
+        println!("{} {} ", mv.to_coords(), nodes_for_move,);
     }
+    println!();
     println!("{}", total_nodes);
 }

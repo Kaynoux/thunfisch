@@ -37,7 +37,7 @@ mod tests {
     #[test]
     fn test_legal_move_generation() {
         // adjust to limit the depth
-        const MAX_DEPTH: usize = 5;
+        const MAX_DEPTH: usize = 6;
 
         let fens = [
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", // Initial Pos
