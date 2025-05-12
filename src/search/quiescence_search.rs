@@ -1,7 +1,6 @@
 use crate::move_generator::generator::ARRAY_LENGTH;
 use crate::prelude::*;
 use crate::search::move_ordering;
-use crate::search::search_info::SearchInfo;
 use arrayvec::ArrayVec;
 
 use std::sync::{

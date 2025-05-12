@@ -1,7 +1,6 @@
+use super::move_ordering;
 use crate::prelude::*;
-use crate::search::move_ordering;
 use crate::search::quiescence_search;
-use crate::search::search_info::SearchInfo;
 
 use std::sync::{
     Arc,

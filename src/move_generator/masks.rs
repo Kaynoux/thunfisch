@@ -42,10 +42,21 @@ pub fn calc_check_mask(board: &Board) -> (Bitboard, usize) {
     (checkmask, check_counter)
 }
 
-pub fn calculate_attackmask(board: &Board, occupied: Bitboard, attacker: Color) -> Bitboard {
+/// The captured removed_pawn should be Bit(0) by default
+/// It is only needed when a pawn should be removed from the enemy pawns to cover an happening ep move
+/// See this edge case here https://lichess.org/editor/8/8/8/1Ppp3r/RK3p1k/8/4P1P1/8_w_-_c6_0_5?color=white
+pub fn calculate_attackmask(
+    board: &Board,
+    occupied: Bitboard,
+    attacker: Color,
+    removed_pawn: Option<Bit>,
+) -> Bitboard {
     let mut attacks = Bitboard::EMPTY;
 
     let mut enemy_pawns = board.get_pieces_by_color(attacker, Pawn);
+    if let Some(bit) = removed_pawn {
+        enemy_pawns &= !bit; // Handle ep edge case
+    }
     let mut enemy_knights = board.get_pieces_by_color(attacker, Knight);
     let mut enemy_bishops_queens =
         board.get_pieces_by_color(attacker, Bishop) | board.get_pieces_by_color(attacker, Queen);

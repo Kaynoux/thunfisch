@@ -1,7 +1,4 @@
-use crate::{
-    prelude::*,
-    types::{bitboard, color},
-};
+use crate::prelude::*;
 
 const KNIGHT: i32 = 1;
 const BISHOP: i32 = 1;

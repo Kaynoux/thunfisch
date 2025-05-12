@@ -407,7 +407,7 @@ pub fn generate_king_move(
     let from_bit = board.get_king(friendly);
     let from = from_bit.to_square();
     let occupied_without_king = board.occupied & !from_bit;
-    let attackmask = masks::calculate_attackmask(board, occupied_without_king, !friendly);
+    let attackmask = masks::calculate_attackmask(board, occupied_without_king, !friendly, None);
 
     let potential_targets = normal_targets::KING_TARGETS[from.i()];
     let targets = potential_targets & !attackmask;
@@ -434,7 +434,7 @@ pub fn generate_castle_moves(
     if check_counter != 0 {
         return;
     }
-    let attackmask = masks::calculate_attackmask(board, board.occupied, !friendly);
+    let attackmask = masks::calculate_attackmask(board, board.occupied, !friendly, None);
     let occupied = board.occupied;
     match friendly {
         Color::White => {
@@ -521,7 +521,13 @@ pub fn generate_ep_moves(
             normal_targets::PAWN_ATTACK_TARGETS[!friendly as usize][ep_target] & pawns_not_pinned;
         for pawn in possible_not_pinned_pawns.iter_mut() {
             let occupied_after_ep = (board.occupied & !pawn & !captured_pawn_bit) | ep_target_bit;
-            let attackmask_after_ep = masks::calculate_attackmask(board, occupied_after_ep, enemy);
+            let attackmask_after_ep = masks::calculate_attackmask(
+                board,
+                occupied_after_ep,
+                enemy,
+                Some(captured_pawn_bit),
+            );
+
             // if not Ep would open open up a check from slider after being deleted
             if attackmask_after_ep & board.get_king(friendly) == Bitboard::EMPTY {
                 quiet_moves.push(EncodedMove::encode(
@@ -540,8 +546,12 @@ pub fn generate_ep_moves(
             for pawn in possible_diag_pinned_pawns.iter_mut() {
                 let occupied_after_ep =
                     (board.occupied & !pawn & !captured_pawn_bit) | ep_target_bit;
-                let attackmask_after_ep =
-                    masks::calculate_attackmask(board, occupied_after_ep, enemy);
+                let attackmask_after_ep = masks::calculate_attackmask(
+                    board,
+                    occupied_after_ep,
+                    enemy,
+                    Some(captured_pawn_bit),
+                );
                 // if not Ep would open open up a check from slider after being deleted
                 if attackmask_after_ep & board.get_king(friendly) == Bitboard::EMPTY {
                     quiet_moves.push(EncodedMove::encode(

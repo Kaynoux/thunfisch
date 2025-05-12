@@ -3,7 +3,6 @@ use num_format::ToFormattedString;
 
 use crate::prelude::*;
 use crate::search;
-use crate::search::search_info::SearchInfo;
 use std::time::Instant;
 use std::{
     sync::{

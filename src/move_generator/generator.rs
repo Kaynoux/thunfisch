@@ -1,6 +1,5 @@
 use super::masks;
 use super::moves;
-use super::moves_counter;
 use super::pinmask;
 use crate::prelude::*;
 use arrayvec::ArrayVec;
@@ -89,68 +88,5 @@ impl Board {
             return false;
         }
         true
-    }
-
-    pub fn count_moves(&mut self) -> usize {
-        let mut counter = 0;
-        let friendly = self.current_color;
-
-        // test pin and checkmask = 5rk1/7b/8/r1PP1K2/8/5P2/8/5q2 w - - 0 1
-        let (hv_pinmask, diag_pinmask) = pinmask::generate_pin_masks(self);
-        let pinmask = hv_pinmask | diag_pinmask;
-
-        let (check_mask, check_counter) = masks::calc_check_mask(self);
-
-        // if check count > 2
-        // than only the king can move also calc king evasions
-        // return
-        if check_counter == 2 {
-            counter += moves_counter::generate_king_move(friendly, self);
-
-            return counter;
-        }
-
-        counter += moves_counter::generate_pawn_moves(
-            self,
-            friendly,
-            hv_pinmask,
-            diag_pinmask,
-            check_mask,
-        );
-        counter += moves_counter::generate_knight_moves(pinmask, friendly, self, check_mask);
-        counter += moves_counter::generate_bishop_moves(
-            hv_pinmask,
-            diag_pinmask,
-            friendly,
-            self,
-            check_mask,
-        );
-
-        counter += moves_counter::generate_rook_moves(
-            hv_pinmask,
-            diag_pinmask,
-            friendly,
-            self,
-            check_mask,
-        );
-
-        counter += moves_counter::generate_queen_moves(
-            hv_pinmask,
-            diag_pinmask,
-            friendly,
-            self,
-            check_mask,
-        );
-
-        counter += moves_counter::generate_king_move(friendly, self);
-
-        counter += moves_counter::generate_castle_moves(check_counter, friendly, self);
-        counter += moves_counter::generate_ep_moves(self, friendly, hv_pinmask, diag_pinmask);
-
-        // let mut all_moves = Vec::with_capacity(special_moves.len() + quiet_moves.len());
-        // all_moves.extend_from_slice(&special_moves);
-        // all_moves.extend_from_slice(&quiet_moves);
-
-        counter
     }
 }
