@@ -12,17 +12,17 @@ fn test_en_passant_execution() {
     board.make_move(&ep_move);
 
     assert_eq!(
-        board.pieces[Square::from_coords("d6").unwrap().0],
+        board.figures(Square::from_coords("d6").unwrap()),
         Figure::WhitePawn,
         "EP Test: White pawn should be on d6"
     );
     assert_eq!(
-        board.pieces[Square::from_coords("d5").unwrap().0],
+        board.figures(Square::from_coords("d5").unwrap()),
         Figure::Empty,
         "EP Test: Black captured pawn on d5 should be empty"
     );
     assert_eq!(
-        board.pieces[Square::from_coords("e5").unwrap().0],
+        board.figures(Square::from_coords("e5").unwrap()),
         Figure::Empty,
         "EP Test: White pawn's original square e5 should be empty"
     );

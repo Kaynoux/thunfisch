@@ -33,39 +33,39 @@ impl Board {
         };
         fen.push(color_char);
         fen.push(' ');
-        if self.white_king_castle {
+        if self.white_king_castle() {
             fen.push('K');
         }
-        if self.white_queen_castle {
+        if self.white_queen_castle() {
             fen.push('Q');
         }
-        if self.black_queen_castle {
+        if self.black_queen_castle() {
             fen.push('k');
         }
-        if self.black_king_castle {
+        if self.black_king_castle() {
             fen.push('q');
         }
 
-        if !self.black_king_castle
-            && !self.black_queen_castle
-            && !self.white_queen_castle
-            && !self.white_king_castle
+        if !self.black_king_castle()
+            && !self.black_queen_castle()
+            && !self.white_queen_castle()
+            && !self.white_king_castle()
         {
             fen.push('-');
         }
         fen.push(' ');
 
-        if let Some(ep) = self.ep_target {
+        if let Some(ep) = self.ep_target() {
             fen.push_str(&ep.to_coords());
         } else {
             fen.push('-');
         };
         fen.push(' ');
 
-        fen.push_str(&self.halfmove_clock.to_string());
+        fen.push_str(&self.halfmove_clock().to_string());
         fen.push(' ');
 
-        fen.push_str(&self.total_halfmove_counter.to_string());
+        fen.push_str(&self.total_halfmove_counter().to_string());
 
         fen
     }

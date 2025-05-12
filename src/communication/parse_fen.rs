@@ -29,56 +29,42 @@ impl Board {
                 }
 
                 ch => {
-                    let bit = Bit(1u64 << index as u64);
                     match ch {
                         'p' => {
-                            board.bbs[Figure::BlackPawn as usize] |= bit;
-                            board.pieces[index] = Figure::BlackPawn;
+                            board.toggle(Color::Black, Figure::BlackPawn, Square(index));
                         }
                         'n' => {
-                            board.bbs[Figure::BlackKnight as usize] |= bit;
-                            board.pieces[index] = Figure::BlackKnight;
+                            board.toggle(Color::Black, Figure::BlackKnight, Square(index));
                         }
                         'b' => {
-                            board.bbs[Figure::BlackBishop as usize] |= bit;
-                            board.pieces[index] = Figure::BlackBishop;
+                            board.toggle(Color::Black, Figure::BlackBishop, Square(index));
                         }
                         'r' => {
-                            board.bbs[Figure::BlackRook as usize] |= bit;
-                            board.pieces[index] = Figure::BlackRook;
+                            board.toggle(Color::Black, Figure::BlackRook, Square(index));
                         }
                         'q' => {
-                            board.bbs[Figure::BlackQueen as usize] |= bit;
-                            board.pieces[index] = Figure::BlackQueen;
+                            board.toggle(Color::Black, Figure::BlackQueen, Square(index));
                         }
                         'k' => {
-                            board.bbs[Figure::BlackKing as usize] |= bit;
-                            board.pieces[index] = Figure::BlackKing;
+                            board.toggle(Color::Black, Figure::BlackKing, Square(index));
                         }
-
                         'P' => {
-                            board.bbs[Figure::WhitePawn as usize] |= bit;
-                            board.pieces[index] = Figure::WhitePawn;
+                            board.toggle(Color::White, Figure::WhitePawn, Square(index));
                         }
                         'N' => {
-                            board.bbs[Figure::WhiteKnight as usize] |= bit;
-                            board.pieces[index] = Figure::WhiteKnight;
+                            board.toggle(Color::White, Figure::WhiteKnight, Square(index));
                         }
                         'B' => {
-                            board.bbs[Figure::WhiteBishop as usize] |= bit;
-                            board.pieces[index] = Figure::WhiteBishop;
+                            board.toggle(Color::White, Figure::WhiteBishop, Square(index));
                         }
                         'R' => {
-                            board.bbs[Figure::WhiteRook as usize] |= bit;
-                            board.pieces[index] = Figure::WhiteRook;
+                            board.toggle(Color::White, Figure::WhiteRook, Square(index));
                         }
                         'Q' => {
-                            board.bbs[Figure::WhiteQueen as usize] |= bit;
-                            board.pieces[index] = Figure::WhiteQueen;
+                            board.toggle(Color::White, Figure::WhiteQueen, Square(index));
                         }
                         'K' => {
-                            board.bbs[Figure::WhiteKing as usize] |= bit;
-                            board.pieces[index] = Figure::WhiteKing;
+                            board.toggle(Color::White, Figure::WhiteKing, Square(index));
                         }
                         _ => {}
                     }
@@ -87,28 +73,32 @@ impl Board {
             }
         }
 
-        // All individual bitboards set now calculate the generell bitboards
-        board.recalculate_genereal_bitboards();
-
         // Set Active Color Part
-        board.current_color() = match active_color {
+        board.set_current_color(match active_color {
             "w" => White,
             "b" => Black,
             _ => panic!("Ungültige aktive Farbe in FEN"),
-        };
+        });
 
         // Set Castling bools
-        board.white_queen_castle = castling.contains('Q');
-        board.white_king_castle = castling.contains('K');
-        board.black_king_castle = castling.contains('q');
-        board.black_queen_castle = castling.contains('k');
+        let white_queen_castle = castling.contains('Q');
+        let white_king_castle = castling.contains('K');
+        let black_king_castle = castling.contains('q');
+        let black_queen_castle = castling.contains('k');
+
+        board.set_castling_rights(
+            white_queen_castle,
+            white_king_castle,
+            black_queen_castle,
+            black_king_castle,
+        );
 
         // Set En passant target
-        board.ep_target = if ep_target == "-" {
+        board.set_ep_target(if ep_target == "-" {
             None
         } else {
             Bit::from_coords(ep_target)
-        };
+        });
 
         board.set_halfmove_clock(halfmove.parse().expect("Invalid halfmove clock"));
         board.set_total_halfmove_counter(fullmove.parse().expect("Invalid fullmove counter"));

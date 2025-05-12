@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{move_generator::magics::ROOK_MAGICS, prelude::*};
 
 #[repr(usize)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -13,6 +13,17 @@ pub enum Piece {
 }
 
 impl Piece {
+    pub fn to_polyglot(self) -> usize {
+        match self {
+            Pawn => 0,
+            Knight => 1,
+            Bishop => 2,
+            Rook => 3,
+            Queen => 4,
+            King => 5,
+            Empty => u8::MAX as usize,
+        }
+    }
     /// Returns the correct FIN symbol by matching the piece together with the provided color.
     pub fn to_fin_char(self, color: Color) -> char {
         match (self, color) {
@@ -74,7 +85,7 @@ impl Piece {
         }
     }
 
-    pub fn to_color_piece(self, color: Color) -> Figure {
+    pub const fn to_color_piece(self, color: Color) -> Figure {
         Figure::from_idx((self as usize) * 2 + (color as usize))
     }
 }

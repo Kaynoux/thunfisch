@@ -47,9 +47,11 @@ pub fn quiescence_search(
     move_ordering::order_moves(&mut moves, board);
 
     for mv in moves {
-        board.make_move(&mv.decode());
-        let score = -quiescence_search(board, -beta, -alpha, depth - 1, stop, search_info);
-        board.unmake_move();
+        let mut bc = board.clone();
+        //board.make_move(&mv.decode());
+        bc.make_move(&mv.decode());
+        let score = -quiescence_search(&mut bc, -beta, -alpha, depth - 1, stop, search_info);
+        //board.unmake_move();
 
         if score >= beta {
             return score;

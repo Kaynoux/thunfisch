@@ -280,7 +280,7 @@ pub fn r_perft(board: &mut Board, depth: usize) -> usize {
     for mv in moves {
         board.make_move(&mv.decode());
         nodes += r_perft(board, depth - 1);
-        board.unmake_move();
+        //board.unmake_move();
     }
     nodes
 }

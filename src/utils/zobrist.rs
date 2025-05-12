@@ -5,7 +5,7 @@
 use crate::prelude::*;
 
 pub fn piece_key(color: Color, piece: Piece, square: Square) -> u64 {
-    let piece_idx = piece as usize * 2 + color.to_polyglot();
+    let piece_idx = piece.to_polyglot() * 2 + color.to_polyglot();
     POLYGLOT_KEYS[piece_idx * 64 + square.i()]
 }
 
@@ -35,10 +35,10 @@ pub fn generate_castling_hash(board: &Board) -> u64 {
         hash ^= HASH_WHITE_KING_CASTLE
     }
     if board.black_queen_castle() {
-        hash ^= HASH_WHITE_QUEEN_CASTLE
+        hash ^= HASH_BLACK_QUEEN_CASTLE
     }
     if board.black_king_castle() {
-        hash ^= HASH_WHITE_KING_CASTLE
+        hash ^= HASH_BLACK_KING_CASTLE
     }
 
     hash

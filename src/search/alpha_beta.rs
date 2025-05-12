@@ -58,9 +58,11 @@ pub fn alpha_beta(
     //move_ordering::order_moves(&mut moves, board);
 
     for mv in moves {
-        board.make_move(&mv.decode());
-        let eval = -alpha_beta(board, depth - 1, -beta, -alpha, stop, search_info).1;
-        board.unmake_move();
+        let mut bc = board.clone();
+        //board.make_move(&mv.decode());
+        let eval = -alpha_beta(&mut bc, depth - 1, -beta, -alpha, stop, search_info).1;
+        //board.unmake_move();
+
         if eval > best_eval {
             best_eval = eval;
             best_move = Some(mv);
