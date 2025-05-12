@@ -1,10 +1,12 @@
+use crate::move_generator::generator::ARRAY_LENGTH;
 use crate::prelude::*;
 use crate::search::mvv_lva::MVV_LVA_TABLE;
+use arrayvec::ArrayVec;
 use std::cmp::Reverse;
 
 const CAPTURE_BONUS: i32 = 1024;
 
-pub fn order_moves(moves: &mut Vec<EncodedMove>, board: &Board) {
+pub fn order_moves(moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>, board: &Board) {
     moves.sort_unstable_by_key(|encoded_mv| {
         let mv = encoded_mv.decode();
         let mv_type = mv.mv_type;

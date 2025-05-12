@@ -76,4 +76,138 @@ mod tests {
 
         // let perft_results = [[20, 400, 8902, 197281, 4865609], []]
     }
+
+    // #[test]
+    // fn test_fen_parsing_specifics() {
+    //     // FEN with specific castling rights, en passant target, and side to move
+    //     let fen = "rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R b KQkq e3 0 2";
+    //     let board = Board::from_fen(fen);
+
+    //     assert_eq!(
+    //         board.current_color,
+    //         Color::Black,
+    //         "FEN Parsing: Current color should be Black"
+    //     );
+    //     assert!(
+    //         board.white_king_castle,
+    //         "FEN Parsing: White kingside castling should be possible"
+    //     );
+    //     assert!(
+    //         board.white_queen_castle,
+    //         "FEN Parsing: White queenside castling should be possible"
+    //     );
+    //     assert!(
+    //         board.black_king_castle,
+    //         "FEN Parsing: Black kingside castling should be possible"
+    //     );
+    //     assert!(
+    //         board.black_queen_castle,
+    //         "FEN Parsing: Black queenside castling should be possible"
+    //     );
+    //     assert_eq!(
+    //         board.ep_target,
+    //         Some(Square::from_coords("e3").unwrap().to_bit()),
+    //         "FEN Parsing: En passant target should be e3"
+    //     );
+    //     assert_eq!(
+    //         board.halfmove_clock, 0,
+    //         "FEN Parsing: Halfmove clock should be 0"
+    //     );
+    //     assert_eq!(
+    //         board.total_halfmove_counter, 4,
+    //         "FEN Parsing: Fullmove number should be 2 (means 4 halfmoves if starting from 0)"
+    //     ); // Assuming total_halfmove_counter is ply
+    //     assert_eq!(
+    //         board.pieces[Square::from_coords("e4").unwrap().0],
+    //         Figure::WhitePawn,
+    //         "FEN Parsing: Piece at e4 should be White Pawn"
+    //     );
+    //     assert_eq!(
+    //         board.pieces[Square::from_coords("c5").unwrap().0],
+    //         Figure::BlackPawn,
+    //         "FEN Parsing: Piece at c5 should be Black Pawn"
+    //     );
+    //     assert_eq!(
+    //         board.pieces[Square::from_coords("f3").unwrap().0],
+    //         Figure::WhiteKnight,
+    //         "FEN Parsing: Piece at f3 should be White Knight"
+    //     );
+    // }
+
+    #[test]
+    fn test_checkmate_detection() {
+        // Fool's mate
+        let mut board =
+            Board::from_fen("rnbqkbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq - 0 2");
+        // Black moves Qh4#
+        let mv = DecodedMove::from_coords("d8h4".to_string(), &board);
+        board.make_move(&mv);
+
+        assert!(
+            board.is_in_check(),
+            "Checkmate Test: White should be in check"
+        );
+        let white_moves = board.generate_moves(false);
+        assert!(
+            white_moves.is_empty(),
+            "Checkmate Test: White should have no legal moves"
+        );
+        // Add a specific is_checkmate() if available, otherwise the two asserts above are a good proxy
+    }
+
+    // #[test]
+    // fn test_stalemate_detection() {
+    //     // King in the corner, queen prevents all moves
+    //     let mut board = Board::from_fen("k7/8/8/8/8/8/5Q2/K7 b - - 0 1");
+    //     // It's Black's turn, Black is not in check, but has no legal moves.
+    //     assert!(
+    //         !board.is_in_check(),
+    //         "Stalemate Test: Black should not be in check"
+    //     );
+    //     let black_moves = board.generate_moves(false);
+    //     assert!(
+    //         black_moves.is_empty(),
+    //         "Stalemate Test: Black should have no legal moves, resulting in stalemate"
+    //     );
+    //     // Add a specific is_stalemate() if available
+    // }
+
+    #[test]
+    fn test_en_passant_execution() {
+        let mut board =
+            Board::from_fen("rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2");
+        // White pawn at e5, Black pawn just moved d7-d5, ep target is d6.
+        // White captures en passant e5xd6
+        let ep_move = DecodedMove {
+            from: Square::from_coords("e5").unwrap(),
+            to: Square::from_coords("d6").unwrap(),
+            mv_type: MoveType::EpCapture,
+        };
+        board.make_move(&ep_move);
+
+        assert_eq!(
+            board.pieces[Square::from_coords("d6").unwrap().0],
+            Figure::WhitePawn,
+            "EP Test: White pawn should be on d6"
+        );
+        assert_eq!(
+            board.pieces[Square::from_coords("d5").unwrap().0],
+            Figure::Empty,
+            "EP Test: Black captured pawn on d5 should be empty"
+        );
+        assert_eq!(
+            board.pieces[Square::from_coords("e5").unwrap().0],
+            Figure::Empty,
+            "EP Test: White pawn's original square e5 should be empty"
+        );
+        assert_eq!(
+            board.current_color,
+            Color::Black,
+            "EP Test: Color to move should be Black"
+        );
+        assert_eq!(
+            board.ep_target, None,
+            "EP Test: En passant target should be cleared"
+        );
+    }
 }

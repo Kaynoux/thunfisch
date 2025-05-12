@@ -1,6 +1,8 @@
+use crate::move_generator::generator::ARRAY_LENGTH;
 use crate::prelude::*;
 use crate::search::move_ordering;
 use crate::search::search_info::SearchInfo;
+use arrayvec::ArrayVec;
 
 use std::sync::{
     Arc,
@@ -37,7 +39,7 @@ pub fn quiescence_search(
         alpha = stand_pat_score;
     }
 
-    let mut moves: Vec<EncodedMove> = if board.is_in_check() {
+    let mut moves: ArrayVec<EncodedMove, ARRAY_LENGTH> = if board.is_in_check() {
         board.generate_moves(false)
     } else {
         board.generate_moves(true)

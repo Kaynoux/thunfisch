@@ -107,6 +107,7 @@ dependencies = [
 name = "rusty-chess-bot"
 version = "0.1.0"
 dependencies = [
+ "arrayvec",
  "colored",
  "const_for",
  "log",

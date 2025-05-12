@@ -6,6 +6,15 @@ pub enum Color {
     Black = 1usize,
 }
 
+impl Color {
+    pub fn to_polyglot(self) -> usize {
+        match self {
+            Color::Black => 0,
+            Color::White => 1,
+        }
+    }
+}
+
 impl Not for Color {
     type Output = Self;
     #[inline(always)]

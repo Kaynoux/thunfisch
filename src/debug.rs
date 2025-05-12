@@ -1,4 +1,6 @@
+use crate::move_generator::generator::ARRAY_LENGTH;
 use crate::prelude::*;
+use arrayvec::ArrayVec;
 use colored;
 use colored::Colorize;
 use num_format::{Locale, ToFormattedString};
@@ -6,7 +8,7 @@ use rayon::prelude::*;
 use std::collections::HashMap;
 use std::time::Instant;
 
-pub fn print_board(board: &Board, moves: Option<&Vec<EncodedMove>>) {
+pub fn print_board(board: &Board, moves: Option<&ArrayVec<EncodedMove, ARRAY_LENGTH>>) {
     println!(
         "Current Color: {:?} Halfmove Clock: {} Fullmove Counter: {}",
         board.current_color, board.halfmove_clock, board.total_halfmove_counter
@@ -38,7 +40,10 @@ pub fn print_board(board: &Board, moves: Option<&Vec<EncodedMove>>) {
     println!("-------------------");
 }
 
-fn get_char_board(board: &Board, moves: Option<&Vec<EncodedMove>>) -> [(char, &'static str); 64] {
+fn get_char_board(
+    board: &Board,
+    moves: Option<&ArrayVec<EncodedMove, ARRAY_LENGTH>>,
+) -> [(char, &'static str); 64] {
     let mut char_board = [(' ', "white"); 64];
     for y in 0usize..=7usize {
         for x in 0usize..=7usize {
@@ -73,7 +78,7 @@ pub fn group_moves_by_type(moves: &[EncodedMove]) -> HashMap<MoveType, Vec<Encod
     map
 }
 
-pub fn print_moves(board: &Board, moves: &Vec<EncodedMove>) {
+pub fn print_moves(board: &Board, moves: &ArrayVec<EncodedMove, ARRAY_LENGTH>) {
     println!("total moves = {}", moves.len());
     let moves_by_type = group_moves_by_type(moves);
 

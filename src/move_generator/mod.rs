@@ -4,6 +4,7 @@ pub mod lookup_tables;
 pub mod magics;
 pub mod masks;
 pub mod moves;
+pub mod moves_counter;
 pub mod normal_targets;
 pub mod pinmask;
 pub mod sliding_targets;

@@ -6,6 +6,7 @@ mod search;
 mod test;
 mod types;
 mod uci;
+mod zobrist;
 fn main() {
     // Starts UCI Communication via std in and out
     uci::handle_uci_communication();

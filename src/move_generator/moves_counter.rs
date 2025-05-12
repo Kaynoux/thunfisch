@@ -1,19 +1,16 @@
-use super::generator::ARRAY_LENGTH;
 use super::masks;
 use super::normal_targets;
 use super::sliding_targets;
 use crate::prelude::*;
-use arrayvec::ArrayVec;
 
 pub fn generate_pawn_moves(
-    quiet_moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
-
     board: &Board,
     friendly: Color,
     hv_pinmask: Bitboard,
     diag_pinmask: Bitboard,
     check_mask: Bitboard,
-) {
+) -> usize {
+    let mut counter = 0;
     let empty = board.get_empty();
     let enemy = board.get_pieces_without_king(!friendly);
 
@@ -49,18 +46,13 @@ pub fn generate_pawn_moves(
         let quiet_target_1 = potential_quiet_target_1 & empty & check_mask;
 
         if quiet_target_1 != Bit(0) {
-            quiet_moves.push(EncodedMove::encode(
-                from,
-                quiet_target_1.to_square(),
-                MoveType::Quiet,
-            ));
+            counter += 1;
         }
 
         let mut capture_targets =
             normal_targets::PAWN_ATTACK_TARGETS[friendly as usize][from] & enemy & check_mask;
         for to_bit in capture_targets.iter_mut() {
-            let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
+            counter += 1;
         }
     }
 
@@ -71,11 +63,7 @@ pub fn generate_pawn_moves(
         let target_1 = potential_target & empty & check_mask & hv_pinmask;
 
         if target_1 != Bit(0) {
-            quiet_moves.push(EncodedMove::encode(
-                from,
-                target_1.to_square(),
-                MoveType::Quiet,
-            ));
+            counter += 1;
         }
     }
 
@@ -86,8 +74,7 @@ pub fn generate_pawn_moves(
             & check_mask
             & diag_pinmask;
         for to_bit in capture_targets.iter_mut() {
-            let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
+            counter += 1;
         }
     }
     for from_bit in pawns_double_not_pinned.iter_mut() {
@@ -99,11 +86,7 @@ pub fn generate_pawn_moves(
             normal_targets::pawn_quiet_double_target(from_bit, friendly) & empty & check_mask;
 
         if between_pos != Bit(0) && to_pos != Bit(0) {
-            quiet_moves.push(EncodedMove::encode(
-                from,
-                to_pos.to_square(),
-                MoveType::DoubleMove,
-            ));
+            counter += 1;
         }
     }
 
@@ -118,11 +101,7 @@ pub fn generate_pawn_moves(
             & hv_pinmask;
 
         if between_pos != Bit(0) && to_pos != Bit(0) {
-            quiet_moves.push(EncodedMove::encode(
-                from,
-                to_pos.to_square(),
-                MoveType::DoubleMove,
-            ));
+            counter += 1;
         }
     }
 
@@ -134,20 +113,13 @@ pub fn generate_pawn_moves(
 
         if quiet_target_1 != Bit(0) {
             let to_1 = quiet_target_1.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to_1, MoveType::QueenPromo));
-            quiet_moves.push(EncodedMove::encode(from, to_1, MoveType::RookPromo));
-            quiet_moves.push(EncodedMove::encode(from, to_1, MoveType::BishopPromo));
-            quiet_moves.push(EncodedMove::encode(from, to_1, MoveType::KnightPromo));
+            counter += 4;
         }
 
         let mut capture_targets =
             normal_targets::PAWN_ATTACK_TARGETS[friendly as usize][from] & enemy & check_mask;
         for to_bit in capture_targets.iter_mut() {
-            let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::QueenPromoCapture));
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::RookPromoCapture));
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::BishopPromoCapture));
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::KnightPromoCapture));
+            counter += 4;
         }
     }
     for from_bit in pawns_promotion_hv_pinned.iter_mut() {
@@ -158,10 +130,7 @@ pub fn generate_pawn_moves(
 
         if target_1 != Bit(0) {
             let to_1 = target_1.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to_1, MoveType::QueenPromo));
-            quiet_moves.push(EncodedMove::encode(from, to_1, MoveType::RookPromo));
-            quiet_moves.push(EncodedMove::encode(from, to_1, MoveType::BishopPromo));
-            quiet_moves.push(EncodedMove::encode(from, to_1, MoveType::KnightPromo));
+            counter += 4;
         }
     }
 
@@ -172,24 +141,21 @@ pub fn generate_pawn_moves(
             & check_mask
             & diag_pinmask;
         for to_bit in capture_targets.iter_mut() {
-            let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::QueenPromoCapture));
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::RookPromoCapture));
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::BishopPromoCapture));
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::KnightPromoCapture));
+            counter += 4;
         }
     }
+
+    counter
 }
 
 pub fn generate_knight_moves(
-    quiet_moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
-
     pinmask: Bitboard,
     friendly: Color,
     board: &Board,
     check_mask: Bitboard,
-) {
+) -> usize {
     // test-fen https://lichess.org/editor/8/8/8/3n4/8/2N5/8/8_w_-_-_0_1?color=white
+    let mut counter = 0;
     let mut knights = board.get_pieces_by_color(friendly, Knight);
     for from_bit in knights.iter_mut() {
         let from = from_bit.to_square();
@@ -202,27 +168,28 @@ pub fn generate_knight_moves(
         let mut quiet_targets = targets & board.get_empty();
         for to_bit in quiet_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+            counter += 1;
         }
 
         let mut capture_targets = targets & board.get_pieces_without_king(!friendly);
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
+            counter += 1;
         }
     }
+
+    counter
 }
 
 pub fn generate_bishop_moves(
-    quiet_moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
-
     hv_pinmask: Bitboard,
     diag_pinmask: Bitboard,
     friendly: Color,
     board: &Board,
     check_mask: Bitboard,
-) {
+) -> usize {
     //test-fen https://lichess.org/editor/8/8/8/3b4/8/2B5/8/8_w_-_-_0_1?color=white
+    let mut counter = 0;
     let empty = board.get_empty();
     let enemy = board.get_pieces_without_king(!friendly);
     let occupied = board.occupied;
@@ -239,13 +206,13 @@ pub fn generate_bishop_moves(
         let mut quiet_targets = targets & empty;
         for to_bit in quiet_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+            counter += 1;
         }
 
         let mut capture_targets = targets & enemy;
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
+            counter += 1;
         }
     }
 
@@ -257,27 +224,27 @@ pub fn generate_bishop_moves(
         let mut quiet_targets = targets & empty;
         for to_bit in quiet_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+            counter += 1;
         }
 
         let mut capture_targets = targets & enemy;
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
+            counter += 1;
         }
     }
+    counter
 }
 
 pub fn generate_rook_moves(
-    quiet_moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
-
     hv_pinmask: Bitboard,
     diag_pinmask: Bitboard,
     friendly: Color,
     board: &Board,
     check_mask: Bitboard,
-) {
+) -> usize {
     // test-fen https://lichess.org/editor/8/8/8/3r4/8/2R5/8/8_w_-_-_0_1?color=white
+    let mut counter = 0;
     let empty = board.get_empty();
     let enemy = board.get_pieces_without_king(!friendly);
     let occupied = board.occupied;
@@ -294,13 +261,13 @@ pub fn generate_rook_moves(
         let mut quiet_targets = targets & empty;
         for to_bit in quiet_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+            counter += 1;
         }
 
         let mut capture_targets = targets & enemy;
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
+            counter += 1;
         }
     }
 
@@ -312,27 +279,28 @@ pub fn generate_rook_moves(
         let mut quiet_targets = targets & empty;
         for to_bit in quiet_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+            counter += 1;
         }
 
         let mut capture_targets = targets & enemy;
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
+            counter += 1;
         }
     }
+
+    counter
 }
 
 pub fn generate_queen_moves(
-    quiet_moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
-
     hv_pinmask: Bitboard,
     diag_pinmask: Bitboard,
     friendly: Color,
     board: &Board,
     check_mask: Bitboard,
-) {
+) -> usize {
     // test-fen https://lichess.org/editor/8/8/8/3q4/8/2Q5/8/8_w_-_-_0_1?color=white
+    let mut counter = 0;
     let empty = board.get_empty();
     let enemy = board.get_pieces_without_king(!friendly);
     let occupied = board.occupied;
@@ -351,13 +319,13 @@ pub fn generate_queen_moves(
         let mut quiet_targets = targets & empty;
         for to_bit in quiet_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+            counter += 1;
         }
 
         let mut capture_targets = targets & enemy;
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
+            counter += 1;
         }
     }
 
@@ -369,13 +337,13 @@ pub fn generate_queen_moves(
         let mut quiet_targets = targets & empty;
         for to_bit in quiet_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+            counter += 1;
         }
 
         let mut capture_targets = targets & enemy;
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
+            counter += 1;
         }
     }
 
@@ -387,23 +355,21 @@ pub fn generate_queen_moves(
         let mut quiet_targets = targets & empty;
         for to_bit in quiet_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+            counter += 1;
         }
 
         let mut capture_targets = targets & enemy;
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
+            counter += 1;
         }
     }
+
+    counter
 }
 
-pub fn generate_king_move(
-    quiet_moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
-
-    friendly: Color,
-    board: &Board,
-) {
+pub fn generate_king_move(friendly: Color, board: &Board) -> usize {
+    let mut counter = 0;
     let from_bit = board.get_king(friendly);
     let from = from_bit.to_square();
     let occupied_without_king = board.occupied & !from_bit;
@@ -415,24 +381,22 @@ pub fn generate_king_move(
     let mut quiet_targets = targets & board.get_empty();
     for to_bit in quiet_targets.iter_mut() {
         let to = to_bit.to_square();
-        quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+        counter += 1;
     }
 
     let mut capture_targets = targets & board.get_pieces_without_king(!friendly);
     for to_bit in capture_targets.iter_mut() {
         let to = to_bit.to_square();
-        quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
+        counter += 1;
     }
+
+    counter
 }
 
-pub fn generate_castle_moves(
-    quiet_moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
-    check_counter: usize,
-    friendly: Color,
-    board: &Board,
-) {
+pub fn generate_castle_moves(check_counter: usize, friendly: Color, board: &Board) -> usize {
+    let mut counter = 0;
     if check_counter != 0 {
-        return;
+        return 0;
     }
     let attackmask = masks::calculate_attackmask(board, board.occupied, !friendly);
     let occupied = board.occupied;
@@ -445,11 +409,7 @@ pub fn generate_castle_moves(
                 && NEED_TO_BE_EMPTY_QUEEN & occupied == Bitboard::EMPTY
                 && attackmask & NEED_TO_BE_NOT_ATTACKED_QUEEN == Bitboard::EMPTY
             {
-                quiet_moves.push(EncodedMove::encode(
-                    Square(4),
-                    Square(2),
-                    MoveType::QueenCastle,
-                ));
+                counter += 1;
             }
             const NEED_TO_BE_EMPTY_KING: Bitboard = Bitboard::from_idx([5, 6]);
             const NEED_TO_BE_NOT_ATTACKED_KING: Bitboard = Bitboard::from_idx([5, 6]);
@@ -458,11 +418,7 @@ pub fn generate_castle_moves(
                 && NEED_TO_BE_EMPTY_KING & occupied == Bitboard::EMPTY
                 && attackmask & NEED_TO_BE_NOT_ATTACKED_KING == Bitboard::EMPTY
             {
-                quiet_moves.push(EncodedMove::encode(
-                    Square(4),
-                    Square(6),
-                    MoveType::KingCastle,
-                ));
+                counter += 1;
             }
         }
         Color::Black => {
@@ -473,11 +429,7 @@ pub fn generate_castle_moves(
                 && NEED_TO_BE_EMPTY_QUEEN & occupied == Bitboard::EMPTY
                 && attackmask & NEED_TO_BE_NOT_ATTACKED_QUEEN == Bitboard::EMPTY
             {
-                quiet_moves.push(EncodedMove::encode(
-                    Square(60),
-                    Square(58),
-                    MoveType::QueenCastle,
-                ));
+                counter += 1;
             }
             const NEED_TO_BE_EMPTY_KING: Bitboard = Bitboard::from_idx([61, 62]);
             const NEED_TO_BE_NOT_ATTACKED_KING: Bitboard = Bitboard::from_idx([61, 62]);
@@ -486,24 +438,22 @@ pub fn generate_castle_moves(
                 && NEED_TO_BE_EMPTY_KING & occupied == Bitboard::EMPTY
                 && attackmask & NEED_TO_BE_NOT_ATTACKED_KING == Bitboard::EMPTY
             {
-                quiet_moves.push(EncodedMove::encode(
-                    Square(60),
-                    Square(62),
-                    MoveType::KingCastle,
-                ));
+                counter += 1;
             }
         }
     }
+    counter
 }
 
 pub fn generate_ep_moves(
     board: &Board,
-    quiet_moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
+
     friendly: Color,
     hv_pinmask: Bitboard,
     diag_pinmask: Bitboard,
-) {
+) -> usize {
     if let Some(ep_target_bit) = board.ep_target {
+        let mut counter = 0;
         let ep_target = ep_target_bit.to_square();
         let captured_pawn_bit = match friendly {
             Color::White => ep_target_bit >> 8,
@@ -524,11 +474,7 @@ pub fn generate_ep_moves(
             let attackmask_after_ep = masks::calculate_attackmask(board, occupied_after_ep, enemy);
             // if not Ep would open open up a check from slider after being deleted
             if attackmask_after_ep & board.get_king(friendly) == Bitboard::EMPTY {
-                quiet_moves.push(EncodedMove::encode(
-                    pawn.to_square(),
-                    ep_target,
-                    MoveType::EpCapture,
-                ));
+                counter += 1;
             }
         }
 
@@ -544,15 +490,13 @@ pub fn generate_ep_moves(
                     masks::calculate_attackmask(board, occupied_after_ep, enemy);
                 // if not Ep would open open up a check from slider after being deleted
                 if attackmask_after_ep & board.get_king(friendly) == Bitboard::EMPTY {
-                    quiet_moves.push(EncodedMove::encode(
-                        pawn.to_square(),
-                        ep_target,
-                        MoveType::EpCapture,
-                    ));
+                    counter += 1;
                 }
             }
         }
-
+        counter
         // hv pinned pawns are ignored because they cannot do ep capture because it needs a diagnoal move
+    } else {
+        0
     }
 }
