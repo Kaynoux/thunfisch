@@ -118,13 +118,12 @@ pub fn handle_uci_communication() {
             }
             Some("pinmask") => {
                 let (hv_pinmask, diag_pinmask) = pinmask::generate_pin_masks(&board);
-                println!("Pin Mask");
                 println!("{:?}", hv_pinmask | diag_pinmask);
             }
             Some("checkmask") => {
                 let (check_mask, check_counter) = masks::calc_check_mask(&board);
 
-                println!("Check Mask: {}", check_counter);
+                println!("Check Counter: {}", check_counter);
                 println!("{:?}", check_mask);
             }
             Some("attackmask") => {
@@ -134,8 +133,19 @@ pub fn handle_uci_communication() {
                     !board.current_color(),
                     None,
                 );
-                println!("Attack Mask:");
                 println!("{:?}", attackmask);
+            }
+            Some("empty") => {
+                println!("{:?}", board.empty());
+            }
+            Some("white") => {
+                println!("{:?}", board.color_bbs(White));
+            }
+            Some("black") => {
+                println!("{:?}", board.color_bbs(Black));
+            }
+            Some("occupied") => {
+                println!("{:?}", board.occupied());
             }
             Some("quit") => break,
             Some(cmd) => {

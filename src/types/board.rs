@@ -78,7 +78,7 @@ impl Board {
     }
 
     pub fn figures(&self, square: Square) -> Figure {
-        self.figures[square]
+        self.figures[square.i()]
     }
 
     pub fn all_figures(&self) -> [Figure; 64] {
@@ -286,8 +286,8 @@ impl Board {
         if mv.mv_type == MoveType::DoubleMove {
             //self.hash ^= zobrist::ep_key(mv.from.x()); // Add new ep
             self.ep_target = match friendly {
-                White => Some(Square(mv.from.0 - 8).to_bit()),
-                Black => Some(Square(mv.from.0 + 8).to_bit()),
+                White => Some(Square(mv.to.0 - 8).to_bit()),
+                Black => Some(Square(mv.to.0 + 8).to_bit()),
             }
         } else {
             self.ep_target = None;
