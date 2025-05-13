@@ -21,7 +21,7 @@ impl Piece {
             Rook => 3,
             Queen => 4,
             King => 5,
-            Empty => u8::MAX as usize,
+            Empty => usize::MAX,
         }
     }
     /// Returns the correct FIN symbol by matching the piece together with the provided color.

@@ -22,10 +22,9 @@ pub fn r_detailed_perft(
     let mut nodes = 0;
     let moves = board.generate_moves(false);
     for encoded_mv in moves {
-        let mut b2 = board.clone();
-        b2.make_move(&encoded_mv.decode());
+        board.make_move(&encoded_mv.decode());
         nodes += r_detailed_perft(
-            &mut b2,
+            board,
             depth - 1,
             captures,
             normal_promotions,
@@ -35,7 +34,7 @@ pub fn r_detailed_perft(
             ep_captures,
             double_moves,
         );
-
+        board.unmake_move();
         let mv = encoded_mv.decode();
         let mv_type = mv.mv_type;
 
@@ -99,10 +98,9 @@ pub fn perft_debug(board: &mut Board, depth: usize) {
     let moves = board.generate_moves(false);
     for encoded_mv in &moves {
         let mv = encoded_mv.decode();
-        let mut b2 = board.clone();
-        b2.make_move(&mv);
+        board.make_move(&mv);
         let nodes_for_move = r_detailed_perft(
-            &mut b2,
+            board,
             depth - 1,
             &mut captures,
             &mut normal_promotions,
@@ -112,6 +110,7 @@ pub fn perft_debug(board: &mut Board, depth: usize) {
             &mut ep_captures,
             &mut double_moves,
         );
+        board.unmake_move();
         total_nodes += nodes_for_move;
 
         let mv_type = mv.mv_type;
@@ -240,30 +239,14 @@ pub fn r_perft_rayon(board: &mut Board, depth: usize) -> usize {
         .sum::<usize>()
 }
 
-pub fn perft_test(board: &mut Board, depth: usize) {
+pub fn perft_perftree_format(board: &mut Board, depth: usize) {
     let mut total_nodes = 0;
     let moves = board.generate_moves(false);
     for encoded_mv in &moves {
         let mv = encoded_mv.decode();
-        let mut b2 = board.clone();
-        b2.make_move(&mv);
-        let nodes_for_move = r_perft(&mut b2, depth - 1);
-        total_nodes += nodes_for_move;
-
-        println!("{} {}", mv.to_coords(), nodes_for_move,);
-    }
-    println!();
-    println!("Nodes searched: {}", total_nodes);
-}
-
-pub fn perft_perftree(board: &mut Board, depth: usize) {
-    let mut total_nodes = 0;
-    let moves = board.generate_moves(false);
-    for encoded_mv in &moves {
-        let mv = encoded_mv.decode();
-        let mut b2 = board.clone();
-        b2.make_move(&mv);
-        let nodes_for_move = r_perft(&mut b2, depth - 1);
+        board.make_move(&mv);
+        let nodes_for_move = r_perft(board, depth - 1);
+        board.unmake_move();
         total_nodes += nodes_for_move;
 
         println!("{} {} ", mv.to_coords(), nodes_for_move,);
@@ -277,10 +260,15 @@ pub fn r_perft(board: &mut Board, depth: usize) -> usize {
     }
     let mut nodes = 0;
     let moves = board.generate_moves(false);
+
+    if depth == 1 {
+        return moves.len();
+    }
+
     for mv in moves {
         board.make_move(&mv.decode());
         nodes += r_perft(board, depth - 1);
-        //board.unmake_move();
+        board.unmake_move();
     }
     nodes
 }

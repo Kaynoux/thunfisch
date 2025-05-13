@@ -28,7 +28,7 @@ impl DecodedMove {
 
         let mut mv_type = MoveType::Quiet;
 
-        let from_str = &move_str[0..4];
+        let from_str = &move_str[0..2];
         let to_str = &move_str[2..4];
 
         let from_pos =
@@ -52,7 +52,7 @@ impl DecodedMove {
             mv_type = MoveType::KingCastle;
         }
 
-        if from_piece == Pawn && from_pos.to_y().abs_diff(to_pos.to_y()) == 1 && to_piece == Empty {
+        if from_piece == Pawn && from_pos.to_x().abs_diff(to_pos.to_x()) == 1 && to_piece == Empty {
             mv_type = MoveType::EpCapture;
         }
 

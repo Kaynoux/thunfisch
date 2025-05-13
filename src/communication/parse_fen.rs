@@ -102,6 +102,7 @@ impl Board {
 
         board.set_halfmove_clock(halfmove.parse().expect("Invalid halfmove clock"));
         board.set_total_halfmove_counter(fullmove.parse().expect("Invalid fullmove counter"));
+        board.generate_hash();
 
         board
     }

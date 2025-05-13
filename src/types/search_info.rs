@@ -5,4 +5,7 @@ pub struct SearchInfo {
     pub total_qs_nodes: usize,
     pub stop_signal: Arc<AtomicBool>,
     pub timeout_occurred: bool,
+    pub tt_probes: usize,
+    pub tt_hits: usize,
+    pub tt_stores: usize,
 }

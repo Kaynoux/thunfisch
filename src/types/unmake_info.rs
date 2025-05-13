@@ -10,4 +10,5 @@ pub struct UnmakeInfo {
     pub white_king_castle: bool,
     pub ep_target: Option<Bit>,
     pub halfmove_clock: usize,
+    pub hash: u64,
 }

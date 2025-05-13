@@ -1,6 +1,9 @@
 use crate::move_generator::generator::ARRAY_LENGTH;
 use crate::prelude::*;
-use crate::search::move_ordering;
+use crate::search::{
+    move_ordering,
+    transposition_table::{TTFlag, TranspositionTable},
+};
 use arrayvec::ArrayVec;
 
 use std::sync::{
@@ -15,22 +18,44 @@ pub fn quiescence_search(
     depth: usize,
     stop: &Arc<AtomicBool>,
     search_info: &mut SearchInfo,
+    tt: &mut TranspositionTable,
 ) -> i32 {
     search_info.total_qs_nodes += 1;
 
+    let key = board.hash();
+    let alpha_orig = alpha;
+    if depth > 0 {
+        search_info.tt_probes += 1;
+        if let Some(entry) = tt.probe(key, depth as u8) {
+            search_info.tt_hits += 1;
+            match entry.flag {
+                TTFlag::Exact => return entry.eval,
+                TTFlag::LowerBound => alpha = alpha.max(entry.eval),
+                TTFlag::UpperBound => {
+                    if entry.eval <= alpha {
+                        return entry.eval;
+                    }
+                }
+            }
+        }
+    }
+
     if search_info.total_alpha_beta_nodes % 32768 == 0 && stop.load(Ordering::Relaxed) {
-        search_info.timeout_occurred = true;
         return 0;
     }
 
     if depth == 0 {
-        return board.evaluate();
+        let eval = board.evaluate();
+        tt.store(key, 0, eval, TTFlag::Exact, None);
+        return eval;
     }
 
     let stand_pat_score = board.evaluate();
     let mut best_score = stand_pat_score;
 
     if stand_pat_score >= beta {
+        search_info.tt_stores += 1;
+        tt.store(key, depth as u8, stand_pat_score, TTFlag::LowerBound, None);
         return stand_pat_score;
     }
 
@@ -47,13 +72,13 @@ pub fn quiescence_search(
     move_ordering::order_moves(&mut moves, board);
 
     for mv in moves {
-        let mut bc = board.clone();
-        //board.make_move(&mv.decode());
-        bc.make_move(&mv.decode());
-        let score = -quiescence_search(&mut bc, -beta, -alpha, depth - 1, stop, search_info);
-        //board.unmake_move();
+        board.make_move(&mv.decode());
+        let score = -quiescence_search(board, -beta, -alpha, depth - 1, stop, search_info, tt);
+        board.unmake_move();
 
         if score >= beta {
+            search_info.tt_stores += 1;
+            tt.store(key, depth as u8, score, TTFlag::LowerBound, None);
             return score;
         }
         if score > best_score {
@@ -63,6 +88,16 @@ pub fn quiescence_search(
             alpha = score
         }
     }
+
+    let flag = if best_score <= alpha_orig {
+        TTFlag::UpperBound
+    } else if best_score >= beta {
+        TTFlag::LowerBound
+    } else {
+        TTFlag::Exact
+    };
+    search_info.tt_stores += 1;
+    tt.store(key, depth as u8, best_score, flag, None);
 
     best_score
 }

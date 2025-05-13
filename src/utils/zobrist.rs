@@ -4,17 +4,18 @@
 
 use crate::prelude::*;
 
-pub fn piece_key(color: Color, piece: Piece, square: Square) -> u64 {
-    let piece_idx = piece.to_polyglot() * 2 + color.to_polyglot();
-    POLYGLOT_KEYS[piece_idx * 64 + square.i()]
+pub fn figure_key(figure: Figure, square: Square) -> u64 {
+    let figure_idx = figure.to_polyglot();
+    POLYGLOT_KEYS[figure_idx * 64 + square.i()]
 }
 
 pub const fn castling_rights_key(idx: usize) -> u64 {
     POLYGLOT_KEYS[768 + idx]
 }
 
-pub fn ep_key(y: usize) -> u64 {
-    POLYGLOT_KEYS[772 + y]
+pub fn ep_key(ep_target: Square) -> u64 {
+    let x = ep_target.x();
+    POLYGLOT_KEYS[772 + x]
 }
 
 pub const fn white_move_key() -> u64 {

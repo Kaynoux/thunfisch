@@ -50,6 +50,10 @@ https://share.firefox.dev/44sKTqO
 Macbook
 Perft: Depth=8 Nodes=84,998,978,956 Time=281.161s Nodes/sec=302,313,997
 
+With toggle make / unmake move
+go perft 7 --rayon
+Perft: Depth=7 Nodes=3,195,901,860 Time=6.241s Nodes/sec=512,120,582
+
 scc --include-ext rs .
 
 WHY DOES RUST NOT HAVE const operators for custom typesa

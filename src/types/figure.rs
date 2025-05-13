@@ -19,6 +19,24 @@ pub enum Figure {
 }
 
 impl Figure {
+    pub const fn to_polyglot(self) -> usize {
+        match self {
+            Figure::BlackPawn => 0,
+            Figure::WhitePawn => 1,
+            Figure::BlackKnight => 2,
+            Figure::WhiteKnight => 3,
+            Figure::BlackBishop => 4,
+            Figure::WhiteBishop => 5,
+            Figure::BlackRook => 6,
+            Figure::WhiteRook => 7,
+            Figure::BlackQueen => 8,
+            Figure::WhiteQueen => 9,
+            Figure::BlackKing => 10,
+            Figure::WhiteKing => 11,
+            Figure::Empty => usize::MAX,
+        }
+    }
+
     pub const fn from_idx(idx: usize) -> Figure {
         match idx {
             0 => Figure::WhitePawn,

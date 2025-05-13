@@ -121,15 +121,17 @@ impl Board {
         self.total_halfmove_counter = counter
     }
 
+    /// Attention: Does not update hash
     pub fn set_ep_target(&mut self, target: Option<Bit>) {
         self.ep_target = target;
     }
 
+    /// Attention: Does not update hash
     pub fn set_current_color(&mut self, color: Color) {
         self.current_color = color;
     }
 
-    /// For move unmaking
+    /// Attention: Does not update hash
     pub fn set_castling_rights(
         &mut self,
         white_queen: bool,
@@ -137,14 +139,10 @@ impl Board {
         black_queen: bool,
         black_king: bool,
     ) {
-        //self.hash ^= zobrist::generate_castling_hash(self);
-
         self.white_queen_castle = white_queen;
         self.white_king_castle = white_king;
         self.black_queen_castle = black_queen;
         self.black_king_castle = black_king;
-
-        //self.hash ^= zobrist::generate_castling_hash(self);
     }
 
     #[inline(always)]
@@ -186,7 +184,7 @@ impl Board {
 
     pub fn toggle_current_color(&mut self) {
         self.current_color = !self.current_color;
-        //self.hash ^= zobrist::white_move_key()
+        self.hash ^= zobrist::white_move_key()
     }
 
     pub fn toggle(&mut self, color: Color, figure: Figure, square: Square) {
@@ -199,7 +197,7 @@ impl Board {
             _ => Figure::Empty,
         };
 
-        //self.hash ^= zobrist::piece_key(color, figure.piece(), square);
+        self.hash ^= zobrist::figure_key(figure, square);
     }
 
     pub fn push_unmake_info_stack(&mut self, mv: EncodedMove, to_figure: Figure) {
@@ -212,6 +210,7 @@ impl Board {
             capture: to_figure,
             ep_target: self.ep_target(),
             halfmove_clock: self.halfmove_clock(),
+            hash: self.hash,
         });
 
         // capture seems wrong at first because if ep than the target piece is a pawn
@@ -238,7 +237,7 @@ impl Board {
             return; // move not relevant for castling
         }
 
-        //self.hash ^= zobrist::generate_castling_hash(self); // remove old castling hash
+        self.hash ^= zobrist::generate_castling_hash(self); // remove old castling hash
 
         const WHITE_ROOK_QUEEN_POS: Square = Square(0);
         const WHITE_ROOK_KING_POS: Square = Square(7);
@@ -275,16 +274,16 @@ impl Board {
             }
         }
 
-        //self.hash ^= zobrist::generate_castling_hash(self); // add new castling hash
+        self.hash ^= zobrist::generate_castling_hash(self); // add new castling hash
     }
 
     pub fn update_ep(&mut self, friendly: Color, mv: &DecodedMove) {
         if let Some(ep) = self.ep_target {
-            //self.hash ^= zobrist::ep_key(ep.to_square().y()); // Remove old ep
+            self.hash ^= zobrist::ep_key(ep.to_square()); // Remove old ep
         }
 
         if mv.mv_type == MoveType::DoubleMove {
-            //self.hash ^= zobrist::ep_key(mv.from.x()); // Add new ep
+            self.hash ^= zobrist::ep_key(mv.from); // Add new ep
             self.ep_target = match friendly {
                 White => Some(Square(mv.to.0 - 8).to_bit()),
                 Black => Some(Square(mv.to.0 + 8).to_bit()),
@@ -292,5 +291,34 @@ impl Board {
         } else {
             self.ep_target = None;
         }
+    }
+
+    pub fn set_hash(&mut self, hash: u64) {
+        self.hash = hash;
+    }
+
+    pub fn hash(&self) -> u64 {
+        self.hash
+    }
+
+    pub fn generate_hash(&self) -> u64 {
+        let mut hash = 0;
+        for (idx, figure) in self.all_figures().iter().enumerate() {
+            if *figure == Figure::Empty {
+                continue;
+            }
+            hash ^= zobrist::figure_key(*figure, Square(idx))
+        }
+
+        hash ^= zobrist::generate_castling_hash(self);
+
+        if self.current_color() == Color::White {
+            hash ^= zobrist::white_move_key()
+        }
+
+        if let Some(ep) = self.ep_target() {
+            hash ^= zobrist::ep_key(ep.to_square())
+        }
+        hash
     }
 }

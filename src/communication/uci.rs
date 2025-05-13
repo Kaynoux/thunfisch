@@ -6,7 +6,10 @@ use crate::move_generator::masks;
 use crate::move_generator::pinmask;
 use crate::prelude::*;
 use crate::search;
+use crate::search::transposition_table::{TTEntry, TranspositionTable};
 use std::io::{self, BufRead, Write};
+use std::mem::size_of;
+use std::sync::atomic::AtomicU64;
 use std::time::Duration;
 
 pub fn handle_uci_communication() {
@@ -14,6 +17,16 @@ pub fn handle_uci_communication() {
     let mut stdout = io::stdout();
     const START_POS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     let mut board = Board::from_fen(START_POS);
+
+    const TARGET_MB: usize = 8192;
+    let desired_bytes = TARGET_MB * 1024 * 1024;
+
+    // Größe eines Slots = AtomicU64 Bucket + TTEntry
+    let slot_bytes = size_of::<AtomicU64>() + size_of::<TTEntry>();
+
+    // wie viele Slots für ca. 128MiB?
+    let slots = (desired_bytes / slot_bytes).next_power_of_two();
+    let mut tt = TranspositionTable::new(slots);
 
     for line_res in stdin.lock().lines() {
         let line = match line_res {
@@ -56,9 +69,9 @@ pub fn handle_uci_communication() {
                     } else if rayon == true {
                         perft::perft_rayon(&mut board, depth);
                     } else if perftree == true {
-                        perft::perft_perftree(&mut board, depth);
+                        perft::perft_perftree_format(&mut board, depth);
                     } else {
-                        perft::perft_test(&mut board, depth);
+                        perft::perft(&mut board, depth);
                     }
                 } else if args.len() >= 2 && args[0] == "depth" {
                     let depth: usize = match args[1].parse() {
@@ -70,6 +83,7 @@ pub fn handle_uci_communication() {
                         &mut board,
                         depth,
                         Duration::new(3600, 0),
+                        &mut tt,
                     );
 
                     if let Some(best_move) = best_move {
@@ -84,6 +98,7 @@ pub fn handle_uci_communication() {
                         &mut board,
                         5,
                         Duration::new(1, 0),
+                        &mut tt,
                     );
 
                     if let Some(best_move) = best_move {
@@ -146,6 +161,9 @@ pub fn handle_uci_communication() {
             }
             Some("occupied") => {
                 println!("{:?}", board.occupied());
+            }
+            Some("hash") => {
+                println!("{:?}", board.hash());
             }
             Some("quit") => break,
             Some(cmd) => {

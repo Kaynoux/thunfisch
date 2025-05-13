@@ -13,10 +13,13 @@ use std::{
     time::Duration,
 };
 
+use super::transposition_table::TranspositionTable;
+
 pub fn iterative_deepening(
     board: &mut Board,
     max_depth: usize,
     time_limit: Duration,
+    tt: &mut TranspositionTable,
 ) -> Option<EncodedMove> {
     let stop = Arc::new(AtomicBool::new(false));
     {
@@ -37,6 +40,9 @@ pub fn iterative_deepening(
             total_qs_nodes: 0,
             stop_signal: stop.clone(),
             timeout_occurred: false,
+            tt_hits: 0,
+            tt_probes: 0,
+            tt_stores: 0,
         };
 
         let (current_depth_best_move, current_depth_best_eval) = search::alpha_beta::alpha_beta(
@@ -46,6 +52,7 @@ pub fn iterative_deepening(
             i32::MAX,
             &stop,
             &mut search_info,
+            tt,
         );
 
         // If the timeout occured in the last minimax than we need to check if it maybe found a better position even though it was canceled
@@ -90,18 +97,20 @@ pub fn iterative_deepening(
         };
 
         println!(
-            "info  depth={}  {}  {}cp  {}nps  {}nodes  {:.3}s  {}  {}ab_nodes  {}qi_nodes",
+            "info  depth={}  best={}  eval={}cp  nps={}  nodes={}  {:.3}s  qs={:.3}  ab={:.3}  probes={} hits={} stores={} fill={:.3} {}",
             depth.to_formatted_string(&Locale::en),
             mv.to_coords(),
             best_eval_overall.to_formatted_string(&Locale::en),
             nodes_per_seconds.to_formatted_string(&Locale::en),
             total_nodes.to_formatted_string(&Locale::en),
             elapsed.as_secs_f64(),
+            search_info.total_alpha_beta_nodes as f64 / (total_nodes as f64),
+            search_info.total_qs_nodes as f64 / (total_nodes as f64),
+            search_info.tt_probes,
+            search_info.tt_hits,
+            search_info.tt_stores,
+            tt.fill_amount(),
             canceled_str,
-            search_info
-                .total_alpha_beta_nodes
-                .to_formatted_string(&Locale::en),
-            search_info.total_qs_nodes.to_formatted_string(&Locale::en),
         );
 
         if search_info.timeout_occurred {
