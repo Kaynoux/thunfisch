@@ -4,7 +4,7 @@
 
 ## Flamegraphs
 
-`samply record ./target/release/rusty-chess-bot`
+`samply record ./target/release/thunfisch`
 
 `uv run autoperft.py stockfish ./target/release/rusty-chess-bot --fen "8/PPPk4/8/8/8/8/4Kppp/8 w - - 0 1" --max_depth 6`
 
@@ -49,6 +49,10 @@ https://share.firefox.dev/44sKTqO
 
 Macbook
 Perft: Depth=8 Nodes=84,998,978,956 Time=281.161s Nodes/sec=302,313,997
+
+PC bulk counting
+go perft 8 --rayon
+Perft: Depth=8 Nodes=84,998,978,956 Time=48.098s Nodes/sec=1,767,205,963
 
 With toggle make / unmake move
 go perft 7 --rayon

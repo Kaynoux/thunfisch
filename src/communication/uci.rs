@@ -6,10 +6,8 @@ use crate::move_generator::masks;
 use crate::move_generator::pinmask;
 use crate::prelude::*;
 use crate::search;
-use crate::search::transposition_table::{TTEntry, TranspositionTable};
 use std::io::{self, BufRead, Write};
-use std::mem::size_of;
-use std::sync::atomic::AtomicU64;
+
 use std::time::Duration;
 
 pub fn handle_uci_communication() {
@@ -17,16 +15,6 @@ pub fn handle_uci_communication() {
     let mut stdout = io::stdout();
     const START_POS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     let mut board = Board::from_fen(START_POS);
-
-    const TARGET_MB: usize = 8192;
-    let desired_bytes = TARGET_MB * 1024 * 1024;
-
-    // Größe eines Slots = AtomicU64 Bucket + TTEntry
-    let slot_bytes = size_of::<AtomicU64>() + size_of::<TTEntry>();
-
-    // wie viele Slots für ca. 128MiB?
-    let slots = (desired_bytes / slot_bytes).next_power_of_two();
-    let mut tt = TranspositionTable::new(slots);
 
     for line_res in stdin.lock().lines() {
         let line = match line_res {
@@ -83,7 +71,6 @@ pub fn handle_uci_communication() {
                         &mut board,
                         depth,
                         Duration::new(3600, 0),
-                        &mut tt,
                     );
 
                     if let Some(best_move) = best_move {
@@ -96,9 +83,8 @@ pub fn handle_uci_communication() {
                 } else {
                     let best_move = search::iterative_deepening::iterative_deepening(
                         &mut board,
-                        5,
-                        Duration::new(1, 0),
-                        &mut tt,
+                        6,
+                        Duration::new(2, 0),
                     );
 
                     if let Some(best_move) = best_move {
@@ -116,7 +102,7 @@ pub fn handle_uci_communication() {
             Some("fen") => println!("Current Fen: {}", board.generate_fen()),
             Some("draw") => visualize::print_board(&board, None),
             Some("moves") => {
-                let moves = board.generate_moves(false);
+                let moves = board.generate_moves::<false>();
                 visualize::print_board(&board, Some(&moves));
             }
             Some("eval") => loop {},
@@ -127,7 +113,7 @@ pub fn handle_uci_communication() {
                 board.make_move(&mv);
             }
             Some("test") => {
-                let moves = board.generate_moves(false);
+                let moves = board.generate_moves::<false>();
                 visualize::print_board(&board, Some(&moves));
                 visualize::print_moves(&board, &moves);
             }

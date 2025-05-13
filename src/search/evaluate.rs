@@ -124,20 +124,6 @@ pub const EG_BASE_POSITION_TABLE: [[i32; 64]; 6] = [
 ];
 
 impl Board {
-    /// Gamephase is calculated by getting the amount of each piece type and using predefined values, e.g. a Queen is captured then the game phase increases mroe than if a pawn is captured
-    pub fn get_game_phase(&self) -> i32 {
-        let mut phase = TOTAL;
-        for color_piece in self.all_figures().iter() {
-            let cp = *color_piece;
-            if cp == Figure::Empty {
-                continue;
-            }
-            phase -= GAMEPHASE_INC[cp as usize];
-        }
-        phase = (phase * 256 + (TOTAL / 2)) / TOTAL;
-        phase
-    }
-
     /// Evaluates the board,
     /// positive -> advantage for white,
     /// negative -> advantage for black,
@@ -148,19 +134,20 @@ impl Board {
         let mut mg = [0i32; 2];
         let mut eg = [0i32; 2];
 
-        for (position_idx, color_piece) in self.all_figures().iter().enumerate() {
-            let cp = *color_piece;
-            if cp == Figure::Empty {
-                continue;
+        let mut phase = TOTAL;
+        for i in 0..=11 {
+            let mut bb = self.figure_bb_by_index(i);
+            for bit in bb.iter_mut() {
+                let square = bit.to_square();
+                mg[i & 1] += MG_TABLE[i][square];
+                eg[i & 1] += EG_TABLE[i][square];
+                phase -= GAMEPHASE_INC[i];
             }
-
-            mg[(cp as usize) & 1] += MG_TABLE[cp as usize][position_idx];
-            eg[(cp as usize) & 1] += EG_TABLE[cp as usize][position_idx];
         }
+        let gamephase = (phase * 256 + (TOTAL / 2)) / TOTAL;
 
         let mg_score = mg[white] - mg[black];
         let eg_score = eg[white] - eg[black];
-        let gamephase = self.get_game_phase() as i32;
 
         let current_color_multiplier = match self.current_color() {
             White => 1,

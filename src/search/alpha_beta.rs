@@ -1,5 +1,5 @@
 use super::move_ordering;
-use super::transposition_table::{TTEntry, TTFlag, TranspositionTable};
+use super::transposition_table::TT;
 use crate::prelude::*;
 use crate::search::quiescence_search;
 
@@ -18,29 +18,8 @@ pub fn alpha_beta(
     mut alpha: i32,
     beta: i32,
     stop: &Arc<AtomicBool>,
-    search_info: &mut SearchInfo,
-    tt: &mut TranspositionTable,
+    search_info: &SearchInfo,
 ) -> (Option<EncodedMove>, i32) {
-    search_info.total_alpha_beta_nodes += 1;
-
-    let key = board.hash();
-    let alpha_orig = alpha;
-    if depth > 0 {
-        search_info.tt_probes += 1;
-        if let Some(entry) = tt.probe(key, depth as u8) {
-            search_info.tt_hits += 1;
-            match entry.flag {
-                TTFlag::Exact => return (entry.best_move, entry.eval),
-                TTFlag::LowerBound => alpha = alpha.max(entry.eval),
-                TTFlag::UpperBound => {
-                    if entry.eval <= alpha {
-                        return (entry.best_move, entry.eval);
-                    }
-                }
-            }
-        }
-    }
-
     if depth == 0 {
         return (
             None,
@@ -51,14 +30,19 @@ pub fn alpha_beta(
                 MAX_QUIESCENCE_SEARCH_DEPTH,
                 stop,
                 search_info,
-                tt,
             ),
         );
     }
 
+    search_info
+        .total_alpha_beta_nodes
+        .fetch_add(1, Ordering::Relaxed);
+
     // if search time is over this statement polls the corresponding bool every 1024 nodes and cancels the node if time is over
-    if search_info.total_alpha_beta_nodes % 32768 == 0 && stop.load(Ordering::Relaxed) {
-        search_info.timeout_occurred = true;
+    if search_info.total_alpha_beta_nodes.load(Ordering::Relaxed) % 32768 == 0
+        && stop.load(Ordering::Relaxed)
+    {
+        search_info.timeout_occurred.store(true, Ordering::Relaxed);
         return (None, 0);
     }
 
@@ -66,7 +50,7 @@ pub fn alpha_beta(
     let mut best_eval = i32::MIN + 1;
     let mut best_move: Option<EncodedMove> = None;
 
-    let mut moves = board.generate_moves(false);
+    let mut moves = board.generate_moves::<false>();
 
     // returns the mate score (very low) when in check but subtracts the depth to give a later check a better eval because the depth is lowers the further you go
     if moves.is_empty() {
@@ -79,9 +63,16 @@ pub fn alpha_beta(
 
     move_ordering::order_moves(&mut moves, board);
 
+    let hash = board.hash();
+    if let Some(tt_mv) = TT.probe(hash) {
+        if let Some(pos) = moves.iter().position(|&m| m == tt_mv) {
+            moves.swap(0, pos);
+        }
+    }
+
     for mv in moves {
         board.make_move(&mv.decode());
-        let eval = -alpha_beta(board, depth - 1, -beta, -alpha, stop, search_info, tt).1;
+        let eval = -alpha_beta(board, depth - 1, -beta, -alpha, stop, search_info).1;
         board.unmake_move();
 
         if eval > best_eval {
@@ -92,21 +83,13 @@ pub fn alpha_beta(
             }
         }
         if eval >= beta {
-            search_info.tt_stores += 1;
-            tt.store(key, depth as u8, eval, TTFlag::LowerBound, Some(mv));
             return (best_move, best_eval);
         }
     }
 
-    let flag = if best_eval <= alpha_orig {
-        TTFlag::UpperBound
-    } else if best_eval >= beta {
-        TTFlag::LowerBound
-    } else {
-        TTFlag::Exact
-    };
-    search_info.tt_stores += 1;
-    tt.store(key, depth as u8, best_eval, flag, best_move);
+    if let Some(mv) = best_move {
+        TT.store(hash, mv);
+    }
 
     (best_move, best_eval)
 }

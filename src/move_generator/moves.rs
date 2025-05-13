@@ -5,9 +5,8 @@ use super::sliding_targets;
 use crate::prelude::*;
 use arrayvec::ArrayVec;
 
-pub fn generate_pawn_moves(
-    quiet_moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
-
+pub fn generate_pawn_moves<const ONLY_SPECIAL: bool>(
+    moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
     board: &Board,
     friendly: Color,
     hv_pinmask: Bitboard,
@@ -45,37 +44,42 @@ pub fn generate_pawn_moves(
     for from_bit in pawns_not_pinned.iter_mut() {
         let from = from_bit.to_square();
 
-        let potential_quiet_target_1 = normal_targets::pawn_quiet_single_target(from_bit, friendly);
-        let quiet_target_1 = potential_quiet_target_1 & empty & check_mask;
+        if !ONLY_SPECIAL {
+            let potential_quiet_target_1 =
+                normal_targets::pawn_quiet_single_target(from_bit, friendly);
+            let quiet_target_1 = potential_quiet_target_1 & empty & check_mask;
 
-        if quiet_target_1 != Bit(0) {
-            quiet_moves.push(EncodedMove::encode(
-                from,
-                quiet_target_1.to_square(),
-                MoveType::Quiet,
-            ));
+            if quiet_target_1 != Bit(0) {
+                moves.push(EncodedMove::encode(
+                    from,
+                    quiet_target_1.to_square(),
+                    MoveType::Quiet,
+                ));
+            }
         }
 
         let mut capture_targets =
             normal_targets::PAWN_ATTACK_TARGETS[friendly as usize][from] & enemy & check_mask;
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
+            moves.push(EncodedMove::encode(from, to, MoveType::Capture));
         }
     }
 
-    for from_bit in pawns_hv_pinned.iter_mut() {
-        let from = from_bit.to_square();
+    if !ONLY_SPECIAL {
+        for from_bit in pawns_hv_pinned.iter_mut() {
+            let from = from_bit.to_square();
 
-        let potential_target = normal_targets::pawn_quiet_single_target(from_bit, friendly);
-        let target_1 = potential_target & empty & check_mask & hv_pinmask;
+            let potential_target = normal_targets::pawn_quiet_single_target(from_bit, friendly);
+            let target_1 = potential_target & empty & check_mask & hv_pinmask;
 
-        if target_1 != Bit(0) {
-            quiet_moves.push(EncodedMove::encode(
-                from,
-                target_1.to_square(),
-                MoveType::Quiet,
-            ));
+            if target_1 != Bit(0) {
+                moves.push(EncodedMove::encode(
+                    from,
+                    target_1.to_square(),
+                    MoveType::Quiet,
+                ));
+            }
         }
     }
 
@@ -87,42 +91,47 @@ pub fn generate_pawn_moves(
             & diag_pinmask;
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
-        }
-    }
-    for from_bit in pawns_double_not_pinned.iter_mut() {
-        let from = from_bit.to_square();
-
-        let between_pos = normal_targets::pawn_quiet_single_target(from_bit, friendly) & empty;
-
-        let to_pos =
-            normal_targets::pawn_quiet_double_target(from_bit, friendly) & empty & check_mask;
-
-        if between_pos != Bit(0) && to_pos != Bit(0) {
-            quiet_moves.push(EncodedMove::encode(
-                from,
-                to_pos.to_square(),
-                MoveType::DoubleMove,
-            ));
+            moves.push(EncodedMove::encode(from, to, MoveType::Capture));
         }
     }
 
-    for from_bit in pawns_double_hv_pinned.iter_mut() {
-        let from = from_bit.to_square();
+    if !ONLY_SPECIAL {
+        for from_bit in pawns_double_not_pinned.iter_mut() {
+            let from = from_bit.to_square();
 
-        let between_pos = normal_targets::pawn_quiet_single_target(from_bit, friendly) & empty;
+            let between_pos = normal_targets::pawn_quiet_single_target(from_bit, friendly) & empty;
 
-        let to_pos = normal_targets::pawn_quiet_double_target(from_bit, friendly)
-            & empty
-            & check_mask
-            & hv_pinmask;
+            let to_pos =
+                normal_targets::pawn_quiet_double_target(from_bit, friendly) & empty & check_mask;
 
-        if between_pos != Bit(0) && to_pos != Bit(0) {
-            quiet_moves.push(EncodedMove::encode(
-                from,
-                to_pos.to_square(),
-                MoveType::DoubleMove,
-            ));
+            if between_pos != Bit(0) && to_pos != Bit(0) {
+                moves.push(EncodedMove::encode(
+                    from,
+                    to_pos.to_square(),
+                    MoveType::DoubleMove,
+                ));
+            }
+        }
+    }
+
+    if !ONLY_SPECIAL {
+        for from_bit in pawns_double_hv_pinned.iter_mut() {
+            let from = from_bit.to_square();
+
+            let between_pos = normal_targets::pawn_quiet_single_target(from_bit, friendly) & empty;
+
+            let to_pos = normal_targets::pawn_quiet_double_target(from_bit, friendly)
+                & empty
+                & check_mask
+                & hv_pinmask;
+
+            if between_pos != Bit(0) && to_pos != Bit(0) {
+                moves.push(EncodedMove::encode(
+                    from,
+                    to_pos.to_square(),
+                    MoveType::DoubleMove,
+                ));
+            }
         }
     }
 
@@ -134,20 +143,20 @@ pub fn generate_pawn_moves(
 
         if quiet_target_1 != Bit(0) {
             let to_1 = quiet_target_1.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to_1, MoveType::QueenPromo));
-            quiet_moves.push(EncodedMove::encode(from, to_1, MoveType::RookPromo));
-            quiet_moves.push(EncodedMove::encode(from, to_1, MoveType::BishopPromo));
-            quiet_moves.push(EncodedMove::encode(from, to_1, MoveType::KnightPromo));
+            moves.push(EncodedMove::encode(from, to_1, MoveType::QueenPromo));
+            moves.push(EncodedMove::encode(from, to_1, MoveType::RookPromo));
+            moves.push(EncodedMove::encode(from, to_1, MoveType::BishopPromo));
+            moves.push(EncodedMove::encode(from, to_1, MoveType::KnightPromo));
         }
 
         let mut capture_targets =
             normal_targets::PAWN_ATTACK_TARGETS[friendly as usize][from] & enemy & check_mask;
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::QueenPromoCapture));
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::RookPromoCapture));
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::BishopPromoCapture));
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::KnightPromoCapture));
+            moves.push(EncodedMove::encode(from, to, MoveType::QueenPromoCapture));
+            moves.push(EncodedMove::encode(from, to, MoveType::RookPromoCapture));
+            moves.push(EncodedMove::encode(from, to, MoveType::BishopPromoCapture));
+            moves.push(EncodedMove::encode(from, to, MoveType::KnightPromoCapture));
         }
     }
     for from_bit in pawns_promotion_hv_pinned.iter_mut() {
@@ -158,10 +167,10 @@ pub fn generate_pawn_moves(
 
         if target_1 != Bit(0) {
             let to_1 = target_1.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to_1, MoveType::QueenPromo));
-            quiet_moves.push(EncodedMove::encode(from, to_1, MoveType::RookPromo));
-            quiet_moves.push(EncodedMove::encode(from, to_1, MoveType::BishopPromo));
-            quiet_moves.push(EncodedMove::encode(from, to_1, MoveType::KnightPromo));
+            moves.push(EncodedMove::encode(from, to_1, MoveType::QueenPromo));
+            moves.push(EncodedMove::encode(from, to_1, MoveType::RookPromo));
+            moves.push(EncodedMove::encode(from, to_1, MoveType::BishopPromo));
+            moves.push(EncodedMove::encode(from, to_1, MoveType::KnightPromo));
         }
     }
 
@@ -173,15 +182,15 @@ pub fn generate_pawn_moves(
             & diag_pinmask;
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::QueenPromoCapture));
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::RookPromoCapture));
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::BishopPromoCapture));
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::KnightPromoCapture));
+            moves.push(EncodedMove::encode(from, to, MoveType::QueenPromoCapture));
+            moves.push(EncodedMove::encode(from, to, MoveType::RookPromoCapture));
+            moves.push(EncodedMove::encode(from, to, MoveType::BishopPromoCapture));
+            moves.push(EncodedMove::encode(from, to, MoveType::KnightPromoCapture));
         }
     }
 }
 
-pub fn generate_knight_moves(
+pub fn generate_knight_moves<const ONLY_SPECIAL: bool>(
     quiet_moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
 
     pinmask: Bitboard,
@@ -199,10 +208,12 @@ pub fn generate_knight_moves(
         let potential_targets = normal_targets::KNIGHT_TARGETS[from.i()];
         let targets = potential_targets & check_mask; // & checkmask
 
-        let mut quiet_targets = targets & board.empty();
-        for to_bit in quiet_targets.iter_mut() {
-            let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+        if !ONLY_SPECIAL {
+            let mut quiet_targets = targets & board.empty();
+            for to_bit in quiet_targets.iter_mut() {
+                let to = to_bit.to_square();
+                quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+            }
         }
 
         let mut capture_targets = targets & board.color_bbs_without_king(!friendly);
@@ -213,7 +224,7 @@ pub fn generate_knight_moves(
     }
 }
 
-pub fn generate_bishop_moves(
+pub fn generate_bishop_moves<const ONLY_SPECIAL: bool>(
     quiet_moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
 
     hv_pinmask: Bitboard,
@@ -236,10 +247,12 @@ pub fn generate_bishop_moves(
         let potential_targets = sliding_targets::get_bishop_targets(from, occupied);
         let targets = potential_targets & check_mask;
 
-        let mut quiet_targets = targets & empty;
-        for to_bit in quiet_targets.iter_mut() {
-            let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+        if !ONLY_SPECIAL {
+            let mut quiet_targets = targets & empty;
+            for to_bit in quiet_targets.iter_mut() {
+                let to = to_bit.to_square();
+                quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+            }
         }
 
         let mut capture_targets = targets & enemy;
@@ -254,10 +267,12 @@ pub fn generate_bishop_moves(
         let potential_targets = sliding_targets::get_bishop_targets(from, occupied);
         let targets = potential_targets & check_mask & diag_pinmask;
 
-        let mut quiet_targets = targets & empty;
-        for to_bit in quiet_targets.iter_mut() {
-            let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+        if !ONLY_SPECIAL {
+            let mut quiet_targets = targets & empty;
+            for to_bit in quiet_targets.iter_mut() {
+                let to = to_bit.to_square();
+                quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+            }
         }
 
         let mut capture_targets = targets & enemy;
@@ -268,7 +283,7 @@ pub fn generate_bishop_moves(
     }
 }
 
-pub fn generate_rook_moves(
+pub fn generate_rook_moves<const ONLY_SPECIAL: bool>(
     quiet_moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
 
     hv_pinmask: Bitboard,
@@ -291,10 +306,12 @@ pub fn generate_rook_moves(
         let potential_targets = sliding_targets::get_rook_targets(from, occupied);
         let targets = potential_targets & check_mask;
 
-        let mut quiet_targets = targets & empty;
-        for to_bit in quiet_targets.iter_mut() {
-            let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+        if !ONLY_SPECIAL {
+            let mut quiet_targets = targets & empty;
+            for to_bit in quiet_targets.iter_mut() {
+                let to = to_bit.to_square();
+                quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+            }
         }
 
         let mut capture_targets = targets & enemy;
@@ -309,10 +326,12 @@ pub fn generate_rook_moves(
         let potential_targets = sliding_targets::get_rook_targets(from, occupied);
         let targets = potential_targets & check_mask & hv_pinmask;
 
-        let mut quiet_targets = targets & empty;
-        for to_bit in quiet_targets.iter_mut() {
-            let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+        if !ONLY_SPECIAL {
+            let mut quiet_targets = targets & empty;
+            for to_bit in quiet_targets.iter_mut() {
+                let to = to_bit.to_square();
+                quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+            }
         }
 
         let mut capture_targets = targets & enemy;
@@ -323,7 +342,7 @@ pub fn generate_rook_moves(
     }
 }
 
-pub fn generate_queen_moves(
+pub fn generate_queen_moves<const ONLY_SPECIAL: bool>(
     quiet_moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
 
     hv_pinmask: Bitboard,
@@ -348,10 +367,12 @@ pub fn generate_queen_moves(
             | sliding_targets::get_bishop_targets(from, occupied);
         let targets = potential_targets & check_mask;
 
-        let mut quiet_targets = targets & empty;
-        for to_bit in quiet_targets.iter_mut() {
-            let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+        if !ONLY_SPECIAL {
+            let mut quiet_targets = targets & empty;
+            for to_bit in quiet_targets.iter_mut() {
+                let to = to_bit.to_square();
+                quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+            }
         }
 
         let mut capture_targets = targets & enemy;
@@ -366,10 +387,12 @@ pub fn generate_queen_moves(
         let potential_targets = sliding_targets::get_rook_targets(from, occupied);
         let targets = potential_targets & check_mask & hv_pinmask;
 
-        let mut quiet_targets = targets & empty;
-        for to_bit in quiet_targets.iter_mut() {
-            let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+        if !ONLY_SPECIAL {
+            let mut quiet_targets = targets & empty;
+            for to_bit in quiet_targets.iter_mut() {
+                let to = to_bit.to_square();
+                quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+            }
         }
 
         let mut capture_targets = targets & enemy;
@@ -384,10 +407,12 @@ pub fn generate_queen_moves(
         let potential_targets = sliding_targets::get_bishop_targets(from, occupied);
         let targets = potential_targets & check_mask & diag_pinmask;
 
-        let mut quiet_targets = targets & empty;
-        for to_bit in quiet_targets.iter_mut() {
-            let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+        if !ONLY_SPECIAL {
+            let mut quiet_targets = targets & empty;
+            for to_bit in quiet_targets.iter_mut() {
+                let to = to_bit.to_square();
+                quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+            }
         }
 
         let mut capture_targets = targets & enemy;
@@ -398,7 +423,7 @@ pub fn generate_queen_moves(
     }
 }
 
-pub fn generate_king_move(
+pub fn generate_king_move<const ONLY_SPECIAL: bool>(
     quiet_moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
 
     friendly: Color,
@@ -412,10 +437,12 @@ pub fn generate_king_move(
     let potential_targets = normal_targets::KING_TARGETS[from.i()];
     let targets = potential_targets & !attackmask;
 
-    let mut quiet_targets = targets & board.empty();
-    for to_bit in quiet_targets.iter_mut() {
-        let to = to_bit.to_square();
-        quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+    if !ONLY_SPECIAL {
+        let mut quiet_targets = targets & board.empty();
+        for to_bit in quiet_targets.iter_mut() {
+            let to = to_bit.to_square();
+            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+        }
     }
 
     let mut capture_targets = targets & board.color_bbs_without_king(!friendly);

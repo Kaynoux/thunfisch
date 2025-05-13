@@ -1,107 +1,72 @@
 use crate::prelude::*;
-use std::sync::atomic::{AtomicU64, Ordering};
+use once_cell::sync::Lazy;
+use std::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering};
 
-/// Typ eines Eintrags im Transposition Table: exakter Wert oder Schranke
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum TTFlag {
-    Exact,
-    LowerBound, // Beta node
-    UpperBound, // Alpha node
+/// Ein Eintrag im TT: (Zobrist-Key, EncodedMove as u32, 0=leer)
+struct TTEntry {
+    key: AtomicU64,
+    mv: AtomicU32,
 }
 
-/// Ein Eintrag im Transposition Table
-#[derive(Clone, Copy)]
-pub struct TTEntry {
-    /// Zobrist-Schlüssel der Stellung
-    pub key: u64,
-    /// Suchtiefe, in der dieser Wert erzeugt wurde
-    pub depth: u8,
-    /// Bewertungswert
-    pub eval: i32,
-    /// Node-Typ
-    pub flag: TTFlag,
-    /// Optional bester Zug aus dieser Stellung
-    pub best_move: Option<EncodedMove>,
-}
-
-impl Default for TTEntry {
-    fn default() -> Self {
-        TTEntry {
-            key: 0,
-            depth: 0,
-            eval: 0,
-            flag: TTFlag::Exact,
-            best_move: None,
-        }
-    }
-}
-
-/// Simple, nicht-threadsafe Transposition Table mit Power-of-Two-Größe
 pub struct TranspositionTable {
-    buckets: Vec<AtomicU64>, // speichert die 64-Bit word-pair key|info
-    entries: Vec<TTEntry>,   // paralleles Array der Einträge
-    mask: usize,             // index mask = size-1
+    entries: Vec<TTEntry>,
+    mask: usize,
+    filled: AtomicUsize,
 }
+
+pub static TT: Lazy<TranspositionTable> = Lazy::new(|| TranspositionTable::new(128));
 
 impl TranspositionTable {
-    /// Erzeugt eine TT mit `size` Einträgen (muss Power of two sein)
-    pub fn new(size: usize) -> Self {
-        assert!(size.is_power_of_two(), "TT size must be a power of two");
+    pub fn new(mb: usize) -> Self {
+        let bytes = mb * 1024 * 1024;
+        // Eintrag-Größe: 8 (u64) + 4 (u32) = 12 Bytes
+        let entry_size = 12;
+        let mut cap = (bytes / entry_size).next_power_of_two();
+        let entries = (0..cap)
+            .map(|_| TTEntry {
+                key: AtomicU64::new(0),
+                mv: AtomicU32::new(0),
+            })
+            .collect();
         TranspositionTable {
-            buckets: (0..size).map(|_| AtomicU64::new(0)).collect(),
-            entries: vec![TTEntry::default(); size],
-            mask: size - 1,
+            entries,
+            mask: cap - 1,
+            filled: AtomicUsize::new(0),
         }
     }
 
-    /// Speichert oder ersetzt einen Eintrag
-    pub fn store(
-        &mut self,
-        key: u64,
-        depth: u8,
-        eval: i32,
-        flag: TTFlag,
-        best_move: Option<EncodedMove>,
-    ) {
-        let idx = (key as usize) & self.mask;
-        // einfache Ersetzungsstrategie: neuer Eintrag überschreibt alten, wenn deeper oder same key
-        let old = &mut self.entries[idx];
-        if old.key == key || depth >= old.depth {
-            old.key = key;
-            old.depth = depth;
-            old.eval = eval;
-            old.flag = flag;
-            old.best_move = best_move;
-            // speichere low-Bits-Kopie in buckets für atomare Vergleiche
-            let info = key;
-            self.buckets[idx].store(info, Ordering::Relaxed);
-        }
+    #[inline]
+    fn index(&self, hash: u64) -> usize {
+        (hash as usize) & self.mask
     }
 
-    /// Probe: liefert Some(&TTEntry) wenn Schlüssel passt und Tiefe ausreichend, sonst None
-    pub fn probe(&self, key: u64, depth: u8) -> Option<&TTEntry> {
-        let idx = (key as usize) & self.mask;
-        if self.buckets[idx].load(Ordering::Relaxed) == key {
-            let entry = &self.entries[idx];
-            if entry.depth >= depth {
-                return Some(entry);
+    pub fn probe(&self, hash: u64) -> Option<EncodedMove> {
+        let e = &self.entries[self.index(hash)];
+        if e.key.load(Ordering::Relaxed) == hash {
+            let raw = e.mv.load(Ordering::Relaxed);
+            if raw != 0 {
+                return Some(EncodedMove((raw - 1) as u16));
             }
         }
         None
     }
 
-    /// Volle Tabelle löschen
-    pub fn clear(&mut self) {
-        for bucket in &self.buckets {
-            bucket.store(0, Ordering::Relaxed);
+    pub fn store(&self, hash: u64, mv: EncodedMove) {
+        let idx = self.index(hash);
+        let e = &self.entries[idx];
+        let prev = e.key.swap(hash, Ordering::Relaxed);
+        if prev == 0 {
+            self.filled.fetch_add(1, Ordering::Relaxed);
         }
-        for entry in &mut self.entries {
-            *entry = TTEntry::default();
-        }
+        // store mv.0+1 as u32, 0 == no move
+        e.mv.store((mv.0 as u32) + 1, Ordering::Relaxed);
     }
 
-    pub fn fill_amount(&self) -> f64 {
-        let filled = self.entries.iter().filter(|e| e.key != 0).count();
-        filled as f64 / self.entries.len() as f64
+    pub fn fill_ratio(&self) -> (usize, usize, f64) {
+        let f = self.filled.load(Ordering::Relaxed);
+        let c = self.entries.len();
+        (f, c, f as f64 * 100.0 / c as f64)
     }
 }
+
+// public API...

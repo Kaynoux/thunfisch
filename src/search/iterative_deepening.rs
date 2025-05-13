@@ -1,8 +1,10 @@
+use super::transposition_table::TT;
+use crate::prelude::*;
+use crate::search::alpha_beta;
 use num_format::Locale;
 use num_format::ToFormattedString;
-
-use crate::prelude::*;
-use crate::search;
+use rayon::iter::IntoParallelRefIterator;
+use rayon::iter::ParallelIterator;
 use std::time::Instant;
 use std::{
     sync::{
@@ -13,13 +15,10 @@ use std::{
     time::Duration,
 };
 
-use super::transposition_table::TranspositionTable;
-
 pub fn iterative_deepening(
     board: &mut Board,
     max_depth: usize,
     time_limit: Duration,
-    tt: &mut TranspositionTable,
 ) -> Option<EncodedMove> {
     let stop = Arc::new(AtomicBool::new(false));
     {
@@ -35,29 +34,38 @@ pub fn iterative_deepening(
 
     for depth in 1..=max_depth {
         let start = Instant::now();
-        let mut search_info = SearchInfo {
-            total_alpha_beta_nodes: 0,
-            total_qs_nodes: 0,
-            stop_signal: stop.clone(),
-            timeout_occurred: false,
-            tt_hits: 0,
-            tt_probes: 0,
-            tt_stores: 0,
-        };
+        let stop_signal = Arc::new(AtomicBool::new(false));
+        let search_info = SearchInfo::new(stop_signal);
 
-        let (current_depth_best_move, current_depth_best_eval) = search::alpha_beta::alpha_beta(
-            board,
-            depth,
-            i32::MIN + 1,
-            i32::MAX,
-            &stop,
-            &mut search_info,
-            tt,
-        );
+        let root_moves = board.generate_moves::<false>();
+
+        let results: Vec<(EncodedMove, i32)> = root_moves
+            .par_iter()
+            .map(|&mv| {
+                let mut b = board.clone(); // Board muss Clone implementieren
+                b.make_move(&mv.decode());
+                let eval = -alpha_beta::alpha_beta(
+                    &mut b,
+                    depth - 1,
+                    -i32::MAX,
+                    i32::MAX,
+                    &stop,
+                    &search_info, // ggf. separate SearchInfo pro Thread
+                )
+                .1;
+                (mv, eval)
+            })
+            .collect();
+
+        let best_result = results.into_iter().max_by_key(|&(_mv, eval)| eval);
+        let (current_depth_best_move, current_depth_best_eval) = match best_result {
+            Some((mv, eval)) => (Some(mv), eval),
+            None => (None, 0),
+        };
 
         // If the timeout occured in the last minimax than we need to check if it maybe found a better position even though it was canceled
         // However we need to check if it reached went to the desired depth, if not it could throw bad eval values
-        if search_info.timeout_occurred {
+        if search_info.timeout_occurred.load(Ordering::Relaxed) {
             if current_depth_best_move.is_some() && current_depth_best_eval > best_eval_overall {
                 best_move_overall = current_depth_best_move;
                 best_eval_overall = current_depth_best_eval;
@@ -88,32 +96,36 @@ pub fn iterative_deepening(
             _ => mv_type,
         };
 
-        let total_nodes = search_info.total_alpha_beta_nodes + search_info.total_qs_nodes;
+        let total_ab_nodes = search_info.total_alpha_beta_nodes.load(Ordering::Relaxed);
+        let total_qs_nodes = search_info.total_qs_nodes.load(Ordering::Relaxed);
+        let total_eval = search_info.total_eval_nodes.load(Ordering::Relaxed);
+
+        let total_not_eval_nodes = total_ab_nodes + total_qs_nodes;
+        let total_nodes = total_not_eval_nodes + total_eval;
+
         let elapsed = start.elapsed();
         let nodes_per_seconds = (total_nodes as f64 / elapsed.as_secs_f64()) as usize;
-        let canceled_str = match search_info.timeout_occurred {
-            true => "canceled",
-            false => "",
-        };
+
+        let canceled = search_info.timeout_occurred.load(Ordering::Relaxed);
+        let canceled_str = if canceled { "canceled" } else { "" };
 
         println!(
-            "info  depth={}  best={}  eval={}cp  nps={}  nodes={}  {:.3}s  qs={:.3}  ab={:.3}  probes={} hits={} stores={} fill={:.3} {}",
+            "info  depth={}  best={}  eval={}cp  nps={}  nodes={}  {:.3}s  as={:.3}  qs={:.3} tt={:.1}% {}/{} {}",
             depth.to_formatted_string(&Locale::en),
             mv.to_coords(),
             best_eval_overall.to_formatted_string(&Locale::en),
             nodes_per_seconds.to_formatted_string(&Locale::en),
             total_nodes.to_formatted_string(&Locale::en),
             elapsed.as_secs_f64(),
-            search_info.total_alpha_beta_nodes as f64 / (total_nodes as f64),
-            search_info.total_qs_nodes as f64 / (total_nodes as f64),
-            search_info.tt_probes,
-            search_info.tt_hits,
-            search_info.tt_stores,
-            tt.fill_amount(),
+            total_ab_nodes as f64 / (total_not_eval_nodes as f64),
+            total_qs_nodes as f64 / (total_not_eval_nodes as f64),
+            TT.fill_ratio().2,
+            TT.fill_ratio().0.to_formatted_string(&Locale::en),
+            TT.fill_ratio().1.to_formatted_string(&Locale::en),
             canceled_str,
         );
 
-        if search_info.timeout_occurred {
+        if search_info.timeout_occurred.load(Ordering::Relaxed) {
             break;
         }
     }

@@ -175,6 +175,11 @@ impl Board {
     }
 
     #[inline(always)]
+    pub const fn figure_bb_by_index(&self, idx: usize) -> Bitboard {
+        self.figure_bbs[idx]
+    }
+
+    #[inline(always)]
     pub fn king(&self, color: Color) -> Bit {
         match color {
             Black => Bit(self.figure_bbs[Figure::BlackKing as usize].0),
