@@ -57,23 +57,15 @@ pub fn iterative_deepening(
             })
             .collect();
 
-        let best_result = results.into_iter().max_by_key(|&(_mv, eval)| eval);
-        let (current_depth_best_move, current_depth_best_eval) = match best_result {
+        let best_result_local = results.into_iter().max_by_key(|&(_mv, eval)| eval);
+        let (best_move_local, best_eval_local) = match best_result_local {
             Some((mv, eval)) => (Some(mv), eval),
             None => (None, 0),
         };
 
-        // If the timeout occured in the last minimax than we need to check if it maybe found a better position even though it was canceled
-        // However we need to check if it reached went to the desired depth, if not it could throw bad eval values
-        if search_info.timeout_occurred.load(Ordering::Relaxed) {
-            if current_depth_best_move.is_some() && current_depth_best_eval > best_eval_overall {
-                best_move_overall = current_depth_best_move;
-                best_eval_overall = current_depth_best_eval;
-            }
-        // Normal case if no timeout hapenned
-        } else if current_depth_best_move.is_some() {
-            best_move_overall = current_depth_best_move;
-            best_eval_overall = current_depth_best_eval;
+        if !search_info.timeout_occurred.load(Ordering::Relaxed) {
+            best_move_overall = best_move_local;
+            best_eval_overall = best_eval_local;
         }
 
         let mut mv = match best_move_overall {

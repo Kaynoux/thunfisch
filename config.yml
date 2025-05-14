@@ -1,9 +1,12 @@
-#token: "" # Lichess OAuth2 Token.
+# Used to configure this Bot for the lichess-bot API
+# More info here: https://github.com/lichess-bot-devs/lichess-bot
+
+token: "" # Lichess OAuth2 Token.
 url: "https://lichess.org/" # Lichess base URL.
 
 engine: # Engine settings.
-  dir: "./engines/" # Directory containing the engine. This can be an absolute path or one relative to lichess-bot/.
-  name: "thunfisch.exe" # Binary name of the engine to use.
+  dir: "/lichess-bot/" # Directory containing the engine. This can be an absolute path or one relative to lichess-bot/.
+  name: "thunfisch" # Binary name of the engine to use.
   # interpreter: "java"
   # interpreter_options:
   #   - "-jar"
@@ -136,7 +139,7 @@ challenge: # Incoming challenges.
   only_bot: false # Accept challenges by bots only.
   max_increment: 3 # Maximum amount of increment to accept a challenge in seconds. The max is 180. Set to 0 for no increment.
   min_increment: 0 # Minimum amount of increment to accept a challenge in seconds.
-  max_base: 120 # Maximum amount of base time to accept a challenge in seconds. The max is 10800 (3 hours).
+  max_base: 600 # Maximum amount of base time to accept a challenge in seconds. The max is 10800 (3 hours).
   min_base: 0 # Minimum amount of base time to accept a challenge in seconds.
   max_days:
     14 # Maximum number of days per move to accept a challenge for a correspondence game.
@@ -155,7 +158,7 @@ challenge: # Incoming challenges.
   #   - threeCheck
   time_controls: # Time controls to accept (bots are not allowed to play ultraBullet).
     - bullet
-    # - blitz
+    - blitz
     # - rapid
     # - classical
   #   - correspondence
@@ -192,16 +195,16 @@ greeting:
 # "all" - every game is written to a single file named "{Bot name} games.pgn"
 
 matchmaking:
-  allow_matchmaking: false # Set it to 'true' to challenge other bots.
+  allow_matchmaking: true # Set it to 'true' to challenge other bots.
   allow_during_games: false # Set it to 'true' to create challenges during long games.
   challenge_variant: "random" # If set to 'random', the bot will choose one variant from the variants enabled in 'challenge.variants'.
-  challenge_timeout: 30 # Create a challenge after being idle for 'challenge_timeout' minutes. The minimum is 1 minute.
+  challenge_timeout: 1 # Create a challenge after being idle for 'challenge_timeout' minutes. The minimum is 1 minute.
   challenge_initial_time: # Initial time in seconds of the challenge (to be chosen at random).
+    - 30
     - 60
     - 180
   challenge_increment: # Increment in seconds of the challenge (to be chosen at random).
-    - 1
-    - 2
+    - 0
   #  challenge_days:                 # Days for correspondence challenge (to be chosen at random).
   #    - 1
   #    - 2

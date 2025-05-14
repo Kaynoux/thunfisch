@@ -9,7 +9,7 @@ use std::sync::{
 };
 
 const MATE_SCORE: i32 = 100000;
-const MAX_QUIESCENCE_SEARCH_DEPTH: usize = 4;
+const MAX_QUIESCENCE_SEARCH_DEPTH: usize = 12;
 
 /// Modified Mini Max algorithm which always picks the best move for each side until a given depth is reached and the evaluates the outcomes to pick the best move at the first layer
 pub fn alpha_beta(
@@ -39,9 +39,7 @@ pub fn alpha_beta(
         .fetch_add(1, Ordering::Relaxed);
 
     // if search time is over this statement polls the corresponding bool every 1024 nodes and cancels the node if time is over
-    if search_info.total_alpha_beta_nodes.load(Ordering::Relaxed) % 32768 == 0
-        && stop.load(Ordering::Relaxed)
-    {
+    if stop.load(Ordering::Relaxed) {
         search_info.timeout_occurred.store(true, Ordering::Relaxed);
         return (None, 0);
     }

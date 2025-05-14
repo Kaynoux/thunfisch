@@ -70,20 +70,24 @@ pub fn handle_uci_communication() {
                     let best_move = search::iterative_deepening::iterative_deepening(
                         &mut board,
                         depth,
-                        Duration::new(3600, 0),
+                        Duration::new(86400, 0),
                     );
 
                     if let Some(best_move) = best_move {
                         println!("bestmove {}", best_move.decode().to_coords());
                     } else {
-                        println!("bestmove (none)");
+                        if board.is_in_check() {
+                            println!("Game over: Checkmate!");
+                        } else {
+                            println!("Game over: Stalemate!");
+                        }
                     }
 
                     continue;
                 } else {
                     let best_move = search::iterative_deepening::iterative_deepening(
                         &mut board,
-                        6,
+                        100,
                         Duration::new(2, 0),
                     );
 

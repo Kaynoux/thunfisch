@@ -1,3 +1,7 @@
+# This script uses perftree
+# Explained here and how to use: 
+# https://github.com/agausmann/perftree.git
+
 depth="$1"
 fen="$2"
 moves="$3"
