@@ -1,8 +1,4 @@
-use crate::{
-    prelude::*,
-    types::unmake_info::UnmakeInfo,
-    utils::zobrist::{self, generate_castling_hash},
-};
+use crate::{prelude::*, types::unmake_info::UnmakeInfo, utils::zobrist};
 /// Each piece type gets its own 64bits where
 #[derive(Clone)]
 pub struct Board {
@@ -306,6 +302,8 @@ impl Board {
         self.hash
     }
 
+    /// generates the hash from scratch is used when parsing a fen
+    /// should not be used when doing an board update
     pub fn generate_hash(&self) -> u64 {
         let mut hash = 0;
         for (idx, figure) in self.all_figures().iter().enumerate() {

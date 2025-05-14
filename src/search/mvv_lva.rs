@@ -30,6 +30,7 @@ const fn calculate_mvv_lva_score(victim_idx: usize, attacker_idx: usize) -> i32 
     victim_value * ORDERING_MULTIPLIER - attacker_value + ORDERING_OFFSET
 }
 
+/// https://www.chessprogramming.org/MVV-LVA
 pub const MVV_LVA_TABLE: [[i32; 6]; 6] = {
     let mut table = [[0i32; 6]; 6];
     let mut attacker_idx = 0;

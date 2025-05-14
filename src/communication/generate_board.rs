@@ -26,6 +26,7 @@ pub fn handle_input(board: &mut Board, args: &[&str]) {
                 *board = Board::from_fen(START_POS);
             }
             "index" => {
+                // usesd for debugging only positions from here https://www.codeproject.com/Articles/5313417/Worlds-fastest-Bitboard-Chess-Movegenerator
                 let fens = [
                     "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", // 0. Initial Pos
                     "r3k2r/p1ppqpb1/Bn2pnp1/3PN3/1p2P3/2N2Q2/PPPB1PpP/R3K2R b KQ - 0 1", // 1. sebastian lague alpa beta test

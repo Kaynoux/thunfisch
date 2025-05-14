@@ -2,12 +2,15 @@ use crate::prelude::*;
 use once_cell::sync::Lazy;
 use std::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering};
 
-/// Ein Eintrag im TT: (Zobrist-Key, EncodedMove as u32, 0=leer)
+/// Single Entry in the transposition table
+/// my move has 16 bits but it has currently no way of storing null moves so I use an u32 as a tempory solution
+/// this needs to be fixed in the future
 struct TTEntry {
     key: AtomicU64,
     mv: AtomicU32,
 }
 
+/// https://www.chessprogramming.org/Transposition_Table
 pub struct TranspositionTable {
     entries: Vec<TTEntry>,
     mask: usize,
@@ -19,9 +22,9 @@ pub static TT: Lazy<TranspositionTable> = Lazy::new(|| TranspositionTable::new(1
 impl TranspositionTable {
     pub fn new(mb: usize) -> Self {
         let bytes = mb * 1024 * 1024;
-        // Eintrag-Größe: 8 (u64) + 4 (u32) = 12 Bytes
+        // 12 because 64bit + 32bit = 12 byte
         let entry_size = 12;
-        let mut cap = (bytes / entry_size).next_power_of_two();
+        let cap = (bytes / entry_size).next_power_of_two();
         let entries = (0..cap)
             .map(|_| TTEntry {
                 key: AtomicU64::new(0),
@@ -68,5 +71,3 @@ impl TranspositionTable {
         (f, c, f as f64 * 100.0 / c as f64)
     }
 }
-
-// public API...

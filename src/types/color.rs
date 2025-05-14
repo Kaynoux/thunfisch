@@ -8,6 +8,8 @@ pub enum Color {
 }
 
 impl Color {
+    /// My color number representation uses opposite values as in the polyglot values so I need to this method
+    /// to lazy to change this now
     pub fn to_polyglot(self) -> usize {
         match self {
             Black => 0,

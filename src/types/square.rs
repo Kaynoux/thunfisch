@@ -20,7 +20,7 @@ impl Square {
         self.0 += 1;
     }
 
-    /// Uses as index as usize
+    /// Quick way to access array index by Square
     #[inline(always)]
     pub const fn i(self) -> usize {
         self.0
@@ -38,6 +38,7 @@ impl Square {
         self.0 & 7 // equivalent to % 8 for positiv numbers
     }
 
+    /// Converts UCI notation to square
     #[inline(always)]
     pub fn from_coords(coords: &str) -> Option<Square> {
         let (c1, c2) = match Bit::get_first_two_string_chars(coords) {

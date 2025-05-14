@@ -6,6 +6,8 @@ use std::cmp::Reverse;
 
 const CAPTURE_BONUS: i32 = 1024;
 
+/// If we sort good moves to the beginning we can increase cut offs in alpha beta
+/// https://www.chessprogramming.org/Move_Ordering
 pub fn order_moves(moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>, board: &Board) {
     moves.sort_unstable_by_key(|encoded_mv| {
         let mv = encoded_mv.decode();

@@ -1,6 +1,8 @@
-use crate::{prelude::*, types::unmake_info::UnmakeInfo};
+use crate::prelude::*;
 
 impl Board {
+    /// Executes a given move on the board
+    /// https://www.chessprogramming.org/Make_Move
     pub fn make_move(&mut self, mv: &DecodedMove) {
         let mv_type = mv.mv_type;
         let friendly = self.current_color();
@@ -94,5 +96,62 @@ impl Board {
                 self.toggle(friendly, from_figure, to);
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::prelude::*;
+
+    #[test]
+    fn test_checkmate() {
+        let mut board =
+            Board::from_fen("rnbqkbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq - 0 2");
+
+        let mv = DecodedMove::from_coords("d8h4".to_string(), &board);
+        board.make_move(&mv);
+
+        assert!(board.is_in_check(), "White should be in check");
+        let white_moves = board.generate_moves::<false>();
+        assert!(white_moves.is_empty(), "White should have no legal moves");
+    }
+
+    #[test]
+    fn test_en_passant_execution() {
+        let mut board =
+            Board::from_fen("rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2");
+
+        let ep_move = DecodedMove {
+            from: Square::from_coords("e5").unwrap(),
+            to: Square::from_coords("d6").unwrap(),
+            mv_type: MoveType::EpCapture,
+        };
+        board.make_move(&ep_move);
+
+        assert_eq!(
+            board.figures(Square::from_coords("d6").unwrap()),
+            Figure::WhitePawn,
+            "EP Test: White pawn should be on d6"
+        );
+        assert_eq!(
+            board.figures(Square::from_coords("d5").unwrap()),
+            Figure::Empty,
+            "EP Test: Black captured pawn on d5 should be empty"
+        );
+        assert_eq!(
+            board.figures(Square::from_coords("e5").unwrap()),
+            Figure::Empty,
+            "EP Test: White pawn's original square e5 should be empty"
+        );
+        assert_eq!(
+            board.current_color(),
+            Black,
+            "EP Test: Color to move should be Black"
+        );
+        assert_eq!(
+            board.ep_target(),
+            None,
+            "EP Test: En passant target should be cleared"
+        );
     }
 }
