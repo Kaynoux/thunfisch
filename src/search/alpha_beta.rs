@@ -75,6 +75,11 @@ pub fn alpha_beta(
     }
 
     for mv in moves {
+        // cancels search if time is over
+        if stop.load(Ordering::Relaxed) {
+            search_info.timeout_occurred.store(true, Ordering::Relaxed);
+            return (None, 0);
+        }
         board.make_move(&mv.decode());
         let eval = -alpha_beta(
             board,

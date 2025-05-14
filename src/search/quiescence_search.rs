@@ -21,9 +21,7 @@ pub fn quiescence_search(
 ) -> i32 {
     *local_seldepth = (*local_seldepth).max(ply);
 
-    if search_info.total_alpha_beta_nodes.load(Ordering::Relaxed) % 32768 == 0
-        && stop.load(Ordering::Relaxed)
-    {
+    if stop.load(Ordering::Relaxed) {
         search_info.timeout_occurred.store(true, Ordering::Relaxed);
         return 0;
     }
