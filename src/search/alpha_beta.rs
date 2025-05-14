@@ -11,7 +11,7 @@ use std::sync::{
 const MATE_SCORE: i32 = 100000;
 const MAX_QUIESCENCE_SEARCH_DEPTH: usize = 12;
 
-/// Modified Mini Max algorithm which always picks the best move for each side until a given depth is reached and the evaluates the outcomes to pick the best move at the first layer
+/// https://www.chessprogramming.org/Alpha-Beta
 pub fn alpha_beta(
     board: &mut Board,
     depth: usize,
@@ -19,7 +19,11 @@ pub fn alpha_beta(
     beta: i32,
     stop: &Arc<AtomicBool>,
     search_info: &SearchInfo,
+    ply: usize,
+    local_seldepth: &mut usize,
 ) -> (Option<EncodedMove>, i32) {
+    *local_seldepth = (*local_seldepth).max(ply);
+
     if depth == 0 {
         return (
             None,
@@ -30,6 +34,8 @@ pub fn alpha_beta(
                 MAX_QUIESCENCE_SEARCH_DEPTH,
                 stop,
                 search_info,
+                ply,
+                local_seldepth,
             ),
         );
     }
@@ -38,7 +44,7 @@ pub fn alpha_beta(
         .total_alpha_beta_nodes
         .fetch_add(1, Ordering::Relaxed);
 
-    // if search time is over this statement polls the corresponding bool every 1024 nodes and cancels the node if time is over
+    // cancels search if time is over
     if stop.load(Ordering::Relaxed) {
         search_info.timeout_occurred.store(true, Ordering::Relaxed);
         return (None, 0);
@@ -70,7 +76,17 @@ pub fn alpha_beta(
 
     for mv in moves {
         board.make_move(&mv.decode());
-        let eval = -alpha_beta(board, depth - 1, -beta, -alpha, stop, search_info).1;
+        let eval = -alpha_beta(
+            board,
+            depth - 1,
+            -beta,
+            -alpha,
+            stop,
+            search_info,
+            ply + 1,
+            local_seldepth,
+        )
+        .1;
         board.unmake_move();
 
         if eval > best_eval {

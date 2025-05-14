@@ -1,4 +1,3 @@
-use super::transposition_table::TT;
 use crate::move_generator::generator::ARRAY_LENGTH;
 use crate::prelude::*;
 use crate::search::move_ordering;
@@ -9,6 +8,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
 };
 
+/// https://www.chessprogramming.org/Quiescence_Search
 pub fn quiescence_search(
     board: &mut Board,
     mut alpha: i32,
@@ -16,7 +16,11 @@ pub fn quiescence_search(
     depth: usize,
     stop: &Arc<AtomicBool>,
     search_info: &SearchInfo,
+    ply: usize,
+    local_seldepth: &mut usize,
 ) -> i32 {
+    *local_seldepth = (*local_seldepth).max(ply);
+
     if search_info.total_alpha_beta_nodes.load(Ordering::Relaxed) % 32768 == 0
         && stop.load(Ordering::Relaxed)
     {
@@ -51,7 +55,16 @@ pub fn quiescence_search(
 
     for mv in moves {
         board.make_move(&mv.decode());
-        let score = -quiescence_search(board, -beta, -alpha, depth - 1, stop, search_info);
+        let score = -quiescence_search(
+            board,
+            -beta,
+            -alpha,
+            depth - 1,
+            stop,
+            search_info,
+            ply + 1,
+            local_seldepth,
+        );
         board.unmake_move();
 
         if score >= beta {

@@ -5,10 +5,6 @@ const BISHOP: i32 = 1;
 const ROOK: i32 = 2;
 const QUEEN: i32 = 4;
 const TOTAL: i32 = KNIGHT * 4 + BISHOP * 4 + ROOK * 4 + QUEEN * 2;
-const EMPTY: i32 = 12;
-
-const WHITE: i32 = 0;
-const BLACK: i32 = 1;
 
 const MG_PIECE_VALUES: [i32; 6] = [82, 337, 365, 477, 1025, 0];
 const EG_PIECE_VALUES: [i32; 6] = [94, 281, 297, 512, 936, 0];

@@ -5,6 +5,8 @@ use super::sliding_targets;
 use crate::prelude::*;
 use arrayvec::ArrayVec;
 
+// Approach for legal move generation is inspired by https://www.codeproject.com/Articles/5313417/Worlds-fastest-Bitboard-Chess-Movegenerator
+
 pub fn generate_pawn_moves<const ONLY_SPECIAL: bool>(
     moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
     board: &Board,
@@ -191,7 +193,7 @@ pub fn generate_pawn_moves<const ONLY_SPECIAL: bool>(
 }
 
 pub fn generate_knight_moves<const ONLY_SPECIAL: bool>(
-    quiet_moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
+    moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
 
     pinmask: Bitboard,
     friendly: Color,
@@ -212,20 +214,20 @@ pub fn generate_knight_moves<const ONLY_SPECIAL: bool>(
             let mut quiet_targets = targets & board.empty();
             for to_bit in quiet_targets.iter_mut() {
                 let to = to_bit.to_square();
-                quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+                moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
             }
         }
 
         let mut capture_targets = targets & board.color_bbs_without_king(!friendly);
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
+            moves.push(EncodedMove::encode(from, to, MoveType::Capture));
         }
     }
 }
 
 pub fn generate_bishop_moves<const ONLY_SPECIAL: bool>(
-    quiet_moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
+    moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
 
     hv_pinmask: Bitboard,
     diag_pinmask: Bitboard,
@@ -251,14 +253,14 @@ pub fn generate_bishop_moves<const ONLY_SPECIAL: bool>(
             let mut quiet_targets = targets & empty;
             for to_bit in quiet_targets.iter_mut() {
                 let to = to_bit.to_square();
-                quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+                moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
             }
         }
 
         let mut capture_targets = targets & enemy;
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
+            moves.push(EncodedMove::encode(from, to, MoveType::Capture));
         }
     }
 
@@ -271,20 +273,20 @@ pub fn generate_bishop_moves<const ONLY_SPECIAL: bool>(
             let mut quiet_targets = targets & empty;
             for to_bit in quiet_targets.iter_mut() {
                 let to = to_bit.to_square();
-                quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+                moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
             }
         }
 
         let mut capture_targets = targets & enemy;
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
+            moves.push(EncodedMove::encode(from, to, MoveType::Capture));
         }
     }
 }
 
 pub fn generate_rook_moves<const ONLY_SPECIAL: bool>(
-    quiet_moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
+    moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
 
     hv_pinmask: Bitboard,
     diag_pinmask: Bitboard,
@@ -310,14 +312,14 @@ pub fn generate_rook_moves<const ONLY_SPECIAL: bool>(
             let mut quiet_targets = targets & empty;
             for to_bit in quiet_targets.iter_mut() {
                 let to = to_bit.to_square();
-                quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+                moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
             }
         }
 
         let mut capture_targets = targets & enemy;
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
+            moves.push(EncodedMove::encode(from, to, MoveType::Capture));
         }
     }
 
@@ -330,20 +332,20 @@ pub fn generate_rook_moves<const ONLY_SPECIAL: bool>(
             let mut quiet_targets = targets & empty;
             for to_bit in quiet_targets.iter_mut() {
                 let to = to_bit.to_square();
-                quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+                moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
             }
         }
 
         let mut capture_targets = targets & enemy;
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
+            moves.push(EncodedMove::encode(from, to, MoveType::Capture));
         }
     }
 }
 
 pub fn generate_queen_moves<const ONLY_SPECIAL: bool>(
-    quiet_moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
+    moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
 
     hv_pinmask: Bitboard,
     diag_pinmask: Bitboard,
@@ -371,14 +373,14 @@ pub fn generate_queen_moves<const ONLY_SPECIAL: bool>(
             let mut quiet_targets = targets & empty;
             for to_bit in quiet_targets.iter_mut() {
                 let to = to_bit.to_square();
-                quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+                moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
             }
         }
 
         let mut capture_targets = targets & enemy;
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
+            moves.push(EncodedMove::encode(from, to, MoveType::Capture));
         }
     }
 
@@ -391,14 +393,14 @@ pub fn generate_queen_moves<const ONLY_SPECIAL: bool>(
             let mut quiet_targets = targets & empty;
             for to_bit in quiet_targets.iter_mut() {
                 let to = to_bit.to_square();
-                quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+                moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
             }
         }
 
         let mut capture_targets = targets & enemy;
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
+            moves.push(EncodedMove::encode(from, to, MoveType::Capture));
         }
     }
 
@@ -411,20 +413,20 @@ pub fn generate_queen_moves<const ONLY_SPECIAL: bool>(
             let mut quiet_targets = targets & empty;
             for to_bit in quiet_targets.iter_mut() {
                 let to = to_bit.to_square();
-                quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+                moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
             }
         }
 
         let mut capture_targets = targets & enemy;
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
+            moves.push(EncodedMove::encode(from, to, MoveType::Capture));
         }
     }
 }
 
 pub fn generate_king_move<const ONLY_SPECIAL: bool>(
-    quiet_moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
+    moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
 
     friendly: Color,
     board: &Board,
@@ -441,19 +443,19 @@ pub fn generate_king_move<const ONLY_SPECIAL: bool>(
         let mut quiet_targets = targets & board.empty();
         for to_bit in quiet_targets.iter_mut() {
             let to = to_bit.to_square();
-            quiet_moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
+            moves.push(EncodedMove::encode(from, to, MoveType::Quiet));
         }
     }
 
     let mut capture_targets = targets & board.color_bbs_without_king(!friendly);
     for to_bit in capture_targets.iter_mut() {
         let to = to_bit.to_square();
-        quiet_moves.push(EncodedMove::encode(from, to, MoveType::Capture));
+        moves.push(EncodedMove::encode(from, to, MoveType::Capture));
     }
 }
 
 pub fn generate_castle_moves(
-    quiet_moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
+    moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
     check_counter: usize,
     friendly: Color,
     board: &Board,
@@ -472,7 +474,7 @@ pub fn generate_castle_moves(
                 && NEED_TO_BE_EMPTY_QUEEN & occupied == Bitboard::EMPTY
                 && attackmask & NEED_TO_BE_NOT_ATTACKED_QUEEN == Bitboard::EMPTY
             {
-                quiet_moves.push(EncodedMove::encode(
+                moves.push(EncodedMove::encode(
                     Square(4),
                     Square(2),
                     MoveType::QueenCastle,
@@ -485,7 +487,7 @@ pub fn generate_castle_moves(
                 && NEED_TO_BE_EMPTY_KING & occupied == Bitboard::EMPTY
                 && attackmask & NEED_TO_BE_NOT_ATTACKED_KING == Bitboard::EMPTY
             {
-                quiet_moves.push(EncodedMove::encode(
+                moves.push(EncodedMove::encode(
                     Square(4),
                     Square(6),
                     MoveType::KingCastle,
@@ -500,7 +502,7 @@ pub fn generate_castle_moves(
                 && NEED_TO_BE_EMPTY_QUEEN & occupied == Bitboard::EMPTY
                 && attackmask & NEED_TO_BE_NOT_ATTACKED_QUEEN == Bitboard::EMPTY
             {
-                quiet_moves.push(EncodedMove::encode(
+                moves.push(EncodedMove::encode(
                     Square(60),
                     Square(58),
                     MoveType::QueenCastle,
@@ -513,7 +515,7 @@ pub fn generate_castle_moves(
                 && NEED_TO_BE_EMPTY_KING & occupied == Bitboard::EMPTY
                 && attackmask & NEED_TO_BE_NOT_ATTACKED_KING == Bitboard::EMPTY
             {
-                quiet_moves.push(EncodedMove::encode(
+                moves.push(EncodedMove::encode(
                     Square(60),
                     Square(62),
                     MoveType::KingCastle,
@@ -525,7 +527,7 @@ pub fn generate_castle_moves(
 
 pub fn generate_ep_moves(
     board: &Board,
-    quiet_moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
+    moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
     friendly: Color,
     hv_pinmask: Bitboard,
     diag_pinmask: Bitboard,
@@ -557,7 +559,7 @@ pub fn generate_ep_moves(
 
             // if not Ep would open open up a check from slider after being deleted
             if attackmask_after_ep & board.king(friendly) == Bitboard::EMPTY {
-                quiet_moves.push(EncodedMove::encode(
+                moves.push(EncodedMove::encode(
                     pawn.to_square(),
                     ep_target,
                     MoveType::EpCapture,
@@ -581,7 +583,7 @@ pub fn generate_ep_moves(
                 );
                 // if not Ep would open open up a check from slider after being deleted
                 if attackmask_after_ep & board.king(friendly) == Bitboard::EMPTY {
-                    quiet_moves.push(EncodedMove::encode(
+                    moves.push(EncodedMove::encode(
                         pawn.to_square(),
                         ep_target,
                         MoveType::EpCapture,

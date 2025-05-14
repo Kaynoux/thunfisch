@@ -1,4 +1,4 @@
-use crate::{move_generator::magics::ROOK_MAGICS, prelude::*};
+use crate::prelude::*;
 
 #[repr(usize)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

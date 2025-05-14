@@ -1,6 +1,8 @@
 use crate::prelude::*;
 
 impl Board {
+    /// Unmakes the last move by using unmake info from the stack
+    /// https://www.chessprogramming.org/Unmake_Move
     pub fn unmake_move(&mut self) {
         let prev = match self.pop_unmake_info_stack() {
             Some(info) => info,
@@ -41,42 +43,33 @@ impl Board {
 
         match mv_type {
             MoveType::Quiet | MoveType::DoubleMove => {
-                // Figur von 'to' entfernen und auf 'from' setzen
-                self.toggle(color_that_moved, original_figure_from, to); // Entferne von 'to'
-                self.toggle(color_that_moved, original_figure_from, from); // Setze zurück auf 'from'
-            }
-            MoveType::Capture => {
-                // Bewegte Figur von 'to' entfernen und auf 'from' setzen
                 self.toggle(color_that_moved, original_figure_from, to);
                 self.toggle(color_that_moved, original_figure_from, from);
-                // Geschlagene Figur auf 'to' wiederherstellen
+            }
+            MoveType::Capture => {
+                self.toggle(color_that_moved, original_figure_from, to);
+                self.toggle(color_that_moved, original_figure_from, from);
                 self.toggle(!color_that_moved, captured_figure, to);
             }
             MoveType::KnightPromo
             | MoveType::BishopPromo
             | MoveType::RookPromo
             | MoveType::QueenPromo => {
-                // Promovierte Figur von 'to' entfernen
                 self.toggle(color_that_moved, figure_on_to, to);
-                // Ursprünglichen Bauern auf 'from' wiederherstellen
+
                 self.toggle(color_that_moved, original_figure_from, from);
             }
             MoveType::KnightPromoCapture
             | MoveType::BishopPromoCapture
             | MoveType::RookPromoCapture
             | MoveType::QueenPromoCapture => {
-                // Promovierte Figur von 'to' entfernen
                 self.toggle(color_that_moved, figure_on_to, to);
-                // Ursprünglichen Bauern auf 'from' wiederherstellen
                 self.toggle(color_that_moved, original_figure_from, from);
-                // Geschlagene Figur auf 'to' wiederherstellen
                 self.toggle(!color_that_moved, captured_figure, to);
             }
             MoveType::EpCapture => {
-                // Bewegten Bauern von 'to' entfernen und auf 'from' setzen
                 self.toggle(color_that_moved, original_figure_from, to);
                 self.toggle(color_that_moved, original_figure_from, from);
-                // Geschlagenen EP-Bauern wiederherstellen
                 let ep_captured_square = match color_that_moved {
                     Color::White => Square(to.0 - 8),
                     Color::Black => Square(to.0 + 8),
@@ -89,13 +82,12 @@ impl Board {
             }
             MoveType::QueenCastle => {
                 let (rook_original_sq, rook_moved_to_sq) = match color_that_moved {
-                    Color::White => (Square(0), Square(3)),   // a1, d1
-                    Color::Black => (Square(56), Square(59)), // a8, d8
+                    Color::White => (Square(0), Square(3)),
+                    Color::Black => (Square(56), Square(59)),
                 };
-                // König zurückbewegen
-                self.toggle(color_that_moved, original_figure_from, to); // König von 'to' (c1/c8) entfernen
-                self.toggle(color_that_moved, original_figure_from, from); // König auf 'from' (e1/e8) setzen
-                // Turm zurückbewegen
+                self.toggle(color_that_moved, original_figure_from, to);
+                self.toggle(color_that_moved, original_figure_from, from);
+
                 self.toggle(
                     color_that_moved,
                     Piece::Rook.to_color_piece(color_that_moved),
@@ -109,13 +101,13 @@ impl Board {
             }
             MoveType::KingCastle => {
                 let (rook_original_sq, rook_moved_to_sq) = match color_that_moved {
-                    Color::White => (Square(7), Square(5)),   // h1, f1
-                    Color::Black => (Square(63), Square(61)), // h8, f8
+                    Color::White => (Square(7), Square(5)),
+                    Color::Black => (Square(63), Square(61)),
                 };
-                // König zurückbewegen
-                self.toggle(color_that_moved, original_figure_from, to); // König von 'to' (g1/g8) entfernen
-                self.toggle(color_that_moved, original_figure_from, from); // König auf 'from' (e1/e8) setzen
-                // Turm zurückbewegen
+
+                self.toggle(color_that_moved, original_figure_from, to);
+                self.toggle(color_that_moved, original_figure_from, from);
+
                 self.toggle(
                     color_that_moved,
                     Piece::Rook.to_color_piece(color_that_moved),
