@@ -52,6 +52,10 @@ pub fn quiescence_search(
     move_ordering::order_moves(&mut moves, board);
 
     for mv in moves {
+        if stop.load(Ordering::Relaxed) {
+            search_info.timeout_occurred.store(true, Ordering::Relaxed);
+            return 0;
+        }
         board.make_move(&mv.decode());
         let score = -quiescence_search(
             board,
