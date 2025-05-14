@@ -3,10 +3,7 @@ use crate::prelude::*;
 use arrayvec::ArrayVec;
 use colored;
 use colored::Colorize;
-use num_format::{Locale, ToFormattedString};
-use rayon::prelude::*;
 use std::collections::HashMap;
-use std::time::Instant;
 
 pub fn print_board(board: &Board, moves: Option<&ArrayVec<EncodedMove, ARRAY_LENGTH>>) {
     println!(
@@ -18,7 +15,7 @@ pub fn print_board(board: &Board, moves: Option<&ArrayVec<EncodedMove, ARRAY_LEN
     println!("FEN: {}", board.generate_fen());
     // println!("Phase: {}", board.get_game_phase());
     if let Some(m) = moves {
-        print_moves(board, m);
+        print_moves(m);
     }
 
     let char_board: [(char, &str); 64] = get_char_board(board, moves);
@@ -80,7 +77,7 @@ pub fn group_moves_by_type(moves: &[EncodedMove]) -> HashMap<MoveType, Vec<Encod
     map
 }
 
-pub fn print_moves(board: &Board, moves: &ArrayVec<EncodedMove, ARRAY_LENGTH>) {
+pub fn print_moves(moves: &ArrayVec<EncodedMove, ARRAY_LENGTH>) {
     println!("total moves = {}", moves.len());
     let moves_by_type = group_moves_by_type(moves);
 
@@ -104,7 +101,7 @@ pub fn print_moves(board: &Board, moves: &ArrayVec<EncodedMove, ARRAY_LENGTH>) {
     for move_type_variant in all_move_types.iter() {
         let current_moves: &[EncodedMove] = match moves_by_type.get(move_type_variant) {
             Some(mvs) => mvs,
-            None => &[], // Leerer Slice, falls dieser Typ nicht vorkommt
+            None => &[],
         };
 
         if !current_moves.is_empty() {

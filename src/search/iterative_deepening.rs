@@ -1,8 +1,6 @@
 use super::transposition_table::TT;
 use crate::prelude::*;
 use crate::search::alpha_beta;
-use num_format::Locale;
-use num_format::ToFormattedString;
 use rayon::iter::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
 use std::time::Instant;
@@ -62,7 +60,7 @@ pub fn iterative_deepening(
 
         let best_result_local = results
             .into_iter()
-            .max_by_key(|&(_mv, eval, seldepth)| eval);
+            .max_by_key(|&(_mv, eval, _seldepth)| eval);
         let (best_move_local, best_eval_local, best_seldepth) = match best_result_local {
             Some((mv, eval, seldepth)) => (Some(mv), eval, seldepth),
             None => (None, 0, 0),
@@ -93,23 +91,21 @@ pub fn iterative_deepening(
             _ => mv_type,
         };
 
+        // generate a string with the best moves after each oterh known as pv
         let pv_string = if let Some(root_mv) = best_move_overall {
-            // PV mit dem ersten Zug starten
             let mut pv_moves = Vec::new();
             pv_moves.push(root_mv);
 
-            // Clone des Ausgangs-Boards, um die Züge anzuwenden
             let mut b = board.clone();
             b.make_move(&root_mv.decode());
 
-            // Solange in der TT ein Eintrag für die aktuelle Stellung steckt,
-            // den Move holen, hinzufügen und aufs Board spielen
+            // Adds the best move safed in the tt table
             while let Some(mv) = TT.probe(b.hash()) {
                 pv_moves.push(mv);
                 b.make_move(&mv.decode());
             }
 
-            // in coords konvertieren und als String zusammenkleben
+            // convert to coords
             pv_moves
                 .iter()
                 .map(|m| m.decode().to_coords())

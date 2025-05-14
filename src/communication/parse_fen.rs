@@ -1,4 +1,4 @@
-use crate::{prelude::*, types::unmake_info::UnmakeInfo};
+use crate::prelude::*;
 
 impl Board {
     /// Converts a FEN to a Board

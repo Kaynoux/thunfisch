@@ -104,40 +104,6 @@ impl Bitboard {
         self.0 == 0
     }
 
-    #[inline]
-    pub fn get_next_by_dir(&self, dir: usize) -> Bit {
-        // No bits set in the ray, can't get next position
-        if self.0 == 0 {
-            return Bit(0); // Return empty bit instead of panicking
-        }
-
-        // Define the directional shifts for each of the 8 directions
-        // These represent the bit shifts needed to move in each direction
-        const DIR_SHIFTS: [i32; 8] = [
-            8,  // North (Up)
-            9,  // Northeast (Up-Right)
-            1,  // East (Right)
-            -7, // Southeast (Down-Right)
-            -8, // South (Down)
-            -9, // Southwest (Down-Left)
-            -1, // West (Left)
-            7,  // Northwest (Up-Left)
-        ];
-
-        // For finding the closest piece in each direction, we need different approaches
-        // For "positive" directions (N, NE, E, NW), start from LSB
-        // For "negative" directions (S, SE, SW, W), start from MSB
-        if dir == 0 || dir == 1 || dir == 2 || dir == 7 {
-            // "Positive" directions - get lowest set bit
-            Bit(self.0 & self.0.wrapping_neg()) // Isolate LSB
-        } else {
-            // "Negative" directions - need to find MSB
-            // This is a bit more complex - we can use leading_zeros to find highest bit
-            let leading_zeros = self.0.leading_zeros();
-            Bit(1u64 << (63 - leading_zeros))
-        }
-    }
-
     pub const fn count(self) -> usize {
         self.0.count_ones() as usize
     }
