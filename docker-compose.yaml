@@ -11,7 +11,7 @@ services:
     container_name: thunfisch
     volumes:
       - ./config.yml:/lichess-bot/config/config.yml
-      - ./target/release/thunfisch:/lichess-bot/thunfisch
+      - ./target/release:/lichess-bot/config
     environment:
       LICHESS_BOT_TOKEN: ${LICHESS_BOT_TOKEN}
     restart: unless-stopped
