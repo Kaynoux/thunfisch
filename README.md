@@ -4,7 +4,7 @@
 
 # thunfisch
 
-Rusty Chess Bot is a UCI-compatible chess engine written from scratch in Rust. It uses magic‐bitboard move generation, iterative deepening with alpha-beta and quiescence search and a transposition table.
+thunfisch is a UCI-compatible chess engine written from scratch in Rust. It uses magic‐bitboard move generation, iterative deepening with alpha-beta and quiescence search and a transposition table.
 
 ## 🚀 Quick Start
 
