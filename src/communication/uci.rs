@@ -6,82 +6,104 @@ use crate::move_generator::pinmask;
 use crate::prelude::*;
 use std::io::{self, BufRead, Write};
 
-pub fn handle_uci_communication() {
-    let stdin = io::stdin();
-    let mut stdout = io::stdout();
+pub fn handle_uci<R: BufRead, W: Write>(reader: R, mut writer: W) -> io::Result<()> {
     const START_POS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     let mut board = Board::from_fen(START_POS);
 
-    for line_res in stdin.lock().lines() {
-        let line = match line_res {
-            Ok(l) => l,
-            Err(_) => break,
-        };
+    for line_res in reader.lines() {
+        let line = line_res?;
 
         let mut parts = line.split_whitespace();
         match parts.next() {
             Some("help") => {
-                println!("Commands:");
-                println!("  uci                - Identify engine and author");
-                println!("  isready            - Engine readiness check");
-                println!("  ucinewgame         - Start new game (resets engine state)");
-                println!("  position [options] - Set up position (see below)");
-                println!("  go [parameters]    - Start search (see below)");
-                println!("  quit               - Exit engine");
-                println!("  fen                - Print current FEN");
-                println!();
+                writeln!(writer, "Commands:")?;
+                writeln!(writer, "  uci                - Identify engine and author")?;
+                writeln!(writer, "  isready            - Engine readiness check")?;
+                writeln!(
+                    writer,
+                    "  ucinewgame         - Start new game (resets engine state)"
+                )?;
+                writeln!(writer, "  position [options] - Set up position (see below")?;
+                writeln!(writer, "  go [parameters]    - Start search (see below")?;
+                writeln!(writer, "  quit               - Exit engine")?;
+                writeln!(writer, "  fen                - Print current FEN")?;
+                writeln!(writer,)?;
 
-                println!("position options");
-                println!("  startpos           - Set up the standard chess starting position");
-                println!("  fen <FEN>          - Set up a position from a FEN string");
-                println!("  moves <m1> <m2>    - Play moves from the given position");
-                println!();
+                writeln!(writer, "position options")?;
+                writeln!(
+                    writer,
+                    "  startpos           - Set up the standard chess starting position"
+                )?;
+                writeln!(
+                    writer,
+                    "  fen <FEN>          - Set up a position from a FEN string"
+                )?;
+                writeln!(
+                    writer,
+                    "  moves <m1> <m2>    - Play moves from the given position"
+                )?;
+                writeln!(writer,)?;
 
-                println!("go parameters:");
-                println!("  depth <n>          - Search to fixed depth n (plies)");
-                println!("  wtime <ms>         - White time left (ms)");
-                println!("  btime <ms>         - Black time left (ms)");
-                println!("  winc <ms>          - White increment per move (ms)");
-                println!("  binc <ms>          - Black increment per move (ms)");
-                println!("  movestogo <n>      - Moves to next time control");
-                println!("  movetime <ms>      - Search exactly this many ms");
-                println!();
+                writeln!(writer, "go parameters:")?;
+                writeln!(
+                    writer,
+                    "  depth <n>          - Search to fixed depth n (plies)"
+                )?;
+                writeln!(writer, "  wtime <ms>         - White time left (ms")?;
+                writeln!(writer, "  btime <ms>         - Black time left (ms")?;
+                writeln!(
+                    writer,
+                    "  winc <ms>          - White increment per move (ms)"
+                )?;
+                writeln!(
+                    writer,
+                    "  binc <ms>          - Black increment per move (ms)"
+                )?;
+                writeln!(writer, "  movestogo <n>      - Moves to next time control")?;
+                writeln!(writer, "  movetime <ms>      - Search exactly this many ms")?;
+                writeln!(writer,)?;
 
-                println!("perft commands:");
-                println!("  go perft <depth> [--debug|--perftree|--rayon]");
-                println!("    --debug     - Print debug info for perft");
-                println!("    --perftree  - Print perft formatted for perftree");
-                println!("    --rayon     - Use rayon for parallel perft");
-                println!();
+                writeln!(writer, "perft commands:")?;
+                writeln!(writer, "  go perft <depth> [--debug|--perftree|--rayon]")?;
+                writeln!(writer, "    --debug     - Print debug info for perft")?;
+                writeln!(
+                    writer,
+                    "    --perftree  - Print perft formatted for perftree"
+                )?;
+                writeln!(writer, "    --rayon     - Use rayon for parallel perft")?;
+                writeln!(writer,)?;
 
-                println!("Examples:");
-                println!("  position startpos moves e2e4 e7e5");
-                println!("  go depth 6");
-                println!("  go wtime 60000 btime 60000 winc 0 binc 0");
-                println!("  go perft 7 --rayon");
-                println!();
+                writeln!(writer, "Examples:")?;
+                writeln!(writer, "  position startpos moves e2e4 e7e5")?;
+                writeln!(writer, "  go depth 6")?;
+                writeln!(writer, "  go wtime 60000 btime 60000 winc 0 binc 0")?;
+                writeln!(writer, "  go perft 7 --rayon")?;
+                writeln!(writer,)?;
 
-                println!("Debugging:");
-                println!("  draw               - Print board");
-                println!("  moves              - Print legal moves");
-                println!("  eval               - Prints current Evaluation with Depth of 0");
-                println!("  do <move>          - Play move (e.g. do e2e4)");
-                println!("  pinmask            - Show pin masks");
-                println!("  checkmask          - Show check mask");
-                println!("  attackmask         - Show attack mask");
-                println!("  empty              - Empty Squares Bitboard");
-                println!("  white              - White Squares Bitboard");
-                println!("  black              - Black Squares Bitboard");
-                println!("  occupied           - Occupied Squares Bitboard");
-                println!("  hash               - Current board hash");
+                writeln!(writer, "Debugging:")?;
+                writeln!(writer, "  draw               - Print board")?;
+                writeln!(writer, "  moves              - Print legal moves")?;
+                writeln!(
+                    writer,
+                    "  eval               - Prints current Evaluation with Depth of 0"
+                )?;
+                writeln!(writer, "  do <move>          - Play move (e.g. do e2e4")?;
+                writeln!(writer, "  pinmask            - Show pin masks")?;
+                writeln!(writer, "  checkmask          - Show check mask")?;
+                writeln!(writer, "  attackmask         - Show attack mask")?;
+                writeln!(writer, "  empty              - Empty Squares Bitboard")?;
+                writeln!(writer, "  white              - White Squares Bitboard")?;
+                writeln!(writer, "  black              - Black Squares Bitboard")?;
+                writeln!(writer, "  occupied           - Occupied Squares Bitboard")?;
+                writeln!(writer, "  hash               - Current board hash")?;
             }
             Some("uci") => {
-                println!("id name Thunfisch");
-                println!("id author Lukas Piorek");
-                println!("uciok");
+                writeln!(writer, "id name Thunfisch")?;
+                writeln!(writer, "id author Lukas Piorek")?;
+                writeln!(writer, "uciok")?;
             }
             Some("isready") => {
-                println!("readyok");
+                writeln!(writer, "readyok")?;
             }
             Some("ucinewgame") => {
                 board = Board::from_fen(START_POS);
@@ -94,13 +116,15 @@ pub fn handle_uci_communication() {
                 let args: Vec<&str> = parts.collect();
                 bestmove::bestmove(args, &mut board);
             }
-            Some("fen") => println!("Current Fen: {}", board.generate_fen()),
+            Some("fen") => {
+                writeln!(writer, "Current Fen: {}", board.generate_fen())?;
+            }
             Some("draw") => visualize::print_board(&board, None),
             Some("moves") => {
                 let moves = board.generate_moves::<false>();
                 visualize::print_board(&board, Some(&moves));
             }
-            Some("eval") => println!("Depth 0 Board Evaluation: {}", board.evaluate()),
+            Some("eval") => writeln!(writer, "Depth 0 Board Evaluation: {}", board.evaluate())?,
             Some("do") => {
                 let args: Vec<&str> = parts.collect();
                 let mv_str: &str = args[0];
@@ -109,13 +133,13 @@ pub fn handle_uci_communication() {
             }
             Some("pinmask") => {
                 let (hv_pinmask, diag_pinmask) = pinmask::generate_pin_masks(&board);
-                println!("{:?}", hv_pinmask | diag_pinmask);
+                writeln!(writer, "{:?}", hv_pinmask | diag_pinmask)?;
             }
             Some("checkmask") => {
                 let (check_mask, check_counter) = masks::calc_check_mask(&board);
 
-                println!("Check Counter: {}", check_counter);
-                println!("{:?}", check_mask);
+                writeln!(writer, "Check Counter: {}", check_counter)?;
+                writeln!(writer, "{:?}", check_mask)?;
             }
             Some("attackmask") => {
                 let attackmask = masks::calculate_attackmask(
@@ -124,30 +148,31 @@ pub fn handle_uci_communication() {
                     !board.current_color(),
                     None,
                 );
-                println!("{:?}", attackmask);
+                writeln!(writer, "{:?}", attackmask)?;
             }
             Some("empty") => {
-                println!("{:?}", board.empty());
+                writeln!(writer, "{:?}", board.empty())?;
             }
             Some("white") => {
-                println!("{:?}", board.color_bbs(White));
+                writeln!(writer, "{:?}", board.color_bbs(White))?;
             }
             Some("black") => {
-                println!("{:?}", board.color_bbs(Black));
+                writeln!(writer, "{:?}", board.color_bbs(Black))?;
             }
             Some("occupied") => {
-                println!("{:?}", board.occupied());
+                writeln!(writer, "{:?}", board.occupied())?;
             }
             Some("hash") => {
-                println!("{:?}", board.hash());
+                writeln!(writer, "{:?}", board.hash())?;
             }
             Some("quit") => break,
             Some(cmd) => {
-                eprintln!("Unknown command: {}", cmd);
+                writeln!(writer, "Unknown command: {}", cmd)?;
             }
             None => {}
         }
 
-        stdout.flush().unwrap();
+        writer.flush()?;
     }
+    Ok(())
 }
