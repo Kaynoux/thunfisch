@@ -28,8 +28,8 @@ Rusty Chess Bot is a UCI-compatible chess engine written from scratch in Rust. I
    ```
 
 ## Commands
-```Basic commands
-UCI
+```
+Basic commands
   uci                - Identify engine and author
   isready            - Engine readiness check
   ucinewgame         - Start new game (resets engine state)
