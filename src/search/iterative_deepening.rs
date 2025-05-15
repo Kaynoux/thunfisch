@@ -99,10 +99,15 @@ pub fn iterative_deepening(
             let mut b = board.clone();
             b.make_move(&root_mv.decode());
 
-            // Adds the best move safed in the tt table
-            while let Some(mv) = TT.probe(b.hash()) {
-                pv_moves.push(mv);
-                b.make_move(&mv.decode());
+            let mut cnt = 1;
+            while cnt < depth {
+                if let Some(mv) = TT.probe(b.hash()) {
+                    pv_moves.push(mv);
+                    b.make_move(&mv.decode());
+                } else {
+                    break;
+                }
+                cnt += 1;
             }
 
             // convert to coords
