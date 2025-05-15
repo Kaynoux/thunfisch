@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/Kaynoux/thunfisch/blob/master/logo.png" alt="logo" width="120"/>
+  <img src="https://github.com/Kaynoux/thunfisch/blob/master/logo.png" alt="logo" width="300"/>
 </p>
 
 # thunfisch
@@ -26,5 +26,3 @@ Rusty Chess Bot is a UCI-compatible chess engine written from scratch in Rust. I
    ```bash
    cargo run --release
    ```
-
--
