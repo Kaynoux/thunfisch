@@ -52,69 +52,76 @@ pub fn bestmove(args: Vec<&str>, board: &mut Board) {
         let mut movestogo: u64 = 0;
         let mut movetime: u64 = 0;
 
-        let mut i = 0;
-        while i < args.len() {
-            match args[i] {
+        // iter through search args
+        let mut iter = args.iter();
+        while let Some(&tok) = iter.next() {
+            match tok {
                 "wtime" => {
-                    if let Some(v) = args.get(i + 1) {
-                        wtime = v.parse().unwrap_or(0);
+                    if let Some(&val) = iter.next() {
+                        wtime = val.parse().unwrap_or(0)
                     }
                 }
                 "btime" => {
-                    if let Some(v) = args.get(i + 1) {
-                        btime = v.parse().unwrap_or(0);
+                    if let Some(&val) = iter.next() {
+                        btime = val.parse().unwrap_or(0)
                     }
                 }
                 "winc" => {
-                    if let Some(v) = args.get(i + 1) {
-                        winc = v.parse().unwrap_or(0);
+                    if let Some(&val) = iter.next() {
+                        winc = val.parse().unwrap_or(0)
                     }
                 }
                 "binc" => {
-                    if let Some(v) = args.get(i + 1) {
-                        binc = v.parse().unwrap_or(0);
+                    if let Some(&val) = iter.next() {
+                        binc = val.parse().unwrap_or(0)
                     }
                 }
                 "movestogo" => {
-                    if let Some(v) = args.get(i + 1) {
-                        movestogo = v.parse().unwrap_or(0);
+                    if let Some(&val) = iter.next() {
+                        movestogo = val.parse().unwrap_or(0)
                     }
                 }
                 "movetime" => {
-                    if let Some(v) = args.get(i + 1) {
-                        movetime = v.parse().unwrap_or(0);
+                    if let Some(&val) = iter.next() {
+                        movetime = val.parse().unwrap_or(0)
                     }
                 }
                 _ => {}
             }
-            i += 1;
         }
 
         // Calculate time budget
-        let have_time_control = wtime > 0 || btime > 0 || movetime > 0;
-        let search_time = if !have_time_control {
-            // no time control given
-            Duration::new(24 * 3600, 0) // use 24h as upper limit
+        let have_tc = wtime > 0 || btime > 0 || movetime > 0;
+        let search_time = if !have_tc {
+            // no time control at all
+            Duration::new(24 * 3600, 0)
         } else if movetime > 0 {
             Duration::from_millis(movetime)
         } else {
-            // normal engine time control
+            // get current color specific values
             let (time_left, inc) = if board.current_color() == White {
                 (wtime, winc)
             } else {
                 (btime, binc)
             };
-            let moves = if movestogo > 0 { movestogo } else { 40 };
-            let mut base_ms = (time_left / moves) + inc;
-
-            // little bit of safety
-            if base_ms > 50 {
-                base_ms -= 30;
+            // if no movestogo set we estimate it is 30 (very dumb change later)
+            let moves_to_go = if movestogo > 0 { movestogo } else { 30 };
+            let mut time_per_move = time_left / moves_to_go;
+            // add half of increment (safe that way than 100%)
+            time_per_move += inc / 2;
+            // safety margins
+            let safety = std::cmp::max(time_left / 20, 50);
+            // never take up all time
+            if time_per_move + safety >= time_left {
+                time_per_move = time_left.saturating_sub(safety);
             }
-            Duration::from_millis(base_ms)
+            // Minimum 10 ms
+            if time_per_move < 10 {
+                time_per_move = 10;
+            }
+            Duration::from_millis(time_per_move)
         };
 
-        // Start search with calcualte search time
         let best_move = iterative_deepening::iterative_deepening(board, 100, search_time);
 
         if let Some(mv) = best_move {
