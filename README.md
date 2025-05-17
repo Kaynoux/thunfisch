@@ -6,6 +6,8 @@
 
 thunfisch is a UCI-compatible chess engine written from scratch in Rust. It uses magic‐bitboard move generation, iterative deepening with alpha-beta and quiescence search and a transposition table.
 
+It is a listed Bot-Account on Lichess. If it is online you can challenge it [here](https://lichess.org/@/thunfisch-bot).
+
 ## 🚀 Quick Start
 
 1. Clone the repository
