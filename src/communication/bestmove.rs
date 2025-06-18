@@ -125,6 +125,7 @@ pub fn bestmove(args: Vec<&str>, board: &mut Board) {
         let best_move = iterative_deepening::iterative_deepening(board, 100, search_time);
 
         if let Some(mv) = best_move {
+            println!("info pv {}", mv.decode().to_coords());
             println!("bestmove {}", mv.decode().to_coords());
         } else if board.is_in_check() {
             println!("Game over: Checkmate!");
