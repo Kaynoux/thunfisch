@@ -1,18 +1,29 @@
 use crate::{prelude::*, types::unmake_info::UnmakeInfo, utils::zobrist};
-/// Each piece type gets its own 64bits where
+
+/// Represents the global game state
 #[derive(Clone)]
 pub struct Board {
+    /// 0 -> white, 1 -> black (see `Color`)
+    /// where are pieces
     color_bbs: [Bitboard; 2],
+    /// color_white | color_black
+    /// -> where are pieces (independent of colour)
     occupied: Bitboard,
+    /// for individual pieces
     figure_bbs: [Bitboard; 13],
+    /// 'naive' representation of a board (including colour information)
     figures: [Figure; 64],
+
     black_king_castle: bool,
     black_queen_castle: bool,
     white_queen_castle: bool,
     white_king_castle: bool,
+    /// wrapped Bit represents the space an EP can happen _to_
     ep_target: Option<Bit>,
     current_color: Color,
+    /// not used - only for FEN (?)
     halfmove_clock: usize,
+    /// how many plies have been played in total
     total_halfmove_counter: usize,
     unmake_info_stack: Vec<UnmakeInfo>,
     hash: u64,

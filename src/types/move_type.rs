@@ -1,19 +1,19 @@
 use crate::prelude::*;
-// Bits 1-6: Represent FROM position as index 0 to 63
-// Bits 7-12: Represent TO position as index 0 to 63
-// Bits 13-16: Represent this:
-// Source: https://www.chessprogramming.org/Encoding_Moves
+/// Bits 1-6: Represent FROM position as index 0 to 63
+/// Bits 7-12: Represent TO position as index 0 to 63
+/// Bits 13-16: Represent this:
+/// Source: https://www.chessprogramming.org/Encoding_Moves
 #[repr(u16)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[rustfmt::skip]
 pub enum MoveType {
-    Quiet =             0b0000_0000_0000_0000, // 0
+    /// pawn 2 forward
     DoubleMove =        0b0001_0000_0000_0000, // 1
     KingCastle =        0b0010_0000_0000_0000, // 2
     QueenCastle =       0b0011_0000_0000_0000, // 3
     Capture =           0b0100_0000_0000_0000, // 4
     EpCapture =         0b0101_0000_0000_0000, // 5
-    // 6,7 unused
+
     KnightPromo =       0b1000_0000_0000_0000, // 8
     BishopPromo =       0b1001_0000_0000_0000, // 9
     RookPromo =         0b1010_0000_0000_0000, // 10
@@ -22,6 +22,8 @@ pub enum MoveType {
     BishopPromoCapture= 0b1101_0000_0000_0000, // 13
     RookPromoCapture =  0b1110_0000_0000_0000, // 14
     QueenPromoCapture = 0b1111_0000_0000_0000, // 15
+    /// everything else
+    Quiet =             0b0000_0000_0000_0000, // 0
 }
 
 impl MoveType {

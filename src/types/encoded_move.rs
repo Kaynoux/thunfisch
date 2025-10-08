@@ -3,6 +3,8 @@ use crate::prelude::*;
 #[derive(Copy, Clone, PartialEq)]
 pub struct EncodedMove(pub u16);
 
+/// contains all information about a move in a u16
+/// Format: `[type | to | from]`
 impl EncodedMove {
     pub const fn decode(self) -> DecodedMove {
         let from = Square((self.0 & 0b0000000000111111) as usize);

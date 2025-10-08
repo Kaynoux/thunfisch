@@ -6,6 +6,9 @@
 ## 3. communication::bestmove::bestmove()
 - Calculates time budget using go arguments (wtime, btime, ...)
 - calculate bestmove with [[Iterative Deepening]]
+### cases
+- depth exists -> keine time control, sondern er "weiß wie weit"
+- wtime (i.e. no fixed depth) -> [[Iterative Deepening]]
 ## 4. iterative_deepening::iterative_deepening()
 - generates the first set of moves (depth=1) from current position
 - generate the deeper moves by iterating over the root moves with `par_iter` 

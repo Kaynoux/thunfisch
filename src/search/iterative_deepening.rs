@@ -37,6 +37,7 @@ pub fn iterative_deepening(
 
         let root_moves = board.generate_moves::<false>();
 
+        // format: z(best move, evaluation after move is made, seldepth)
         let results: Vec<(EncodedMove, i32, usize)> = root_moves
             .par_iter()
             .map(|&mv| {

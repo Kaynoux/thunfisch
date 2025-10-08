@@ -10,4 +10,11 @@
 - [ ] [[History Heuristics]]
 - [ ] [[Opening Book]]
 - [ ] [[Transposition Tables]] erweitern (aktuell nur bestmove)
-- [ ] Branch pruning verbessern
+	- [ ] muss deutlich mehr positionen speichern (bsp: Bei tiefe 2 mehr als 20)
+- [ ] [[Alpha Beta Pruning]] verbessern (besser move orderung?) (grund unbekannt)
+- [ ] Time control ist extrem stupid
+- [ ] Special moves revisiten -> mögliches performance improvement
+- [ ] Smarteres threading
+- [ ] fix promotion logic
+- [ ] Smartere Evaluation
+- [ ] Properly detect threefold repetition
