@@ -1,0 +1,13 @@
+- [x] [[Iterative Deepening]]
+- [x] [[Minimax Algorithmus]]
+- [x] [[Alpha Beta Pruning]]
+- [x] [[Quiescene Search]]
+- [x] [[Transposition Tables]]
+- [x] [[MVV-LVA Move Ordering]]
+- [x] [[Piece Square Table Evaluation]]
+- [x] Multithreadeding
+- [ ] [[Killer Heuristics]]
+- [ ] [[History Heuristics]]
+- [ ] [[Opening Book]]
+- [ ] [[Transposition Tables]] erweitern (aktuell nur bestmove)
+- [ ] Branch pruning verbessern

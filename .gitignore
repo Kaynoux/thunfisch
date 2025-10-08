@@ -1,1 +1,4 @@
 /target
+docs/.obsidian
+.DS_Store
+Thumbs.db
