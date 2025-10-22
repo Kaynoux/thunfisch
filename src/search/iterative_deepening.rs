@@ -1,6 +1,7 @@
 use super::transposition_table::TT;
 use crate::prelude::*;
 use crate::search::alpha_beta;
+use crate::search::alpha_beta::alpha_beta;
 use rayon::iter::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
 use std::time::Instant;
@@ -38,30 +39,44 @@ pub fn iterative_deepening(
         let root_moves = board.generate_moves::<false>();
 
         // format: z(best move, evaluation after move is made, seldepth)
-        let results: Vec<(EncodedMove, i32, usize)> = root_moves
-            .par_iter()
-            .map(|&mv| {
-                let mut b = board.clone(); // Board muss Clone implementieren
-                b.make_move(&mv.decode());
-                let mut local_seldepth = 1;
-                let eval = -alpha_beta::alpha_beta(
-                    &mut b,
-                    depth - 1,
-                    -i32::MAX,
-                    i32::MAX,
-                    &stop,
-                    &search_info,
-                    1,
-                    &mut local_seldepth,
-                )
-                .1;
-                (mv, eval, local_seldepth)
-            })
-            .collect();
+        // let results: Vec<(EncodedMove, i32, usize)> = root_moves
+        //     .par_iter()
+        //     .map(|&mv| {
+        //         let mut b = board.clone(); // Board muss Clone implementieren
+        //         b.make_move(&mv.decode());
+        //         let mut local_seldepth = 1;
+        //         let eval = -alpha_beta::alpha_beta(
+        //             &mut b,
+        //             depth - 1,
+        //             -i32::MAX,
+        //             i32::MAX,
+        //             &stop,
+        //             &search_info,
+        //             1,
+        //             &mut local_seldepth,
+        //         )
+        //         .1;
+        //         (mv, eval, local_seldepth)
+        //     })
+        //     .collect();
 
-        let best_result_local = results
-            .into_iter()
-            .max_by_key(|&(_mv, eval, _seldepth)| eval);
+        let mut local_seldepth = 0;
+        let best_result_local = alpha_beta::alpha_beta(
+            board,
+            depth,
+            -i32::MAX,
+            i32::MAX,
+            &stop,
+            &search_info,
+            0,
+            &mut local_seldepth,
+        );
+        let best_result_local = Some((
+            best_result_local.0.unwrap(),
+            -best_result_local.1, // invert for negamax
+            local_seldepth,
+        ));
+
         let (best_move_local, best_eval_local, best_seldepth) = match best_result_local {
             Some((mv, eval, seldepth)) => (Some(mv), eval, seldepth),
             None => (None, 0, 0),
