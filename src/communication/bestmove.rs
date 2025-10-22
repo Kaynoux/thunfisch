@@ -96,7 +96,8 @@ pub fn bestmove(args: Vec<&str>, board: &mut Board) {
             // no time control at all
             Duration::new(24 * 3600, 0)
         } else if movetime > 0 {
-            Duration::from_millis(movetime)
+            // Duration::from_millis(movetime)
+            Duration::from_millis(20000)
         } else {
             // get current color specific values
             let (time_left, inc) = if board.current_color() == White {

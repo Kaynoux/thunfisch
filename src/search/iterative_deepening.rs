@@ -92,7 +92,7 @@ pub fn iterative_deepening(
             _ => mv_type,
         };
 
-        // generate a string with the best moves after each oterh known as pv
+        // generate principal variation string (i.e. the best moves for both sides)
         let pv_string = if let Some(root_mv) = best_move_overall {
             let mut pv_moves = Vec::new();
             pv_moves.push(root_mv);
@@ -130,12 +130,18 @@ pub fn iterative_deepening(
 
         let elapsed = start.elapsed();
         let nodes_per_seconds = (total_nodes as f64 / elapsed.as_secs_f64()) as usize;
+        // chess evaluations are always absolute (+ = advantage white, - = advantage black)
+        // negamax however always puts advantages relative to the player
+        let current_color_multiplier = match board.current_color() {
+            White => 1,
+            Black => -1,
+        };
 
         println!(
             "info  depth {} seldepth {}  score cp {} nodes {} nps {} time {} tt {} pv {}",
             depth,
             best_seldepth,
-            best_eval_overall,
+            best_eval_overall * current_color_multiplier,
             total_nodes,
             nodes_per_seconds,
             elapsed.as_millis(),
