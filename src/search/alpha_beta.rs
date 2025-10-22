@@ -23,6 +23,9 @@ pub fn alpha_beta(
     local_seldepth: &mut usize,
 ) -> (Option<EncodedMove>, i32) {
     *local_seldepth = (*local_seldepth).max(ply);
+    search_info
+        .total_alpha_beta_nodes
+        .fetch_add(1, Ordering::Relaxed);
 
     if depth == 0 {
         return (
@@ -39,10 +42,6 @@ pub fn alpha_beta(
             ),
         );
     }
-
-    search_info
-        .total_alpha_beta_nodes
-        .fetch_add(1, Ordering::Relaxed);
 
     // cancels search if time is over
     if stop.load(Ordering::Relaxed) {

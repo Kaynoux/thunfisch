@@ -1,6 +1,7 @@
 use super::transposition_table::TT;
 use crate::prelude::*;
 use crate::search::alpha_beta;
+use crate::search::move_ordering;
 use rayon::iter::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
 use std::time::Instant;
@@ -35,7 +36,8 @@ pub fn iterative_deepening(
         let start = Instant::now();
         let search_info = SearchInfo::new();
 
-        let root_moves = board.generate_moves::<false>();
+        let mut root_moves = board.generate_moves::<false>();
+        move_ordering::order_moves(&mut root_moves, board);
 
         // format: z(best move, evaluation after move is made, seldepth)
         let results: Vec<(EncodedMove, i32, usize)> = root_moves
@@ -62,6 +64,7 @@ pub fn iterative_deepening(
         let best_result_local = results
             .into_iter()
             .max_by_key(|&(_mv, eval, _seldepth)| eval);
+
         let (best_move_local, best_eval_local, best_seldepth) = match best_result_local {
             Some((mv, eval, seldepth)) => (Some(mv), eval, seldepth),
             None => (None, 0, 0),
@@ -131,16 +134,23 @@ pub fn iterative_deepening(
         let elapsed = start.elapsed();
         let nodes_per_seconds = (total_nodes as f64 / elapsed.as_secs_f64()) as usize;
 
+        let current_color_multiplier = match board.current_color() {
+            White => 1,
+            Black => -1,
+        };
+
         println!(
-            "info  depth {} seldepth {}  score cp {} nodes {} nps {} time {} tt {} pv {}",
+            "info  depth {} seldepth {}  score cp {} nodes {} nps {} time {} tt {} pv {} | nodes_ab {} nodes_qs {}",
             depth,
             best_seldepth,
-            best_eval_overall,
+            best_eval_overall * current_color_multiplier,
             total_nodes,
             nodes_per_seconds,
             elapsed.as_millis(),
             TT.fill_ratio().2 as usize,
-            pv_string
+            pv_string,
+            total_ab_nodes,
+            total_qs_nodes,
         );
 
         if search_info.timeout_occurred.load(Ordering::Relaxed) {
