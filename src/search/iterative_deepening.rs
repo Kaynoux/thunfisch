@@ -5,6 +5,7 @@ use crate::search::move_ordering;
 use crate::settings::settings;
 use rayon::iter::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
+
 use std::time::Instant;
 use std::{
     sync::{
@@ -32,10 +33,11 @@ pub fn iterative_deepening(
 
     let mut best_move_overall: Option<EncodedMove> = None;
     let mut best_eval_overall = i32::MIN;
+    let global_start = Instant::now();
 
     for depth in 1..=max_depth {
-        let start = Instant::now();
-        let search_info = SearchInfo::new();
+        let iteration_start = Instant::now();
+        let iteration_search_info = SearchInfo::new();
 
         let mut root_moves = board.generate_moves::<false>();
         if settings::MOVE_ORDERING {
@@ -55,7 +57,7 @@ pub fn iterative_deepening(
                     -i32::MAX,
                     i32::MAX,
                     &stop,
-                    &search_info,
+                    &iteration_search_info,
                     1,
                     &mut local_seldepth,
                 )
@@ -73,7 +75,10 @@ pub fn iterative_deepening(
             None => (None, 0, 0),
         };
 
-        if !search_info.timeout_occurred.load(Ordering::Relaxed) {
+        if !iteration_search_info
+            .timeout_occurred
+            .load(Ordering::Relaxed)
+        {
             best_move_overall = best_move_local;
             best_eval_overall = best_eval_local;
         }
@@ -127,15 +132,21 @@ pub fn iterative_deepening(
             String::new()
         };
 
-        let total_ab_nodes = search_info.total_alpha_beta_nodes.load(Ordering::Relaxed);
-        let total_qs_nodes = search_info.total_qs_nodes.load(Ordering::Relaxed);
-        let total_eval = search_info.total_eval_nodes.load(Ordering::Relaxed);
+        let iteration_ab_nodes = iteration_search_info
+            .total_alpha_beta_nodes
+            .load(Ordering::Relaxed);
+        let iteration_qs_nodes = iteration_search_info.total_qs_nodes.load(Ordering::Relaxed);
+        let iteration_eval_nodes = iteration_search_info
+            .total_eval_nodes
+            .load(Ordering::Relaxed);
 
-        let total_not_eval_nodes = total_ab_nodes + total_qs_nodes;
-        let total_nodes = total_not_eval_nodes + total_eval;
+        let iteration_not_eval_nodes = iteration_ab_nodes + iteration_qs_nodes;
+        let iteration_nodes = iteration_not_eval_nodes + iteration_eval_nodes;
 
-        let elapsed = start.elapsed();
-        let nodes_per_seconds = (total_nodes as f64 / elapsed.as_secs_f64()) as usize;
+        let iteration_duration = iteration_start.elapsed();
+        let global_duration = global_start.elapsed();
+        let nodes_per_seconds =
+            (iteration_nodes as f64 / iteration_duration.as_secs_f64()) as usize;
 
         let current_color_multiplier = match board.current_color() {
             White => 1,
@@ -143,20 +154,27 @@ pub fn iterative_deepening(
         };
 
         println!(
-            "info  depth {} seldepth {}  score cp {} nodes {} nps {} time {} tt {} pv {} | nodes_ab {} nodes_qs {}",
+            "info  depth {} seldepth {}  score cp {} nodes {} nps {} time {} tt {} pv {} | nodes_ab {} nodes_qs {} timeout {} total_time {}",
             depth,
             best_seldepth,
             best_eval_overall * current_color_multiplier,
-            total_nodes,
+            iteration_nodes,
             nodes_per_seconds,
-            elapsed.as_millis(),
+            iteration_duration.as_millis(),
             TT.fill_ratio().2 as usize,
             pv_string,
-            total_ab_nodes,
-            total_qs_nodes,
+            iteration_ab_nodes,
+            iteration_qs_nodes,
+            iteration_search_info
+                .timeout_occurred
+                .load(Ordering::Relaxed),
+            global_duration.as_millis()
         );
 
-        if search_info.timeout_occurred.load(Ordering::Relaxed) {
+        if iteration_search_info
+            .timeout_occurred
+            .load(Ordering::Relaxed)
+        {
             break;
         }
     }

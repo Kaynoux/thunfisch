@@ -1,6 +1,6 @@
 pub mod settings {
-    pub const QUIESCENCE_SEARCH: bool = false;
-    pub const TRANSPOSITION_TABLE: bool = false;
-    pub const MOVE_ORDERING: bool = false;
-    pub const ALPHA_BETA: bool = false;
+    pub const QUIESCENCE_SEARCH: bool = true;
+    pub const TRANSPOSITION_TABLE: bool = true;
+    pub const MOVE_ORDERING: bool = true;
+    pub const ALPHA_BETA: bool = true;
 }

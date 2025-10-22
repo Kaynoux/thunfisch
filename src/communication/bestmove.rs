@@ -51,6 +51,7 @@ pub fn bestmove(args: Vec<&str>, board: &mut Board) {
         let mut binc: u64 = 0;
         let mut movestogo: u64 = 0;
         let mut movetime: u64 = 0;
+        let mut fixtime: u64 = 0;
 
         // iter through search args
         let mut iter = args.iter();
@@ -86,15 +87,22 @@ pub fn bestmove(args: Vec<&str>, board: &mut Board) {
                         movetime = val.parse().unwrap_or(0)
                     }
                 }
+                "fixtime" => {
+                    if let Some(&val) = iter.next() {
+                        fixtime = val.parse().unwrap_or(0)
+                    }
+                }
                 _ => {}
             }
         }
 
         // Calculate time budget
-        let have_tc = wtime > 0 || btime > 0 || movetime > 0;
+        let have_tc = wtime > 0 || btime > 0 || movetime > 0 || fixtime > 0;
         let search_time = if !have_tc {
             // no time control at all
             Duration::new(24 * 3600, 0)
+        } else if fixtime != 0 {
+            Duration::from_millis(fixtime)
         } else if movetime > 0 {
             Duration::from_millis(movetime)
         } else {
@@ -121,6 +129,8 @@ pub fn bestmove(args: Vec<&str>, board: &mut Board) {
             }
             Duration::from_millis(time_per_move)
         };
+
+        println!("{:?}", movetime);
 
         let best_move = iterative_deepening::iterative_deepening(board, 100, search_time);
 

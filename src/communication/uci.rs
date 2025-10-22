@@ -45,6 +45,7 @@ pub fn handle_uci_communication() {
                 println!("  binc <ms>          - Black increment per move (ms)");
                 println!("  movestogo <n>      - Moves to next time control");
                 println!("  movetime <ms>      - Search exactly this many ms");
+                println!("  fixtime <ms>.      - Harcoded searchtime");
                 println!();
 
                 println!("perft commands:");

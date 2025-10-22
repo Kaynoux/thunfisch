@@ -2,3 +2,6 @@
 docs/.obsidian
 .DS_Store
 Thumbs.db
+/python-debugging/bin
+/python-debugging/logs
+/python-debugging/plot_logs
