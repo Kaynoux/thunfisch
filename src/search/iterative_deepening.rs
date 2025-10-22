@@ -153,7 +153,7 @@ pub fn iterative_deepening(
         };
 
         println!(
-            "info  depth {} seldepth {}  score cp {} nodes {} nps {} time {} tt {} pv {}",
+            "info  depth {} seldepth {}  score cp {} nodes {} nps {} time {} tt {} pv {} | nodes_ab {} nodes_qs {}",
             depth,
             best_seldepth,
             best_eval_overall * current_color_multiplier,
@@ -161,7 +161,9 @@ pub fn iterative_deepening(
             nodes_per_seconds,
             elapsed.as_millis(),
             TT.fill_ratio().2 as usize,
-            pv_string
+            pv_string,
+            total_ab_nodes,
+            total_qs_nodes,
         );
 
         if search_info.timeout_occurred.load(Ordering::Relaxed) {
