@@ -3,6 +3,7 @@ mod debug;
 mod move_generator;
 mod prelude;
 mod search;
+mod settings;
 mod types;
 mod utils;
 

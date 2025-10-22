@@ -2,6 +2,7 @@ use super::move_ordering;
 use super::transposition_table::TT;
 use crate::prelude::*;
 use crate::search::quiescence_search;
+use crate::settings::settings;
 
 use std::sync::{
     Arc,
@@ -28,20 +29,23 @@ pub fn alpha_beta(
         .fetch_add(1, Ordering::Relaxed);
 
     if depth == 0 {
-        return (
-            None,
-            quiescence_search::quiescence_search(
-                board,
-                alpha,
-                beta,
-                MAX_QUIESCENCE_SEARCH_DEPTH,
-                stop,
-                search_info,
-                ply,
-                local_seldepth,
-            ),
-        );
-    }
+        if settings::QUIESCENCE_SEARCH {
+            return (
+                None,
+                quiescence_search::quiescence_search(
+                    board,
+                    alpha,
+                    beta,
+                    MAX_QUIESCENCE_SEARCH_DEPTH,
+                    stop,
+                    search_info,
+                    ply,
+                    local_seldepth,
+                ),
+            );
+        }
+        return (None, board.evaluate());
+    };
 
     // cancels search if time is over
     if stop.load(Ordering::Relaxed) {
@@ -67,9 +71,11 @@ pub fn alpha_beta(
     move_ordering::order_moves(&mut moves, board);
 
     let hash = board.hash();
-    if let Some(tt_mv) = TT.probe(hash) {
-        if let Some(pos) = moves.iter().position(|&m| m == tt_mv) {
-            moves.swap(0, pos);
+    if settings::TRANSPOSITION_TABLE {
+        if let Some(tt_mv) = TT.probe(hash) {
+            if let Some(pos) = moves.iter().position(|&m| m == tt_mv) {
+                moves.swap(0, pos);
+            }
         }
     }
 
@@ -105,8 +111,10 @@ pub fn alpha_beta(
         }
     }
 
-    if let Some(mv) = best_move {
-        TT.store(hash, mv);
+    if settings::TRANSPOSITION_TABLE {
+        if let Some(mv) = best_move {
+            TT.store(hash, mv);
+        }
     }
 
     (best_move, best_eval)
