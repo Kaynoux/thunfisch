@@ -1,6 +1,7 @@
 use crate::move_generator::generator::ARRAY_LENGTH;
 use crate::prelude::*;
 use crate::search::move_ordering;
+use crate::settings::settings;
 use arrayvec::ArrayVec;
 
 use std::sync::{
@@ -49,7 +50,9 @@ pub fn quiescence_search(
         board.generate_moves::<true>()
     };
 
-    move_ordering::order_moves(&mut moves, board);
+    if settings::MOVE_ORDERING {
+        move_ordering::order_moves(&mut moves, board);
+    }
 
     for mv in moves {
         if stop.load(Ordering::Relaxed) {
@@ -69,9 +72,12 @@ pub fn quiescence_search(
         );
         board.unmake_move();
 
-        if score >= beta {
-            return score;
+        if settings::ALPHA_BETA {
+            if score >= beta {
+                return score;
+            }
         }
+
         if score > best_score {
             best_score = score;
         }

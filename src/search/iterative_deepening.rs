@@ -2,6 +2,7 @@ use super::transposition_table::TT;
 use crate::prelude::*;
 use crate::search::alpha_beta;
 use crate::search::move_ordering;
+use crate::settings::settings;
 use rayon::iter::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
 use std::time::Instant;
@@ -37,7 +38,9 @@ pub fn iterative_deepening(
         let search_info = SearchInfo::new();
 
         let mut root_moves = board.generate_moves::<false>();
-        move_ordering::order_moves(&mut root_moves, board);
+        if settings::MOVE_ORDERING {
+            move_ordering::order_moves(&mut root_moves, board);
+        }
 
         // format: z(best move, evaluation after move is made, seldepth)
         let results: Vec<(EncodedMove, i32, usize)> = root_moves

@@ -68,7 +68,9 @@ pub fn alpha_beta(
         }
     }
 
-    move_ordering::order_moves(&mut moves, board);
+    if settings::MOVE_ORDERING {
+        move_ordering::order_moves(&mut moves, board);
+    }
 
     let hash = board.hash();
     if settings::TRANSPOSITION_TABLE {
@@ -106,8 +108,11 @@ pub fn alpha_beta(
                 alpha = eval;
             }
         }
-        if eval >= beta {
-            return (best_move, best_eval);
+
+        if settings::ALPHA_BETA {
+            if eval >= beta {
+                return (best_move, best_eval);
+            }
         }
     }
 
