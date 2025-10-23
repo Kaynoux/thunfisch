@@ -17,6 +17,6 @@ run_sprt() {
 }
 
 # dummy for testing
-echo "help" | $(NEW_VERSION)
+echo "help" | $NEW_VERSION
 
 
