@@ -5,3 +5,4 @@ Thumbs.db
 /python-debugging/bin
 /python-debugging/logs
 /python-debugging/plot_logs
+/testing/config.json
