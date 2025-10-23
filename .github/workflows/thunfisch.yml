@@ -3,7 +3,8 @@ name: Thunfisch
 on:
   push:
   pull_request:
-  workflow_dispatch:  # Enables manual triggering (apparently not though because github is stupid
+  # should enable manual triggering (except it doesn't because god knows why)
+  workflow_dispatch:
 
 env:
   CARGO_TERM_COLOR: always
@@ -39,4 +40,7 @@ jobs:
       - name: Make thunfisch binary executable
         run: chmod +x ./target/release/thunfisch
       - name: Run ELO tests
-        run: bash testing/elo.sh
+        run: |
+          ls
+          cd testing/
+          ./elo.sh
