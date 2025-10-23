@@ -37,10 +37,9 @@ jobs:
         with:
           name: thunfisch-new
           path: ./target/release
-      - run: chmod +x ./target/release/thunfisch # does that work?
+      - run: chmod +x ./target/release/thunfisch
       - name: Install fastchess
         run: |
-          whoami
           cd /tmp
           git clone https://github.com/Disservin/fastchess.git
           cd fastchess
