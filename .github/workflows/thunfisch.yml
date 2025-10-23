@@ -40,12 +40,12 @@ jobs:
       - run: chmod +x ./target/release/thunfisch # does that work?
       - name: Install fastchess
         run: |
+          whoami
           cd /tmp
           git clone https://github.com/Disservin/fastchess.git
           cd fastchess
           make -j
-          make install
-          echo "-------------------------------------------"
+          make install PREFIX=~/.local/
           fastchess -version
       - name: Run ELO tests
         run: cd testing/ && ./elo.sh
