@@ -37,10 +37,12 @@ jobs:
         with:
           name: thunfisch-new
           path: ./target/release
-      - name: Make thunfisch binary executable
-        run: chmod +x ./target/release/thunfisch
-      - name: Run ELO tests
+      - run: chmod +x ./target/release/thunfisch # does that work?
+      - name: Install fastchess
         run: |
-          ls
-          cd testing/
-          ./elo.sh
+          pwd 
+          ls /
+          echo $PATH
+          ls /usr/local
+      - name: Run ELO tests
+        run: cd testing/ && ./elo.sh
