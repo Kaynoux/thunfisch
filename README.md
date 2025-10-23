@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://github.com/Kaynoux/thunfisch/blob/master/logo.png" alt="logo" width="300"/>
+  <img src="./media/logo.png" alt="logo" width="300"/>
 </p>
 
 # thunfisch [![Rust](https://github.com/Kaynoux/thunfisch/actions/workflows/rust.yml/badge.svg)](https://github.com/Kaynoux/thunfisch/actions/workflows/rust.yml)
