@@ -1,0 +1,50 @@
+name: Thunfisch
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: cargo build --release --verbose
+      - name: Run tests
+        run: cargo test --release --verbose
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: thunfisch-new
+          path: target/release/thunfisch
+
+  elo-test:
+    # using ubuntu honestly is a cheat code
+    runs-on: ubuntu-latest
+    needs: build
+    # runs on pull requests or when triggered manually
+    # if: github.event_name == 'pull_request' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download binary artifact
+        run: mkdir -p target/release/
+      - uses: actions/download-artifact@v4
+        with:
+          name: thunfisch-new
+          path: ./target/release
+      - run: chmod +x ./target/release/thunfisch
+      - name: Install fastchess
+        run: |
+          cd /tmp
+          git clone https://github.com/Disservin/fastchess.git
+          cd fastchess
+          make -j
+          make install PREFIX=~/.local/
+          fastchess -version
+      - name: Run ELO tests
+        run: cd testing/ && ./elo.sh
