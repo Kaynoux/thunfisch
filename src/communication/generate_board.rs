@@ -35,6 +35,8 @@ pub fn handle_input(board: &mut Board, args: &[&str]) {
                     "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1",  // Pos 4
                     "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8 ",        // Pos 5
                     "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10 ", // Pos 6
+                    "6Q1/pp6/8/8/1kp2N2/1n2R1P1/3r4/1K6 b - - 0 1", // 7 - Threefold Repetition,  Kasparov v. Deep Blue (somewhere on https://en.wikipedia.org/wiki/Threefold_repetition)
+                    "1kr5/6pp/R1P2p2/1N6/8/1P6/P2q1PPP/6K1 w - - 0 1", // 8 - Forced perpetual check (3-fold repetition after 8 ply) to avoid checkmate
                 ];
 
                 iter.next();

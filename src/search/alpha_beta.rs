@@ -28,6 +28,10 @@ pub fn alpha_beta(
         .total_alpha_beta_nodes
         .fetch_add(1, Ordering::Relaxed);
 
+    if board.is_threefold_repetition() {
+        return (None, 0);
+    }
+
     if depth == 0 {
         if settings::QUIESCENCE_SEARCH {
             return (

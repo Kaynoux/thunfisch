@@ -4,6 +4,7 @@ impl Board {
     /// Executes a given move on the board
     /// https://www.chessprogramming.org/Make_Move
     pub fn make_move(&mut self, mv: &DecodedMove) {
+        self.push_repetition_stack();
         let mv_type = mv.mv_type;
         let friendly = self.current_color();
         let from = mv.from;

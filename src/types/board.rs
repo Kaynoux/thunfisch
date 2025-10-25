@@ -26,6 +26,7 @@ pub struct Board {
     /// how many plies have been played in total
     total_halfmove_counter: usize,
     unmake_info_stack: Vec<UnmakeInfo>,
+    repetition_stack: Vec<u64>,
     hash: u64,
 }
 
@@ -58,6 +59,7 @@ impl Board {
         halfmove_clock: 0,
         total_halfmove_counter: 0,
         unmake_info_stack: Vec::new(),
+        repetition_stack: Vec::new(),
         hash: 0,
     };
 
@@ -232,6 +234,24 @@ impl Board {
 
     pub fn pop_unmake_info_stack(&mut self) -> Option<UnmakeInfo> {
         self.unmake_info_stack.pop()
+    }
+
+    pub fn push_repetition_stack(&mut self) {
+        self.repetition_stack.push(self.hash)
+    }
+
+    pub fn pop_repetition_stack(&mut self) {
+        self.repetition_stack.pop();
+    }
+
+    pub fn is_threefold_repetition(&mut self) -> bool {
+        self.repetition_stack
+            .iter()
+            .rev()
+            .skip(3)
+            .filter(|&&h| h == self.hash())
+            .count()
+            >= 2
     }
 
     /// Revoke castling rights if

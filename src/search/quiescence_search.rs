@@ -27,6 +27,10 @@ pub fn quiescence_search(
         return 0;
     }
 
+    if board.is_threefold_repetition() {
+        return 0;
+    }
+
     if depth == 0 {
         return board.evaluate();
     }
