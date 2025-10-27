@@ -2,7 +2,7 @@
   <img src="./media/logo.png" alt="logo" width="300"/>
 </p>
 
-# thunfisch [![Rust](https://github.com/Kaynoux/thunfisch/actions/workflows/rust.yml/badge.svg)](https://github.com/Kaynoux/thunfisch/actions/workflows/thunfisch.yml)
+# thunfisch [![Thunfisch](https://github.com/Kaynoux/thunfisch/actions/workflows/thunfisch.yml/badge.svg)](https://github.com/Kaynoux/thunfisch/actions/workflows/thunfisch.yml)
 
 thunfisch is a UCI-compatible chess engine written from scratch in Rust. It uses magic‐bitboard move generation, iterative deepening with alpha-beta and quiescence search and a transposition table.
 
