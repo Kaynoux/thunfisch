@@ -115,8 +115,12 @@ pub fn iterative_deepening(
             let mut cnt = 1;
             while cnt < depth {
                 if let Some(mv) = TT.probe(b.hash()) {
-                    pv_moves.push(mv);
                     b.make_move(&mv.decode());
+                    pv_moves.push(mv);
+                    // First do and add the move to pv string if then a threefold repition is triggered cancel further pv string generation
+                    if b.is_threefold_repetition() {
+                        break;
+                    }
                 } else {
                     break;
                 }
