@@ -28,7 +28,7 @@ pub fn alpha_beta(
         .total_alpha_beta_nodes
         .fetch_add(1, Ordering::Relaxed);
 
-    if board.is_threefold_repetition() {
+    if board.is_threefold_repetition() || board.is_50_move_rule() {
         return (None, 0);
     }
 

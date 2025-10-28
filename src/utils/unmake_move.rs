@@ -12,6 +12,7 @@ impl Board {
             }
         };
         self.pop_repetition_stack();
+
         let mv = prev.mv.decode();
         let mv_type = mv.mv_type;
         let color_that_moved = !self.current_color();

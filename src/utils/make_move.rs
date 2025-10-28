@@ -4,7 +4,6 @@ impl Board {
     /// Executes a given move on the board
     /// https://www.chessprogramming.org/Make_Move
     pub fn make_move(&mut self, mv: &DecodedMove) {
-        self.push_repetition_stack();
         let mv_type = mv.mv_type;
         let friendly = self.current_color();
         let from = mv.from;
@@ -15,19 +14,26 @@ impl Board {
 
         // Unmake Info if move needs to be undone
         self.push_unmake_info_stack(mv.encode(), to_figure);
+        self.push_repetition_stack();
 
         self.update_ep(friendly, mv);
         self.update_castling(friendly, from_figure.piece(), mv, to_figure.piece());
         self.toggle_current_color();
+        self.increase_halfmove_clock();
         match mv_type {
             MoveType::Quiet | MoveType::DoubleMove => {
                 self.toggle(friendly, from_figure, from);
                 self.toggle(friendly, from_figure, to);
+                match from_figure {
+                    Figure::WhitePawn | Figure::BlackPawn => self.set_halfmove_clock(0),
+                    _ => {}
+                }
             }
             MoveType::Capture => {
                 self.toggle(!friendly, to_figure, to);
                 self.toggle(friendly, from_figure, from);
                 self.toggle(friendly, from_figure, to);
+                self.set_halfmove_clock(0);
             }
             MoveType::KnightPromo => {
                 self.toggle(friendly, from_figure, from);
@@ -73,6 +79,7 @@ impl Board {
                 self.toggle(!friendly, Piece::Pawn.to_color_piece(!friendly), ep_to);
                 self.toggle(friendly, from_figure, from);
                 self.toggle(friendly, from_figure, to);
+                self.set_halfmove_clock(0);
             }
             MoveType::QueenCastle => {
                 let (from_rook, to_rook) = match friendly {
