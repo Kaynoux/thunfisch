@@ -1,0 +1,95 @@
+name: ELO Benchmark between PR and master
+
+on:
+  pull_request:
+    branches: [master]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+
+jobs:
+  build-both-and-benchmark:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout PR (current)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          path: pr
+
+      - name: Fetch master (shallow)
+        working-directory: pr
+        run: |
+          git fetch origin master --depth=1
+
+      - name: Prepare worktree for master
+        working-directory: pr
+        run: |
+          # Worktree für master neben das PR-Repo legen
+          git worktree add -f ../master origin/master
+          git worktree list
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache cargo (PR)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            pr/target
+          key: cargo-${{ runner.os }}-pr-${{ hashFiles('pr/Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-pr-
+
+      - name: Build PR (current) and place binary in ./testing/current
+        working-directory: pr
+        run: |
+          cargo build --locked --release
+          mkdir -p testing
+          cp target/release/thunfisch testing/current
+          chmod +x testing/current
+
+      - name: Cache cargo (master)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            master/target
+          key: cargo-${{ runner.os }}-master-${{ hashFiles('master/Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-master-
+
+      - name: Build master (previous) and place binary in ./testing/previous (inside PR repo)
+        working-directory: master
+        run: |
+          cargo build --locked --release
+          mkdir -p ../pr/testing
+          cp target/release/thunfisch ../pr/testing/previous
+          chmod +x ../pr/testing/previous
+
+      - name: Install fastchess
+        run: |
+          cd /tmp
+          git clone --depth 1 https://github.com/Disservin/fastchess.git
+          cd fastchess
+          make -j"$(nproc)"
+          make install PREFIX="$HOME/.local"
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          fastchess -version
+
+      - name: Run benchmark script from PR repo
+        working-directory: pr
+        env:
+          PATH: ${{ env.PATH }}:$HOME/.local/bin
+        run: |
+          chmod +x testing/bench-prev-current.sh
+          # Skript erwartet Engines genau unter ./testing/current und ./testing/previous
+          ./testing/bench-prev-current.sh
