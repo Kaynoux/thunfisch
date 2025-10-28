@@ -22,4 +22,4 @@ fastchess \
   -each proto=uci tc=5+0.5 \
   -rounds 2 \
   -openings file=8moves_v3.pgn format=pgn order=random \
-  # -concurrency 4
+  -concurrency 4
