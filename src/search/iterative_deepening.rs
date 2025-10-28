@@ -46,7 +46,7 @@ pub fn iterative_deepening(
 
         // format: z(best move, evaluation after move is made, seldepth)
         let results: Vec<(EncodedMove, i32, usize)> = root_moves
-            .iter()
+            .par_iter()
             .map(|&mv| {
                 let mut b = board.clone(); // Board muss Clone implementieren
                 b.make_move(&mv.decode());
@@ -103,25 +103,22 @@ pub fn iterative_deepening(
             _ => mv_type,
         };
 
-        // generate a string with the best moves after each oterh known as pv string
+        // Generate the PV String (= the predicted line where both sides play optimally)
         // Starts by doing the current best move and adds it to the pv string this is then repeated by always doing the bestmove and then looking up the best move from the tt table again and again until the tt does not contain a bestmove for the board state at that moment
         let pv_string = if let Some(root_mv) = best_move_overall {
             let mut pv_moves = Vec::new();
             pv_moves.push(root_mv);
 
             let mut b = board.clone();
-            println!("positions: {:?}", b.repetition_stack().len());
             b.make_move(&root_mv.decode());
 
             let mut cnt = 1;
             while cnt < depth {
-                println!("occurrences: {}", b.count_board_position());
+                // If threefold repetition occurs, we force stop generating the PV
+                if b.is_threefold_repetition() || b.is_50_move_rule() {
+                    break;
+                }
                 if let Some(mv) = TT.probe(b.hash()) {
-                    // First do and add the move to pv string if then a threefold repition is triggered cancel further pv string generation
-                    if b.is_threefold_repetition() || b.is_50_move_rule() {
-                        println!("\ndraw\n");
-                        break;
-                    }
                     b.make_move(&mv.decode());
                     pv_moves.push(mv);
                 } else {

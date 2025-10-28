@@ -7,11 +7,13 @@ use std::collections::HashMap;
 
 pub fn print_board(board: &Board, moves: Option<&ArrayVec<EncodedMove, ARRAY_LENGTH>>) {
     println!(
-        "Current Color: {:?}\nHalfmove Clock: {}\nTotal Halfmove Counter: {}\nPosition occurrences: {}",
+        "Current Color: {:?}\nHalfmove Clock: {}\nTotal Halfmove Counter: {}\nPrevious occurrences: {}\nHash: {}, Previous: {:?}",
         board.current_color(),
         board.halfmove_clock(),
         board.total_halfmove_counter(),
-        board.count_board_position()
+        board.count_repetitions(),
+        board.hash(),
+        board.repetition_stack().iter().rev().take(6).map(|&h| h.to_string().chars().take(4).collect()).collect::<Vec<String>>()
     );
     println!("FEN: {}", board.generate_fen());
     // println!("Phase: {}", board.get_game_phase());

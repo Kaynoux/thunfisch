@@ -259,21 +259,17 @@ impl Board {
     }
 
     pub fn is_threefold_repetition(&self) -> bool {
-        self.repetition_stack
-            .iter()
-            .rev()
-            .skip(3)
-            .filter(|&&h| h == self.hash())
-            .count()
-            >= 2
+        self.count_repetitions() >= 2
     }
 
-    /// only for visualization purposes
-    pub fn count_board_position(&self) -> usize {
+    /// extracted from `is_threefold_repetition` for visualization purposes
+    pub fn count_repetitions(&self) -> usize {
         self.repetition_stack
             .iter()
             .rev()
             .skip(3)
+            .step_by(2)
+            .take(self.halfmove_clock)
             .filter(|&&h| h == self.hash())
             .count()
     }
