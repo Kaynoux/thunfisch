@@ -7,10 +7,11 @@ use std::collections::HashMap;
 
 pub fn print_board(board: &Board, moves: Option<&ArrayVec<EncodedMove, ARRAY_LENGTH>>) {
     println!(
-        "Current Color: {:?} Halfmove Clock: {} Fullmove Counter: {}",
+        "Current Color: {:?}\nHalfmove Clock: {}\nTotal Halfmove Counter: {}\nPosition occurrences: {}",
         board.current_color(),
         board.halfmove_clock(),
-        board.total_halfmove_counter()
+        board.total_halfmove_counter(),
+        board.count_board_position()
     );
     println!("FEN: {}", board.generate_fen());
     // println!("Phase: {}", board.get_game_phase());
@@ -23,7 +24,7 @@ pub fn print_board(board: &Board, moves: Option<&ArrayVec<EncodedMove, ARRAY_LEN
     let mut x: i32 = 0;
 
     while y >= 0 {
-        print!("{} | ", y);
+        print!("{} | ", y + 1);
         while x <= 7 {
             let idx = (y * 8 + x) as usize;
             let colored_str = char_board[idx].0.to_string().color(char_board[idx].1);
@@ -35,7 +36,7 @@ pub fn print_board(board: &Board, moves: Option<&ArrayVec<EncodedMove, ARRAY_LEN
         y -= 1;
         println!();
     }
-    println!("    0 1 2 3 4 5 6 7");
+    println!("    A B C D E F G H");
     println!("-------------------");
 }
 

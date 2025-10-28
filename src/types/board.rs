@@ -254,7 +254,11 @@ impl Board {
         self.repetition_stack.pop();
     }
 
-    pub fn is_threefold_repetition(&mut self) -> bool {
+    pub fn repetition_stack<'a>(&'a self) -> &'a Vec<u64> {
+        &self.repetition_stack
+    }
+
+    pub fn is_threefold_repetition(&self) -> bool {
         self.repetition_stack
             .iter()
             .rev()
@@ -262,6 +266,16 @@ impl Board {
             .filter(|&&h| h == self.hash())
             .count()
             >= 2
+    }
+
+    /// only for visualization purposes
+    pub fn count_board_position(&self) -> usize {
+        self.repetition_stack
+            .iter()
+            .rev()
+            .skip(3)
+            .filter(|&&h| h == self.hash())
+            .count()
     }
 
     /// Revoke castling rights if

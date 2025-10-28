@@ -46,7 +46,7 @@ pub fn iterative_deepening(
 
         // format: z(best move, evaluation after move is made, seldepth)
         let results: Vec<(EncodedMove, i32, usize)> = root_moves
-            .par_iter()
+            .iter()
             .map(|&mv| {
                 let mut b = board.clone(); // Board muss Clone implementieren
                 b.make_move(&mv.decode());
@@ -110,17 +110,20 @@ pub fn iterative_deepening(
             pv_moves.push(root_mv);
 
             let mut b = board.clone();
+            println!("positions: {:?}", b.repetition_stack().len());
             b.make_move(&root_mv.decode());
 
             let mut cnt = 1;
             while cnt < depth {
+                println!("occurrences: {}", b.count_board_position());
                 if let Some(mv) = TT.probe(b.hash()) {
-                    b.make_move(&mv.decode());
-                    pv_moves.push(mv);
                     // First do and add the move to pv string if then a threefold repition is triggered cancel further pv string generation
                     if b.is_threefold_repetition() || b.is_50_move_rule() {
+                        println!("\ndraw\n");
                         break;
                     }
+                    b.make_move(&mv.decode());
+                    pv_moves.push(mv);
                 } else {
                     break;
                 }

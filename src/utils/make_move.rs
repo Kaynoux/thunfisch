@@ -20,6 +20,7 @@ impl Board {
         self.update_castling(friendly, from_figure.piece(), mv, to_figure.piece());
         self.toggle_current_color();
         self.increase_halfmove_clock();
+        self.set_total_halfmove_counter(self.total_halfmove_counter() + 1);
         match mv_type {
             MoveType::Quiet | MoveType::DoubleMove => {
                 self.toggle(friendly, from_figure, from);
