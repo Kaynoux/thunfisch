@@ -38,38 +38,46 @@ impl Board {
             MoveType::KnightPromo => {
                 self.toggle(friendly, from_figure, from);
                 self.toggle(friendly, Knight.to_color_piece(friendly), to);
+                self.set_halfmove_clock(0);
             }
             MoveType::BishopPromo => {
                 self.toggle(friendly, from_figure, from);
                 self.toggle(friendly, Bishop.to_color_piece(friendly), to);
+                self.set_halfmove_clock(0);
             }
             MoveType::RookPromo => {
                 self.toggle(friendly, from_figure, from);
                 self.toggle(friendly, Rook.to_color_piece(friendly), to);
+                self.set_halfmove_clock(0);
             }
             MoveType::QueenPromo => {
                 self.toggle(friendly, from_figure, from);
                 self.toggle(friendly, Queen.to_color_piece(friendly), to);
+                self.set_halfmove_clock(0);
             }
             MoveType::KnightPromoCapture => {
                 self.toggle(!friendly, to_figure, to);
                 self.toggle(friendly, from_figure, from);
                 self.toggle(friendly, Knight.to_color_piece(friendly), to);
+                self.set_halfmove_clock(0);
             }
             MoveType::BishopPromoCapture => {
                 self.toggle(!friendly, to_figure, to);
                 self.toggle(friendly, from_figure, from);
                 self.toggle(friendly, Bishop.to_color_piece(friendly), to);
+                self.set_halfmove_clock(0);
             }
             MoveType::RookPromoCapture => {
                 self.toggle(!friendly, to_figure, to);
                 self.toggle(friendly, from_figure, from);
                 self.toggle(friendly, Rook.to_color_piece(friendly), to);
+                self.set_halfmove_clock(0);
             }
             MoveType::QueenPromoCapture => {
                 self.toggle(!friendly, to_figure, to);
                 self.toggle(friendly, from_figure, from);
                 self.toggle(friendly, Queen.to_color_piece(friendly), to);
+                self.set_halfmove_clock(0);
             }
             MoveType::EpCapture => {
                 let ep_to = match friendly {

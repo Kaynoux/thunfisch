@@ -118,7 +118,7 @@ pub fn iterative_deepening(
                     b.make_move(&mv.decode());
                     pv_moves.push(mv);
                     // First do and add the move to pv string if then a threefold repition is triggered cancel further pv string generation
-                    if b.is_threefold_repetition() {
+                    if b.is_threefold_repetition() || b.is_50_move_rule() {
                         break;
                     }
                 } else {
