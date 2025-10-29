@@ -86,9 +86,9 @@ jobs:
         working-directory: pr
         run: |
           fastchess \
-          -engine cmd=./current \
+          -engine cmd=./testing/current \
           name=current \
-          -engine cmd=./previous \
+          -engine cmd=./testing/previous \
           name=previous \
           -each proto=uci \
           -each tc=0/0:30+1 \
