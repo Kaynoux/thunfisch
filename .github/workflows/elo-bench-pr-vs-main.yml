@@ -6,14 +6,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-both-and-benchmark:
+  build-master:
     runs-on: ubuntu-latest
-    permissions:
-      pull-requests: write
-    defaults:
-      run:
-        shell: bash
-
     steps:
       - name: Checkout PR (current)
         uses: actions/checkout@v4
@@ -29,9 +23,44 @@ jobs:
       - name: Prepare worktree for master
         working-directory: pr
         run: |
-          # Worktree für master neben das PR-Repo legen
           git worktree add -f ../master origin/master
           git worktree list
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+
+      - name: Cache cargo (master)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: cargo-${{ runner.os }}-${{ hashFiles('master/Cargo.lock') }}
+          restore-keys: |
+            cargo-${{ runner.os }}-
+
+      - name: Build master binary
+        working-directory: master
+        run: |
+          cargo build --locked --release
+          mv target/release/thunfisch target/release/previous
+
+      - name: Upload master binary as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: thunfisch-previous
+          path: master/target/release/previous
+          retention-days: 1
+
+  build-current:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout PR (current)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -44,38 +73,48 @@ jobs:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-            pr/target
-          key: cargo-${{ runner.os }}-pr-${{ hashFiles('pr/Cargo.lock') }}
+          key: cargo-${{ runner.os }}-${{ hashFiles('Cargo.lock') }}
           restore-keys: |
-            cargo-${{ runner.os }}-pr-
+            cargo-${{ runner.os }}-
 
-      - name: Build PR (current) and place binary in ./testing/current
-        working-directory: pr
+      - name: Build PR binary
         run: |
           cargo build --locked --release
-          mkdir -p testing
-          cp target/release/thunfisch testing/current
-          chmod +x testing/current
+          mv target/release/thunfisch target/release/current
 
-      - name: Cache cargo (master)
-        uses: actions/cache@v4
+      - name: Upload PR binary as artifact
+        uses: actions/upload-artifact@v4
         with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            master/target
-          key: cargo-${{ runner.os }}-master-${{ hashFiles('master/Cargo.lock') }}
-          restore-keys: |
-            cargo-${{ runner.os }}-master-
+          name: thunfisch-current
+          path: target/release/current
+          retention-days: 1
 
-      - name: Build master (previous) and place binary in ./testing/previous (inside PR repo)
-        working-directory: master
+  benchmark:
+    needs: [build-master, build-current]
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout PR for opening book
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Download binaries
+        uses: actions/download-artifact@v4
+        with:
+          pattern: thunfisch-*
+          path: ./testing/
+          merge-multiple: true
+
+      - name: Verify binaries
         run: |
-          cargo build --locked --release
-          mkdir -p ../pr/testing
-          cp target/release/thunfisch ../pr/testing/previous
-          chmod +x ../pr/testing/previous
-
+          ls -la ./testing/
+          chmod +x ./testing/previous ./testing/current
       - name: Install fastchess
         run: |
           cd /tmp
@@ -84,8 +123,7 @@ jobs:
           # Add the directory containing the executable to the system PATH
           echo "/tmp/fastchess-linux-x86-64" >> $GITHUB_PATH
 
-      - name: Run benchmark script from PR repo
-        working-directory: pr
+      - name: Run benchmark script
         run: |
           # Verify the installation
           fastchess --version
@@ -104,11 +142,10 @@ jobs:
 
       - name: Extract benchmark summary
         if: github.event_name == 'pull_request'
-        working-directory: pr
         run: tail -n 10 benchmark_summary.txt > benchmark_for_comment.txt
 
       - name: Post Benchmark Results to PR
         if: github.event_name == 'pull_request'
         uses: thollander/actions-comment-pull-request@v3
         with:
-          file-path: pr/benchmark_for_comment.txt
+          file-path: benchmark_for_comment.txt
