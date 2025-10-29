@@ -96,7 +96,7 @@ jobs:
           -each tc=0/0:30+1 \
           -rounds 1 \
           -concurrency 4 \
-          -openings file=8moves_v3.pgn format=pgn order=random \
+          -openings file=./testing/8moves_v3.pgn format=pgn order=random \
           > benchmark_summary.txt 2>&1
 
       - name: Prepare benchmark comment
