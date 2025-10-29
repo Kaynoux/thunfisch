@@ -1,5 +1,4 @@
 name: ELO Benchmark between PR and master
-
 on:
   pull_request:
     branches: [master]
@@ -78,18 +77,55 @@ jobs:
       - name: Install fastchess
         run: |
           cd /tmp
-          git clone --depth 1 https://github.com/Disservin/fastchess.git
-          cd fastchess
-          make -j"$(nproc)"
-          make install PREFIX="$HOME/.local"
-          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          wget https://github.com/Disservin/fastchess/releases/download/v1.6.0-alpha/fastchess-linux-x86-64.tar
+          tar -xf fastchess-linux-x86-64.tar
+          echo fastchess-linux-x86-64 >> $env:GITHUB_PATH
           fastchess -version
 
       - name: Run benchmark script from PR repo
         working-directory: pr
-        env:
-          PATH: ${{ env.PATH }}:$HOME/.local/bin
         run: |
-          chmod +x testing/bench-prev-current.sh
-          # Skript erwartet Engines genau unter ./testing/current und ./testing/previous
-          ./testing/bench-prev-current.sh
+          fastchess \
+          -engine cmd=./current \
+          name=current \
+          -engine cmd=./previous \
+          name=previous \
+          -each proto=uci \
+          -each tc=0/0:30+1 \
+          -rounds 1 \
+          -concurrency 4 \
+          -openings file=8moves_v3.pgn format=pgn order=random \
+          > benchmark_summary.txt 2>&1
+
+      - name: Prepare benchmark comment
+        id: prepare-comment
+        # This step only runs for pull requests
+        if: github.event_name == 'pull_request'
+        working-directory: pr
+        run: |
+          {
+            echo "comment_body<<EOF"
+            echo "### ♟️ ELO Benchmark Results"
+            echo "\`\`\`"
+            tail -n 5 benchmark_summary.txt
+            echo "\`\`\`"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Post benchmark results to PR
+        # This step only runs for pull requests
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const comment_body = `${{ steps.prepare-comment.outputs.comment_body }}`;
+
+            await github.rest.issues.createComment({
+              owner,
+              repo,
+              issue_number,
+              body: comment_body
+            });
