@@ -148,12 +148,12 @@ impl Board {
         let mut phase = TOTAL;
         for i in 0..=11 {
             let mut bb = self.figure_bb_by_index(i);
-            println!("figure: {:?}", Figure::from_idx(i));
+            // println!("figure: {:?}", Figure::from_idx(i));
             for bit in bb.iter_mut() {
                 let square = bit.to_square();
                 mg[i & 1] += MG_TABLE[i][square];
                 eg[i & 1] += EG_TABLE[i][square];
-                println!("blended: {}", (MG_TABLE[i][square] * (256 - 224) + EG_TABLE[i][square] * 224 >> 8));
+                // println!("blended: {}", (MG_TABLE[i][square] * (256 - 224) + EG_TABLE[i][square] * 224 >> 8));
                 phase -= GAMEPHASE_INC[i];
             }
         }
