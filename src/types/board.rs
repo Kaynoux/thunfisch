@@ -22,6 +22,7 @@ pub struct Board {
     ep_target: Option<Bit>,
     current_color: Color,
     /// not used - only for FEN (?)
+    /// halfmove counter since the last pawn move or capture (for 50 move rule)
     halfmove_clock: usize,
     /// how many plies have been played in total
     total_halfmove_counter: usize,
@@ -124,6 +125,15 @@ impl Board {
 
     pub fn set_halfmove_clock(&mut self, clock: usize) {
         self.halfmove_clock = clock
+    }
+
+    pub fn increase_halfmove_clock(&mut self) {
+        self.halfmove_clock += 1
+    }
+
+    pub fn is_50_move_rule(&self) -> bool {
+        // 50 move rule refers to moves, but the halfmove clock counts ply
+        self.halfmove_clock() >= 100
     }
 
     pub fn set_total_halfmove_counter(&mut self, counter: usize) {
@@ -244,14 +254,24 @@ impl Board {
         self.repetition_stack.pop();
     }
 
-    pub fn is_threefold_repetition(&mut self) -> bool {
+    pub fn repetition_stack<'a>(&'a self) -> &'a Vec<u64> {
+        &self.repetition_stack
+    }
+
+    pub fn is_threefold_repetition(&self) -> bool {
+        self.count_repetitions() >= 2
+    }
+
+    /// extracted from `is_threefold_repetition` for visualization purposes
+    pub fn count_repetitions(&self) -> usize {
         self.repetition_stack
             .iter()
             .rev()
             .skip(3)
+            .step_by(2)
+            .take(self.halfmove_clock)
             .filter(|&&h| h == self.hash())
             .count()
-            >= 2
     }
 
     /// Revoke castling rights if

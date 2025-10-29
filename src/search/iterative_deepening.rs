@@ -103,7 +103,7 @@ pub fn iterative_deepening(
             _ => mv_type,
         };
 
-        // generate a string with the best moves after each oterh known as pv string
+        // Generate the PV String (= the predicted line where both sides play optimally)
         // Starts by doing the current best move and adds it to the pv string this is then repeated by always doing the bestmove and then looking up the best move from the tt table again and again until the tt does not contain a bestmove for the board state at that moment
         let pv_string = if let Some(root_mv) = best_move_overall {
             let mut pv_moves = Vec::new();
@@ -114,13 +114,13 @@ pub fn iterative_deepening(
 
             let mut cnt = 1;
             while cnt < depth {
+                // If threefold repetition occurs, we force stop generating the PV
+                if b.is_threefold_repetition() || b.is_50_move_rule() {
+                    break;
+                }
                 if let Some(mv) = TT.probe(b.hash()) {
                     b.make_move(&mv.decode());
                     pv_moves.push(mv);
-                    // First do and add the move to pv string if then a threefold repition is triggered cancel further pv string generation
-                    if b.is_threefold_repetition() {
-                        break;
-                    }
                 } else {
                     break;
                 }

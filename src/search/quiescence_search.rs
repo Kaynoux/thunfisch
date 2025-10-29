@@ -27,7 +27,7 @@ pub fn quiescence_search(
         return 0;
     }
 
-    if board.is_threefold_repetition() {
+    if board.is_threefold_repetition() || board.is_50_move_rule() {
         return 0;
     }
 

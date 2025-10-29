@@ -12,6 +12,7 @@ pub enum MoveType {
     KingCastle =        0b0010_0000_0000_0000, // 2
     QueenCastle =       0b0011_0000_0000_0000, // 3
     Capture =           0b0100_0000_0000_0000, // 4
+    // en passant
     EpCapture =         0b0101_0000_0000_0000, // 5
 
     KnightPromo =       0b1000_0000_0000_0000, // 8
@@ -45,24 +46,16 @@ impl MoveType {
             (MoveType::BishopPromo | MoveType::BishopPromoCapture, White) => {
                 Some(Figure::WhiteBishop)
             }
-            (MoveType::RookPromo | MoveType::RookPromoCapture, White) => {
-                Some(Figure::WhiteRook)
-            }
-            (MoveType::QueenPromo | MoveType::QueenPromoCapture, White) => {
-                Some(Figure::WhiteQueen)
-            }
+            (MoveType::RookPromo | MoveType::RookPromoCapture, White) => Some(Figure::WhiteRook),
+            (MoveType::QueenPromo | MoveType::QueenPromoCapture, White) => Some(Figure::WhiteQueen),
             (MoveType::KnightPromo | MoveType::KnightPromoCapture, Black) => {
                 Some(Figure::BlackKnight)
             }
             (MoveType::BishopPromo | MoveType::BishopPromoCapture, Black) => {
                 Some(Figure::BlackBishop)
             }
-            (MoveType::RookPromo | MoveType::RookPromoCapture, Black) => {
-                Some(Figure::BlackRook)
-            }
-            (MoveType::QueenPromo | MoveType::QueenPromoCapture, Black) => {
-                Some(Figure::BlackQueen)
-            }
+            (MoveType::RookPromo | MoveType::RookPromoCapture, Black) => Some(Figure::BlackRook),
+            (MoveType::QueenPromo | MoveType::QueenPromoCapture, Black) => Some(Figure::BlackQueen),
             _ => None,
         }
     }
