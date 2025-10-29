@@ -8,6 +8,8 @@ on:
 jobs:
   build-both-and-benchmark:
     runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
     defaults:
       run:
         shell: bash
@@ -81,6 +83,7 @@ jobs:
           tar -xf fastchess-linux-x86-64.tar
           # Add the directory containing the executable to the system PATH
           echo "/tmp/fastchess-linux-x86-64" >> $GITHUB_PATH
+
       - name: Run benchmark script from PR repo
         working-directory: pr
         run: |
@@ -93,41 +96,19 @@ jobs:
           -engine cmd=./testing/previous \
           name=previous \
           -each proto=uci \
-          -each tc=0/0:30+1 \
+          -each tc=0/0:10+1 \
           -rounds 1 \
           -concurrency 4 \
           -openings file=./testing/8moves_v3.pgn format=pgn order=random \
           > benchmark_summary.txt 2>&1
 
-      - name: Prepare benchmark comment
-        id: prepare-comment
+      - name: Extract benchmark summary
         if: github.event_name == 'pull_request'
         working-directory: pr
-        run: |
-          {
-            echo "comment_body<<EOF"
-            echo "### ♟️ ELO Benchmark Results"
-            echo "\`\`\`"
-            tail -n 5 benchmark_summary.txt
-            echo "\`\`\`"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
+        run: tail -n 5 benchmark_summary.txt > benchmark_for_comment.txt
 
-      - name: Post benchmark results to PR
+      - name: Post Benchmark Results to PR
         if: github.event_name == 'pull_request'
-        uses: actions/github-script@v7
-        env:
-          COMMENT_BODY: ${{ steps.prepare-comment.outputs.comment_body }}
+        uses: thollander/actions-comment-pull-request@v3
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const { owner, repo } = context.repo;
-            const issue_number = context.issue.number;
-            const comment_body = process.env.COMMENT_BODY;
-
-            await github.rest.issues.createComment({
-              owner,
-              repo,
-              issue_number,
-              body: comment_body
-            });
+          file-path: pr/benchmark_for_comment.txt
