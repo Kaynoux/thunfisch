@@ -41,8 +41,8 @@ def to_potential_castle(mv_from, mv_to) -> str | None:
         return "O-O"
     if (mv_from[0], mv_to[0]) == ("e", "c"):
         row = int(mv_from[1]) - 1
-        board[row][6] = board[row][3]
-        board[row][5] = board[row][7]
+        board[row][5] = board[row][3]
+        board[row][4] = board[row][7]
         board[row][3] = ""
         board[row][7] = ""
         return "O-O-O"
