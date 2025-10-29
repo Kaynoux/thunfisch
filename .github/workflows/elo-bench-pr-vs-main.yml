@@ -136,11 +136,17 @@ jobs:
           -engine cmd=./testing/previous \
           name=previous \
           -each proto=uci \
-          -each tc=0/0:15+1 \
+          -each tc=0/0:05+0.05 \
           -rounds 1 \
           -concurrency 4 \
           -openings file=./testing/8moves_v3.pgn format=pgn order=random \
-          > benchmark_summary.txt 2>&1
+          | tee benchmark_summary.txt 2>&1
+      - name: Upload benchmark_summary as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-summary
+          path: benchmark_summary.txt
+          retention-days: 1
 
       # - name: Run benchmark script
       #   run: |
