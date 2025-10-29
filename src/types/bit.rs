@@ -9,7 +9,7 @@ impl fmt::Debug for Bit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let (x, y) = self.to_xy();
         write!(f, "[{},{}]", x, y)
-    }
+    }b
 }
 
 pub const POSITION_XY: [(usize, usize); 64] = {
