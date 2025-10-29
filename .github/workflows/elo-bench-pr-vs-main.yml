@@ -96,8 +96,8 @@ jobs:
           -engine cmd=./testing/previous \
           name=previous \
           -each proto=uci \
-          -each tc=0/0:10+1 \
-          -rounds 1 \
+          -each tc=0/0:15+1 \
+          -rounds 10 \
           -concurrency 4 \
           -openings file=./testing/8moves_v3.pgn format=pgn order=random \
           > benchmark_summary.txt 2>&1
@@ -105,7 +105,7 @@ jobs:
       - name: Extract benchmark summary
         if: github.event_name == 'pull_request'
         working-directory: pr
-        run: tail -n 5 benchmark_summary.txt > benchmark_for_comment.txt
+        run: tail -n 10 benchmark_summary.txt > benchmark_for_comment.txt
 
       - name: Post Benchmark Results to PR
         if: github.event_name == 'pull_request'
