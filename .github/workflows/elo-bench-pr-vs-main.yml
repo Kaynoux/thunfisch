@@ -3,8 +3,6 @@ on:
   pull_request:
     branches: [master]
     types: [opened, synchronize, reopened]
-  # todo remove this is only for testing that the thing runs
-  push:
   workflow_dispatch:
 
 jobs:
@@ -124,53 +122,29 @@ jobs:
           tar -xf fastchess-linux-x86-64.tar
           # Add the directory containing the executable to the system PATH
           echo "/tmp/fastchess-linux-x86-64" >> $GITHUB_PATH
+      - name: Verify fastchess installation
+        run: fastchess --version
 
       - name: Run benchmark script
         run: |
-          # Verify the installation
-          fastchess --version
-          # Run the benchmark
           fastchess \
           -engine cmd=./testing/current \
           name=current \
           -engine cmd=./testing/previous \
           name=previous \
           -each proto=uci \
-          -each tc=0/0:05+0.05 \
-          -rounds 1 \
+          -each tc=0/0:15+1 \
+          -rounds 10 \
           -concurrency 4 \
           -openings file=./testing/8moves_v3.pgn format=pgn order=random \
           | tee benchmark_summary.txt 2>&1
-      - name: Upload benchmark_summary as artifact
-        uses: actions/upload-artifact@v4
+
+      - name: Extract benchmark summary
+        if: github.event_name == 'pull_request'
+        run: tail -n 10 benchmark_summary.txt > benchmark_for_comment.txt
+
+      - name: Post Benchmark Results to PR
+        if: github.event_name == 'pull_request'
+        uses: thollander/actions-comment-pull-request@v3
         with:
-          name: benchmark-summary
-          path: benchmark_summary.txt
-          retention-days: 1
-
-      # - name: Run benchmark script
-      #   run: |
-      #     # Verify the installation
-      #     fastchess --version
-      #     # Run the benchmark
-      #     fastchess \
-      #     -engine cmd=./testing/current \
-      #     name=current \
-      #     -engine cmd=./testing/previous \
-      #     name=previous \
-      #     -each proto=uci \
-      #     -each tc=0/0:15+1 \
-      #     -rounds 10 \
-      #     -concurrency 4 \
-      #     -openings file=./testing/8moves_v3.pgn format=pgn order=random \
-      #     > benchmark_summary.txt 2>&1
-
-      # - name: Extract benchmark summary
-      #   if: github.event_name == 'pull_request'
-      #   run: tail -n 10 benchmark_summary.txt > benchmark_for_comment.txt
-
-      # - name: Post Benchmark Results to PR
-      #   if: github.event_name == 'pull_request'
-      #   uses: thollander/actions-comment-pull-request@v3
-      #   with:
-      #     file-path: benchmark_for_comment.txt
+          file-path: benchmark_for_comment.txt
