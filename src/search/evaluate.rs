@@ -6,27 +6,37 @@ const ROOK: i32 = 2;
 const QUEEN: i32 = 4;
 const TOTAL: i32 = KNIGHT * 4 + BISHOP * 4 + ROOK * 4 + QUEEN * 2;
 
+// [pawn, knight, bishop, rook, queen, king]
 const MG_PIECE_VALUES: [i32; 6] = [82, 337, 365, 477, 1025, 0];
 const EG_PIECE_VALUES: [i32; 6] = [94, 281, 297, 512, 936, 0];
 const MG_TABLE: [[i32; 64]; 12] = init_table(MG_PIECE_VALUES, MG_BASE_POSITION_TABLE);
 const EG_TABLE: [[i32; 64]; 12] = init_table(EG_PIECE_VALUES, EG_BASE_POSITION_TABLE);
-const GAMEPHASE_INC: [i32; 12] = [0, 0, 1, 1, 1, 1, 2, 2, 4, 4, 0, 0];
+// how impactful to the game phase a figure is if it's still on the board
+// for example: A game is 'more' endgame if there are no more queens on the board
+const GAMEPHASE_INC: [i32; 12] = [0, 0, KNIGHT, KNIGHT, BISHOP, BISHOP, ROOK, ROOK, QUEEN, QUEEN, 0, 0];
 
-// Flips square index to represent black site with white site offsets
+// Flips square index to flip rows but keep columns the same
+// e.g. a1 becomes a8; e4 -> e5
 const fn flip(sq: usize) -> usize {
-    (sq & 7) | ((7 - (sq >> 3)) << 3)
+    sq^56
 }
 
-const fn init_table(base_value: [i32; 6], base_position_table: [[i32; 64]; 6]) -> [[i32; 64]; 12] {
+/// Construct one evaluation table individual for each piece.
+/// The evaluation table assigns a value to each square on the board.
+/// Each piece has a raw material value `base_piece_value`, which is constant across the entire board.
+/// The position table is variable across the board and will additively alter the value of a piece depending on where it is located.
+const fn init_table(base_piece_value: [i32; 6], base_position_table: [[i32; 64]; 6]) -> [[i32; 64]; 12] {
     let mut table = [[0i32; 64]; 12];
     let mut piece = 0;
     while piece < 6 {
         let piece_type = piece * 2;
         let mut square = 0;
         while square < 64 {
-            let base = base_value[piece];
-            let offset_white = base_position_table[piece][square];
-            let offset_black = base_position_table[piece][flip(square)];
+            let base = base_piece_value[piece];
+            // PSTs are from black's POV (i.e. [0][0] corresponds to a8 instead of a0)
+            // so flip the board for white
+            let offset_white = base_position_table[piece][flip(square)];
+            let offset_black = base_position_table[piece][square];
             table[piece_type][square] = base + offset_white;
             table[piece_type + 1][square] = base + offset_black;
             square += 1;
@@ -82,9 +92,14 @@ pub const MG_BASE_POSITION_TABLE: [[i32; 64]; 6] = [
 pub const EG_BASE_POSITION_TABLE: [[i32; 64]; 6] = [
     // 0: Pawn
     [
-        0, 0, 0, 0, 0, 0, 0, 0, 178, 173, 158, 134, 147, 132, 165, 187, 94, 100, 85, 67, 56, 53,
-        82, 84, 32, 24, 13, 5, -2, 4, 17, 17, 13, 9, -3, -7, -7, -8, 3, -1, 4, 7, -6, 1, 0, -5, -1,
-        -8, 13, 8, 8, 10, 13, 0, 2, -7, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0,
+        178, 173, 158, 134, 147, 132, 165, 187,
+        94, 100, 85, 67, 56, 53, 82, 84,
+        32, 24, 13, 5, -2, 4, 17, 17,
+        13, 9, -3, -7, -7, -8, 3, -1,
+        4, 7, -6, 1, 0, -5, -1, -8,
+        13, 8, 8, 10, 13, 0, 2, -7,
+        0, 0, 0, 0, 0, 0, 0, 0,
     ],
     // 1: Knight
     [
@@ -119,11 +134,11 @@ pub const EG_BASE_POSITION_TABLE: [[i32; 64]; 6] = [
     ],
 ];
 
+/// Evaluates the board
+/// positive -> advantage for white,
+/// negative -> advantage for black,
+/// Unit = Centipawns, 100 Centipawns => 1 Pawn
 impl Board {
-    /// Evaluates the board,
-    /// positive -> advantage for white,
-    /// negative -> advantage for black,
-    /// Unit = Centipawns, 100 Centipawns => 1 Pawn
     pub fn evaluate(&self) -> i32 {
         let white = 0usize;
         let black = 1usize;
@@ -133,13 +148,18 @@ impl Board {
         let mut phase = TOTAL;
         for i in 0..=11 {
             let mut bb = self.figure_bb_by_index(i);
+            // println!("figure: {:?}", Figure::from_idx(i));
             for bit in bb.iter_mut() {
                 let square = bit.to_square();
                 mg[i & 1] += MG_TABLE[i][square];
                 eg[i & 1] += EG_TABLE[i][square];
+                // println!("blended: {}", (MG_TABLE[i][square] * (256 - 224) + EG_TABLE[i][square] * 224 >> 8));
                 phase -= GAMEPHASE_INC[i];
             }
         }
+        // value is larger the less pieces are on the board
+        // value is bound by the interval [0, 256]
+        // (0 = starting position, 256 = only pawns and kings)
         let gamephase = (phase * 256 + (TOTAL / 2)) / TOTAL;
 
         let mg_score = mg[white] - mg[black];
@@ -150,6 +170,6 @@ impl Board {
             Black => -1,
         };
 
-        (mg_score * (256 - gamephase) + eg_score * gamephase >> 8) * current_color_multiplier
+        ((mg_score * (256 - gamephase) + eg_score * gamephase) >> 8) * current_color_multiplier
     }
 }
