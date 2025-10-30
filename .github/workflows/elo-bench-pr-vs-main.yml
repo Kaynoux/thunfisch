@@ -134,6 +134,7 @@ jobs:
           name=previous \
           -each proto=uci \
           -each tc=0/0:15+1 \
+          -pgnout file=./testing/sprt.pgn
           -rounds 10 \
           -concurrency 4 \
           -openings file=./testing/8moves_v3.pgn format=pgn order=random \
@@ -148,3 +149,9 @@ jobs:
         uses: thollander/actions-comment-pull-request@v3
         with:
           file-path: benchmark_for_comment.txt
+      - name: Export PGN file
+        uses: actions/upload-artifact@v4
+        with:
+            file-path: testing/sprt.pgn
+            name: sprt-pgn
+            retention-days: 30
