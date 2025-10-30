@@ -33,7 +33,7 @@ const fn init_table(base_piece_value: [i32; 6], base_position_table: [[i32; 64];
         let mut square = 0;
         while square < 64 {
             let base = base_piece_value[piece];
-            // PSTs may be flipped (i.e. [0][0] corresponds to a8 instead of a0)
+            // PSTs are from black's POV (i.e. [0][0] corresponds to a8 instead of a0)
             // so flip the board for white
             let offset_white = base_position_table[piece][flip(square)];
             let offset_black = base_position_table[piece][square];

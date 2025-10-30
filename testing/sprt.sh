@@ -15,13 +15,6 @@ run_sprt() {
         -concurrency 4 \
         -rounds 5000 \
         -recover \
-        -sprt elo0=0 elo1=20 alpha=0.05 beta=0.05
+        -sprt elo0=0 elo1=100 alpha=0.005 beta=0.005
 }
-
-# dummy game for testing setup
-# fastchess \
-#   -engine cmd=$NEW_VERSION name=new-1 -engine cmd=$NEW_VERSION name=new-2 \
-#   -each proto=uci tc=5+0.5 \
-#   -rounds 4 \
-#   -openings file=8moves_v3.pgn format=pgn order=random \
-#   -concurrency 4
+run_sprt
