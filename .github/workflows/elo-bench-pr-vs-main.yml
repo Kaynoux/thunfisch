@@ -152,6 +152,6 @@ jobs:
       - name: Export PGN file
         uses: actions/upload-artifact@v4
         with:
-            file-path: testing/games.pgn
-            name: games-pgn
+            path: testing/games.pgn
+            name: pgn
             retention-days: 30
