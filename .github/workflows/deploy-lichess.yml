@@ -2,12 +2,15 @@ name: Deploy Lichess Bot
 
 on:
   push:
+    branches:
+      - main
   workflow_dispatch:
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
+    environment: Lichess Deployment
+
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
