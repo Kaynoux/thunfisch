@@ -3,7 +3,9 @@ name: Deploy Lichess Bot
 on:
   workflow_dispatch:
   push:
-
+    branches:
+      - master
+      
 jobs:
   deploy:
     runs-on: ubuntu-latest
