@@ -20,6 +20,8 @@ jobs:
           username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            export PATH="$PATH:/home/ubuntu/.cargo/bin"
+
             cd /home/ubuntu/repos/thunfisch
             
             git pull origin master
