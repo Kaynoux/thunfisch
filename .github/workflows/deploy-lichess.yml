@@ -17,11 +17,10 @@ jobs:
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
+          username: ubuntu
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
-            # Gehe zum Projektverzeichnis
-            cd ${{ secrets.WORK_DIR }}
+            cd /home/ubuntu/repos/thunfisch
             
             git pull origin main
             
