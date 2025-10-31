@@ -13,24 +13,21 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
       
-      - name: Install SSH Key
-        run: |
-          install -m 600 -D /dev/null ~/.ssh/id_rsa
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          
-      - name: Add Host to known_hosts
-        run: ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-
-      - name: Docker Deployment
-        run: |
-          ssh -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} " \
-            cd ${{ secrets.WORK_DIR }} && \
-            git pull origin main && \
-            cargo build --release && \
-            export LICHESS_BOT_TOKEN=${{ secrets.LICHESS_BOT_TOKEN }} && \
-            docker compose up -d --build && \
-            docker image prune -f \
-          "
-
-      - name: Cleanup SSH Keys
-        run: rm -rf ~/.ssh
+      - name: Deployment
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Gehe zum Projektverzeichnis
+            cd ${{ secrets.WORK_DIR }}
+            
+            git pull origin main
+            
+            cargo build --release
+            
+            export LICHESS_BOT_TOKEN=${{ secrets.LICHESS_BOT_TOKEN }}
+            
+            docker compose up -d --build
+            docker image prune -f
