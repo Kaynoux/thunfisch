@@ -1,0 +1,36 @@
+name: Deploy Lichess Bot 
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - master
+      
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: Lichess Deployment
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      
+      - name: Deployment
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            export PATH="$PATH:/home/ubuntu/.cargo/bin"
+
+            cd /home/ubuntu/repos/thunfisch
+            
+            git pull origin master
+            
+            cargo build --release
+            
+            export LICHESS_BOT_TOKEN=${{ secrets.LICHESS_BOT_TOKEN }}
+            
+            docker compose up -d --build
+            docker image prune -f
