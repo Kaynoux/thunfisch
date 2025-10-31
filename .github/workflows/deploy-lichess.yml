@@ -5,7 +5,7 @@ on:
     branches:
       - main
   workflow_dispatch:
-    
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -27,6 +27,7 @@ jobs:
           ssh -i ~/.ssh/id_rsa ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} " \
             cd ${{ secrets.WORK_DIR }} && \
             git pull origin main && \
+            cargo build --release && \
             export LICHESS_BOT_TOKEN=${{ secrets.LICHESS_BOT_TOKEN }} && \
             docker compose up -d --build && \
             docker image prune -f \
