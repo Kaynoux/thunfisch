@@ -22,7 +22,7 @@ jobs:
           script: |
             cd /home/ubuntu/repos/thunfisch
             
-            git pull origin main
+            git pull origin master
             
             cargo build --release
             
