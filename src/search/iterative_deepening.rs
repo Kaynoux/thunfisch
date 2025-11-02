@@ -6,6 +6,7 @@ use crate::settings::settings;
 use rayon::iter::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
 
+use std::i32;
 use std::time::Instant;
 use std::{
     sync::{
@@ -118,7 +119,8 @@ pub fn iterative_deepening(
                 if b.is_threefold_repetition() || b.is_50_move_rule() {
                     break;
                 }
-                if let Some(mv) = TT.probe(b.hash()) {
+                // probe the tt with values that guarantee returning the actual entry
+                if let Some((_, mv)) = TT.probe(b.hash(), -i32::MAX, i32::MAX, 0) {
                     b.make_move(&mv.decode());
                     pv_moves.push(mv);
                 } else {

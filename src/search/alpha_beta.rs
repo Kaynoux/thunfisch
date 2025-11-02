@@ -32,6 +32,13 @@ pub fn alpha_beta(
         return (None, 0);
     }
 
+    let hash = board.hash();
+    if settings::TRANSPOSITION_TABLE {
+        if let Some(tt_hit) = TT.probe(hash, alpha, beta, depth) {
+            return (Some(tt_hit.1), tt_hit.0)
+        }
+    }
+
     if depth == 0 {
         if settings::QUIESCENCE_SEARCH {
             let qs_result = quiescence_search::quiescence_search(
@@ -77,15 +84,15 @@ pub fn alpha_beta(
         move_ordering::order_moves(&mut moves, board);
     }
 
-    let hash = board.hash();
     if settings::TRANSPOSITION_TABLE {
-        if let Some(tt_mv) = TT.probe(hash) {
+        if let Some((_, tt_mv)) = TT.probe(hash, alpha, beta, depth) {
             if let Some(pos) = moves.iter().position(|&m| m == tt_mv) {
                 moves.swap(0, pos);
             }
         }
     }
 
+    let mut score_type = ScoreType::UPPER_BOUND;
     for mv in moves {
         // cancels search if time is over
         if stop.load(Ordering::Relaxed) {
@@ -111,20 +118,23 @@ pub fn alpha_beta(
             best_move = Some(mv);
             if eval > alpha {
                 alpha = eval;
+                score_type = ScoreType::EXACT;
             }
         }
 
         if settings::ALPHA_BETA {
             if eval >= beta {
+                if settings::TRANSPOSITION_TABLE {
+                    // beta cutoff -> there could be better moves we didn't see, so the score is lower bound
+                    TT.store(hash, best_move, eval, depth, ScoreType::LOWER_BOUND);
+                }
                 return (best_move, best_eval);
             }
         }
     }
 
     if settings::TRANSPOSITION_TABLE {
-        if let Some(mv) = best_move {
-            TT.store(hash, Some(mv), best_eval, depth, ScoreType::EXACT);
-        }
+        TT.store(hash, best_move, alpha, depth, score_type);
     }
 
     (best_move, best_eval)

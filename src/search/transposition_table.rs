@@ -93,15 +93,46 @@ impl TranspositionTable {
         (hash as usize) & self.mask
     }
 
-    pub fn probe(&self, hash: u64) -> Option<EncodedMove> {
+    pub fn probe(
+        &self,
+        hash: u64,
+        alpha: i32,
+        beta: i32,
+        depth: usize,
+    ) -> Option<(i32, EncodedMove)> {
         let e = &self.entries[self.index(hash)];
-        if e.key.load(Ordering::Relaxed) == hash {
-            let raw = e.mv.load(Ordering::Relaxed);
-            if raw != 0 {
-                return Some(EncodedMove((raw - 1) as u16));
+        if e.key.load(Ordering::Relaxed) != hash {
+            return None;
+        }
+        let (e_depth, e_type) = e.flags.decode();
+        let best_mv = e.mv.load(Ordering::Relaxed);
+        let eval = e.eval.load(Ordering::Relaxed);
+
+        if e_depth < depth {
+            return None;
+        }
+        if best_mv == 0 {
+            return None;
+        }
+
+        let best_mv = EncodedMove((best_mv - 1) as u16); // converting here for readable returns below
+        match e_type {
+            ScoreType::EXACT => Some((eval, best_mv)),
+            ScoreType::LOWER_BOUND => {
+                if eval <= alpha {
+                    Some((alpha, best_mv))
+                } else {
+                    None
+                }
+            }
+            ScoreType::UPPER_BOUND => {
+                if eval >= beta {
+                    Some((beta, best_mv))
+                } else {
+                    None
+                }
             }
         }
-        None
     }
 
     /// Currently uses ALWAYS REPLACE scheme for collisions
@@ -121,7 +152,9 @@ impl TranspositionTable {
         }
         // store mv.0+1 as u32
         // if mv is none, represent this as 0
-        entry.mv.store(mv.map_or(0, |mv| mv.0 as u32 + 1), Ordering::Relaxed);
+        entry
+            .mv
+            .store(mv.map_or(0, |mv| mv.0 as u32 + 1), Ordering::Relaxed);
         entry.eval.store(eval, Ordering::Relaxed);
         entry.flags.store(depth, score_type);
     }
