@@ -152,7 +152,8 @@ pub fn iterative_deepening(
 
         let iteration_duration = iteration_start.elapsed();
         let global_duration = global_start.elapsed();
-        let nodes_per_seconds = (iteration_nodes as f64 / iteration_duration.as_secs_f64()) as usize;
+        let nodes_per_seconds =
+            (iteration_nodes as f64 / iteration_duration.as_secs_f64()) as usize;
 
         println!(
             "info  depth {} seldepth {}  score cp {} nodes {} nps {} time {} tt {} pv {} | nodes_ab {} nodes_qs {} timeout {} total_time {}",

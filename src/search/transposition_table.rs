@@ -93,6 +93,8 @@ impl TranspositionTable {
         (hash as usize) & self.mask
     }
 
+    /// See http://web.archive.org/web/20071031100051/http://www.brucemo.com:80/compchess/programming/hashing.htm
+    /// for how the returns work on this
     pub fn probe(
         &self,
         hash: u64,
