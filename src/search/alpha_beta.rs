@@ -1,5 +1,5 @@
 use super::move_ordering;
-use super::transposition_table::TT;
+use super::transposition_table::{ScoreType, TT};
 use crate::prelude::*;
 use crate::search::quiescence_search;
 use crate::settings::settings;
@@ -34,19 +34,20 @@ pub fn alpha_beta(
 
     if depth == 0 {
         if settings::QUIESCENCE_SEARCH {
-            return (
-                None,
-                quiescence_search::quiescence_search(
-                    board,
-                    alpha,
-                    beta,
-                    MAX_QUIESCENCE_SEARCH_DEPTH,
-                    stop,
-                    search_info,
-                    ply,
-                    local_seldepth,
-                ),
+            let qs_result = quiescence_search::quiescence_search(
+                board,
+                alpha,
+                beta,
+                MAX_QUIESCENCE_SEARCH_DEPTH,
+                stop,
+                search_info,
+                ply,
+                local_seldepth,
             );
+            if settings::TRANSPOSITION_TABLE {
+                TT.store(board.hash(), None, qs_result, depth, ScoreType::EXACT);
+            }
+            return (None, qs_result);
         }
         return (None, board.evaluate());
     };
@@ -122,7 +123,7 @@ pub fn alpha_beta(
 
     if settings::TRANSPOSITION_TABLE {
         if let Some(mv) = best_move {
-            TT.store(hash, mv);
+            TT.store(hash, Some(mv), best_eval, depth, ScoreType::EXACT);
         }
     }
 

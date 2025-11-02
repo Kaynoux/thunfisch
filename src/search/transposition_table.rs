@@ -1,18 +1,16 @@
 use crate::prelude::*;
 use once_cell::sync::Lazy;
-use std::sync::atomic::{
-    AtomicI32, AtomicU8, AtomicU32, AtomicU64, AtomicUsize, Ordering
-};
+use std::sync::atomic::{AtomicI32, AtomicU8, AtomicU32, AtomicU64, AtomicUsize, Ordering};
 
 #[derive(Debug, PartialEq)]
-enum ScoreType {
+pub enum ScoreType {
     EXACT,
     LOWER_BOUND,
     UPPER_BOUND,
 }
 
 impl ScoreType {
-    pub fn from(enc: u8) -> ScoreType {
+    fn from(enc: u8) -> ScoreType {
         match enc & 3 {
             0 => ScoreType::EXACT,
             1 => ScoreType::LOWER_BOUND,
@@ -22,7 +20,7 @@ impl ScoreType {
         }
     }
 
-    pub fn to_u8(&self) -> u8 {
+    fn to_u8(&self) -> u8 {
         match self {
             ScoreType::EXACT => 0,
             ScoreType::LOWER_BOUND => 1,
@@ -33,19 +31,17 @@ impl ScoreType {
 
 /// Encoding:
 /// [depth (6 bit) | score type (2 bit)]
-/// Since the TTEntry Struct is padded
 struct TTFlags(AtomicU8);
 
 impl TTFlags {
-    fn encode(depth: usize, score_type: &ScoreType) -> TTFlags {
-        TTFlags(AtomicU8::new(
-            (((depth & 0x3fff) as u8) << 2) + score_type.to_u8() as u8,
-        ))
-    }
-
     fn decode(&self) -> (usize, ScoreType) {
         let asu8 = self.0.load(Ordering::Relaxed);
-        ((asu8 >> 2) as usize, ScoreType::from(asu8 as u8))
+        ((asu8 >> 2) as usize, ScoreType::from(asu8))
+    }
+
+    fn store(&self, depth: usize, score_type: ScoreType) {
+        let encoded = (((depth & 0x3f) as u8) << 2) | score_type.to_u8();
+        self.0.store(encoded, Ordering::Relaxed);
     }
 }
 
@@ -82,8 +78,7 @@ impl TranspositionTable {
                 key: AtomicU64::new(0),
                 mv: AtomicU32::new(0),
                 eval: AtomicI32::new(0),
-                flags: TTFlags(AtomicU8::new(0))
-
+                flags: TTFlags(AtomicU8::new(0)),
             })
             .collect();
         TranspositionTable {
@@ -109,15 +104,26 @@ impl TranspositionTable {
         None
     }
 
-    pub fn store(&self, hash: u64, mv: EncodedMove) {
+    /// Currently uses ALWAYS REPLACE scheme for collisions
+    pub fn store(
+        &self,
+        hash: u64,
+        mv: Option<EncodedMove>,
+        eval: i32,
+        depth: usize,
+        score_type: ScoreType,
+    ) {
         let idx = self.index(hash);
-        let e = &self.entries[idx];
-        let prev = e.key.swap(hash, Ordering::Relaxed);
+        let entry = &self.entries[idx];
+        let prev = entry.key.swap(hash, Ordering::Relaxed);
         if prev == 0 {
             self.filled.fetch_add(1, Ordering::Relaxed);
         }
-        // store mv.0+1 as u32, 0 == no move
-        e.mv.store((mv.0 as u32) + 1, Ordering::Relaxed);
+        // store mv.0+1 as u32
+        // if mv is none, represent this as 0
+        entry.mv.store(mv.map_or(0, |mv| mv.0 as u32 + 1), Ordering::Relaxed);
+        entry.eval.store(eval, Ordering::Relaxed);
+        entry.flags.store(depth, score_type);
     }
 
     //todo figure out whether there actually is a difference between f and c
@@ -128,10 +134,20 @@ impl TranspositionTable {
     }
 }
 
-
 #[cfg(test)]
 mod test_tt_encodings {
     use super::*;
+
+    // implementing clone makes no sense for the main project but for the tests it does so
+    impl Clone for ScoreType {
+        fn clone(&self) -> Self {
+            match self {
+                Self::EXACT => Self::EXACT,
+                Self::LOWER_BOUND => Self::LOWER_BOUND,
+                Self::UPPER_BOUND => Self::UPPER_BOUND,
+            }
+        }
+    }
 
     #[test]
     fn test_size_of_struct() {
@@ -146,13 +162,14 @@ mod test_tt_encodings {
     fn test_depth_type_encoding() {
         let depth: usize = 15;
         let score_type = ScoreType::EXACT;
-        let encoded = TTFlags::encode(depth, &score_type);
+        let encoded = TTFlags(AtomicU8::new(0));
+        encoded.store(depth, score_type.clone());
         assert_eq!(encoded.0.load(Ordering::Relaxed), 0b00111100);
         assert_eq!(encoded.decode(), (depth, score_type));
 
         let depth: usize = 4;
         let score_type = ScoreType::UPPER_BOUND;
-        let encoded = TTFlags::encode(depth, &score_type);
+        encoded.store(depth, score_type.clone());
         assert_eq!(encoded.0.load(Ordering::Relaxed), 0b00010010);
         assert_eq!(encoded.decode(), (depth, score_type));
 
