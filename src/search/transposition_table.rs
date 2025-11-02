@@ -1,13 +1,64 @@
 use crate::prelude::*;
 use once_cell::sync::Lazy;
-use std::sync::atomic::{AtomicU32, AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::{
+    AtomicI32, AtomicU8, AtomicU32, AtomicU64, AtomicUsize, Ordering
+};
+
+#[derive(Debug, PartialEq)]
+enum ScoreType {
+    EXACT,
+    LOWER_BOUND,
+    UPPER_BOUND,
+}
+
+impl ScoreType {
+    pub fn from(enc: u8) -> ScoreType {
+        match enc & 3 {
+            0 => ScoreType::EXACT,
+            1 => ScoreType::LOWER_BOUND,
+            2 => ScoreType::UPPER_BOUND,
+            // we don't have a use for `0b11`
+            _ => ScoreType::UPPER_BOUND,
+        }
+    }
+
+    pub fn to_u8(&self) -> u8 {
+        match self {
+            ScoreType::EXACT => 0,
+            ScoreType::LOWER_BOUND => 1,
+            ScoreType::UPPER_BOUND => 2,
+        }
+    }
+}
+
+/// Encoding:
+/// [depth (6 bit) | score type (2 bit)]
+/// Since the TTEntry Struct is padded
+struct TTFlags(AtomicU8);
+
+impl TTFlags {
+    fn encode(depth: usize, score_type: &ScoreType) -> TTFlags {
+        TTFlags(AtomicU8::new(
+            (((depth & 0x3fff) as u8) << 2) + score_type.to_u8() as u8,
+        ))
+    }
+
+    fn decode(&self) -> (usize, ScoreType) {
+        let asu8 = self.0.load(Ordering::Relaxed);
+        ((asu8 >> 2) as usize, ScoreType::from(asu8 as u8))
+    }
+}
 
 /// Single Entry in the transposition table
 /// my move has 16 bits but it has currently no way of storing null moves so I use an u32 as a tempory solution
 /// this needs to be fixed in the future
+/// Also the Score being 4 bytes leads to the struct being padded to 24 bytes (from the 17 it actually needs)
+/// should also be fixed
 struct TTEntry {
     key: AtomicU64,
     mv: AtomicU32,
+    eval: AtomicI32,
+    flags: TTFlags,
 }
 
 /// https://www.chessprogramming.org/Transposition_Table
@@ -17,18 +68,22 @@ pub struct TranspositionTable {
     filled: AtomicUsize,
 }
 
+/// Transposition Table shared between all search threads
 pub static TT: Lazy<TranspositionTable> = Lazy::new(|| TranspositionTable::new(128));
 
 impl TranspositionTable {
     pub fn new(mb: usize) -> Self {
         let bytes = mb * 1024 * 1024;
         // 12 because 64bit + 32bit = 12 byte
-        let entry_size = 12;
+        let entry_size = size_of::<TTEntry>();
         let cap = (bytes / entry_size).next_power_of_two();
         let entries = (0..cap)
             .map(|_| TTEntry {
                 key: AtomicU64::new(0),
                 mv: AtomicU32::new(0),
+                eval: AtomicI32::new(0),
+                flags: TTFlags(AtomicU8::new(0))
+
             })
             .collect();
         TranspositionTable {
@@ -65,9 +120,43 @@ impl TranspositionTable {
         e.mv.store((mv.0 as u32) + 1, Ordering::Relaxed);
     }
 
+    //todo figure out whether there actually is a difference between f and c
     pub fn fill_ratio(&self) -> (usize, usize, f64) {
         let f = self.filled.load(Ordering::Relaxed);
         let c = self.entries.len();
         (f, c, f as f64 * 100.0 / c as f64)
+    }
+}
+
+
+#[cfg(test)]
+mod test_tt_encodings {
+    use super::*;
+
+    #[test]
+    fn test_size_of_struct() {
+        println!("{}", size_of::<TTEntry>());
+        println!("{}", size_of::<TTFlags>());
+        println!("{}", size_of::<AtomicU32>());
+        println!("{}", size_of::<AtomicI32>());
+        println!("{}", size_of::<AtomicU64>());
+    }
+
+    #[test]
+    fn test_depth_type_encoding() {
+        let depth: usize = 15;
+        let score_type = ScoreType::EXACT;
+        let encoded = TTFlags::encode(depth, &score_type);
+        assert_eq!(encoded.0.load(Ordering::Relaxed), 0b00111100);
+        assert_eq!(encoded.decode(), (depth, score_type));
+
+        let depth: usize = 4;
+        let score_type = ScoreType::UPPER_BOUND;
+        let encoded = TTFlags::encode(depth, &score_type);
+        assert_eq!(encoded.0.load(Ordering::Relaxed), 0b00010010);
+        assert_eq!(encoded.decode(), (depth, score_type));
+
+        let encoded = TTFlags(AtomicU8::new(0b00001111));
+        assert_eq!(encoded.decode(), (3, ScoreType::UPPER_BOUND));
     }
 }
