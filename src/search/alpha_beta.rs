@@ -34,6 +34,7 @@ pub fn alpha_beta(
 
     // only probe TT after draw detection, because the TT does not remember move history
     // doing it the other way around yield the TT score instead of the draw score for a repetition
+    // also probe the TT bfore the QS, because QS is expensive
     let hash = board.hash();
     if settings::TRANSPOSITION_TABLE {
         if let Some(tt_hit) = TT.probe(hash, alpha, beta, depth) {
@@ -41,7 +42,6 @@ pub fn alpha_beta(
             return (Some(tt_hit.1), tt_hit.0);
         }
     }
-
 
     if depth == 0 {
         if settings::QUIESCENCE_SEARCH {
@@ -55,9 +55,7 @@ pub fn alpha_beta(
                 ply,
                 local_seldepth,
             );
-            if settings::TRANSPOSITION_TABLE {
-                TT.store(board.hash(), None, qs_result, depth, ScoreType::Exact);
-            }
+            // QS stores its own TT results -> do nothing here
             return (None, qs_result);
         }
         return (None, board.evaluate());
@@ -88,11 +86,9 @@ pub fn alpha_beta(
         move_ordering::order_moves(&mut moves, board);
     }
 
-    if settings::TRANSPOSITION_TABLE {
-        if let Some((_, tt_mv)) = TT.probe(hash, alpha, beta, depth) {
-            if let Some(pos) = moves.iter().position(|&m| m == tt_mv) {
-                moves.swap(0, pos);
-            }
+    if let Some((_, tt_mv)) = TT.probe(hash, alpha, beta, depth) {
+        if let Some(pos) = moves.iter().position(|&m| m == tt_mv) {
+            moves.swap(0, pos);
         }
     }
 
@@ -128,18 +124,14 @@ pub fn alpha_beta(
 
         if settings::ALPHA_BETA {
             if eval >= beta {
-                if settings::TRANSPOSITION_TABLE {
-                    // beta cutoff -> there could be better moves we didn't see, so the score is lower bound
-                    TT.store(hash, best_move, eval, depth, ScoreType::LowerBound);
-                }
+                // beta cutoff -> there could be better moves we didn't see, so the score is lower bound
+                TT.store(hash, best_move, eval, depth, ScoreType::LowerBound);
                 return (best_move, best_eval);
             }
         }
     }
 
-    if settings::TRANSPOSITION_TABLE {
-        TT.store(hash, best_move, alpha, depth, score_type);
-    }
+    TT.store(hash, best_move, alpha, depth, score_type);
 
     (best_move, best_eval)
 }

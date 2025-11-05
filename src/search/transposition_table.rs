@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{prelude::*, settings::settings};
 use once_cell::sync::Lazy;
 use std::sync::atomic::{AtomicI32, AtomicU8, AtomicU32, AtomicU64, AtomicUsize, Ordering};
 
@@ -101,6 +101,9 @@ impl TranspositionTable {
         beta: i32,
         depth: usize,
     ) -> Option<(i32, EncodedMove)> {
+        if !settings::TRANSPOSITION_TABLE {
+            return None;
+        }
         let e = &self.entries[self.index(hash)];
         if e.key.load(Ordering::Relaxed) != hash {
             return None;
@@ -145,6 +148,9 @@ impl TranspositionTable {
         depth: usize,
         score_type: ScoreType,
     ) {
+        if !settings::TRANSPOSITION_TABLE {
+            return;
+        }
         let idx = self.index(hash);
         let entry = &self.entries[idx];
         let prev = entry.key.swap(hash, Ordering::Relaxed);

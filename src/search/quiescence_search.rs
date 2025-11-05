@@ -1,7 +1,8 @@
-use crate::move_generator::generator::ARRAY_LENGTH;
 use crate::prelude::*;
 use crate::search::move_ordering;
+use crate::search::transposition_table::ScoreType;
 use crate::settings::settings;
+use crate::{move_generator::generator::ARRAY_LENGTH, search::transposition_table::TT};
 use arrayvec::ArrayVec;
 
 use std::sync::{
@@ -31,8 +32,18 @@ pub fn quiescence_search(
         return 0;
     }
 
+    let hash = board.hash();
+    if settings::TRANSPOSITION_TABLE {
+        if let Some(tt_hit) = TT.probe(hash, alpha, beta, depth) {
+            search_info.total_tt_hits.fetch_add(1, Ordering::Relaxed);
+            return tt_hit.0;
+        }
+    }
+
     if depth == 0 {
-        return board.evaluate();
+        let eval = board.evaluate();
+        TT.store(hash, None, eval, depth, ScoreType::Exact);
+        return eval;
     }
 
     search_info.total_qs_nodes.fetch_add(1, Ordering::Relaxed);
@@ -58,6 +69,8 @@ pub fn quiescence_search(
         move_ordering::order_moves(&mut moves, board);
     }
 
+    let mut score_type = ScoreType::UpperBound;
+    let mut best_mv = None;
     for mv in moves {
         if stop.load(Ordering::Relaxed) {
             search_info.timeout_occurred.store(true, Ordering::Relaxed);
@@ -78,17 +91,22 @@ pub fn quiescence_search(
 
         if settings::ALPHA_BETA {
             if score >= beta {
+                TT.store(hash, Some(mv), score, depth, ScoreType::LowerBound);
                 return score;
             }
         }
 
         if score > best_score {
             best_score = score;
+            best_mv = Some(mv);
         }
         if score > alpha {
-            alpha = score
+            alpha = score;
+            score_type = ScoreType::Exact;
         }
     }
+
+    TT.store(hash, best_mv, alpha, depth, score_type);
 
     best_score
 }
