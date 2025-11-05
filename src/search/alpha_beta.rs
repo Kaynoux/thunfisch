@@ -32,12 +32,16 @@ pub fn alpha_beta(
         return (None, 0);
     }
 
+    // only probe TT after draw detection, because the TT does not remember move history
+    // doing it the other way around yield the TT score instead of the draw score for a repetition
     let hash = board.hash();
     if settings::TRANSPOSITION_TABLE {
         if let Some(tt_hit) = TT.probe(hash, alpha, beta, depth) {
-            return (Some(tt_hit.1), tt_hit.0)
+            search_info.total_tt_hits.fetch_add(1, Ordering::Relaxed);
+            return (Some(tt_hit.1), tt_hit.0);
         }
     }
+
 
     if depth == 0 {
         if settings::QUIESCENCE_SEARCH {
@@ -52,7 +56,7 @@ pub fn alpha_beta(
                 local_seldepth,
             );
             if settings::TRANSPOSITION_TABLE {
-                TT.store(board.hash(), None, qs_result, depth, ScoreType::EXACT);
+                TT.store(board.hash(), None, qs_result, depth, ScoreType::Exact);
             }
             return (None, qs_result);
         }
@@ -92,7 +96,7 @@ pub fn alpha_beta(
         }
     }
 
-    let mut score_type = ScoreType::UPPER_BOUND;
+    let mut score_type = ScoreType::UpperBound;
     for mv in moves {
         // cancels search if time is over
         if stop.load(Ordering::Relaxed) {
@@ -118,7 +122,7 @@ pub fn alpha_beta(
             best_move = Some(mv);
             if eval > alpha {
                 alpha = eval;
-                score_type = ScoreType::EXACT;
+                score_type = ScoreType::Exact;
             }
         }
 
@@ -126,7 +130,7 @@ pub fn alpha_beta(
             if eval >= beta {
                 if settings::TRANSPOSITION_TABLE {
                     // beta cutoff -> there could be better moves we didn't see, so the score is lower bound
-                    TT.store(hash, best_move, eval, depth, ScoreType::LOWER_BOUND);
+                    TT.store(hash, best_move, eval, depth, ScoreType::LowerBound);
                 }
                 return (best_move, best_eval);
             }

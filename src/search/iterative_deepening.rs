@@ -146,6 +146,7 @@ pub fn iterative_deepening(
         let iteration_eval_nodes = iteration_search_info
             .total_eval_nodes
             .load(Ordering::Relaxed);
+        let iteration_tt_hits = iteration_search_info.total_tt_hits.load(Ordering::Relaxed);
 
         let iteration_not_eval_nodes = iteration_ab_nodes + iteration_qs_nodes;
         let iteration_nodes = iteration_not_eval_nodes + iteration_eval_nodes;
@@ -156,7 +157,7 @@ pub fn iterative_deepening(
             (iteration_nodes as f64 / iteration_duration.as_secs_f64()) as usize;
 
         println!(
-            "info  depth {} seldepth {}  score cp {} nodes {} nps {} time {} tt {} pv {} | nodes_ab {} nodes_qs {} timeout {} total_time {}",
+            "info  depth {} seldepth {}  score cp {} nodes {} nps {} time {} tt {} pv {} | nodes_ab {} nodes_qs {} tt_hits {} timeout {} total_time {}",
             depth,
             best_seldepth,
             best_eval_overall,
@@ -167,6 +168,7 @@ pub fn iterative_deepening(
             pv_string,
             iteration_ab_nodes,
             iteration_qs_nodes,
+            iteration_tt_hits,
             iteration_search_info
                 .timeout_occurred
                 .load(Ordering::Relaxed),

@@ -4,27 +4,27 @@ use std::sync::atomic::{AtomicI32, AtomicU8, AtomicU32, AtomicU64, AtomicUsize, 
 
 #[derive(Debug, PartialEq)]
 pub enum ScoreType {
-    EXACT,
-    LOWER_BOUND,
-    UPPER_BOUND,
+    Exact,
+    LowerBound,
+    UpperBound,
 }
 
 impl ScoreType {
     fn from(enc: u8) -> ScoreType {
         match enc & 3 {
-            0 => ScoreType::EXACT,
-            1 => ScoreType::LOWER_BOUND,
-            2 => ScoreType::UPPER_BOUND,
+            0 => ScoreType::Exact,
+            1 => ScoreType::LowerBound,
+            2 => ScoreType::UpperBound,
             // we don't have a use for `0b11`
-            _ => ScoreType::UPPER_BOUND,
+            _ => ScoreType::UpperBound,
         }
     }
 
     fn to_u8(&self) -> u8 {
         match self {
-            ScoreType::EXACT => 0,
-            ScoreType::LOWER_BOUND => 1,
-            ScoreType::UPPER_BOUND => 2,
+            ScoreType::Exact => 0,
+            ScoreType::LowerBound => 1,
+            ScoreType::UpperBound => 2,
         }
     }
 }
@@ -65,12 +65,11 @@ pub struct TranspositionTable {
 }
 
 /// Transposition Table shared between all search threads
-pub static TT: Lazy<TranspositionTable> = Lazy::new(|| TranspositionTable::new(128));
+pub static TT: Lazy<TranspositionTable> = Lazy::new(|| TranspositionTable::new(512));
 
 impl TranspositionTable {
     pub fn new(mb: usize) -> Self {
         let bytes = mb * 1024 * 1024;
-        // 12 because 64bit + 32bit = 12 byte
         let entry_size = size_of::<TTEntry>();
         let cap = (bytes / entry_size).next_power_of_two();
         let entries = (0..cap)
@@ -119,15 +118,15 @@ impl TranspositionTable {
 
         let best_mv = EncodedMove((best_mv - 1) as u16); // converting here for readable returns below
         match e_type {
-            ScoreType::EXACT => Some((eval, best_mv)),
-            ScoreType::LOWER_BOUND => {
+            ScoreType::Exact => Some((eval, best_mv)),
+            ScoreType::LowerBound => {
                 if eval <= alpha {
                     Some((alpha, best_mv))
                 } else {
                     None
                 }
             }
-            ScoreType::UPPER_BOUND => {
+            ScoreType::UpperBound => {
                 if eval >= beta {
                     Some((beta, best_mv))
                 } else {
@@ -177,9 +176,9 @@ mod test_tt_encodings {
     impl Clone for ScoreType {
         fn clone(&self) -> Self {
             match self {
-                Self::EXACT => Self::EXACT,
-                Self::LOWER_BOUND => Self::LOWER_BOUND,
-                Self::UPPER_BOUND => Self::UPPER_BOUND,
+                Self::Exact => Self::Exact,
+                Self::LowerBound => Self::LowerBound,
+                Self::UpperBound => Self::UpperBound,
             }
         }
     }
@@ -196,19 +195,19 @@ mod test_tt_encodings {
     #[test]
     fn test_depth_type_encoding() {
         let depth: usize = 15;
-        let score_type = ScoreType::EXACT;
+        let score_type = ScoreType::Exact;
         let encoded = TTFlags(AtomicU8::new(0));
         encoded.store(depth, score_type.clone());
         assert_eq!(encoded.0.load(Ordering::Relaxed), 0b00111100);
         assert_eq!(encoded.decode(), (depth, score_type));
 
         let depth: usize = 4;
-        let score_type = ScoreType::UPPER_BOUND;
+        let score_type = ScoreType::UpperBound;
         encoded.store(depth, score_type.clone());
         assert_eq!(encoded.0.load(Ordering::Relaxed), 0b00010010);
         assert_eq!(encoded.decode(), (depth, score_type));
 
         let encoded = TTFlags(AtomicU8::new(0b00001111));
-        assert_eq!(encoded.decode(), (3, ScoreType::UPPER_BOUND));
+        assert_eq!(encoded.decode(), (3, ScoreType::UpperBound));
     }
 }
