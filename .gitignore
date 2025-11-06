@@ -5,5 +5,9 @@ Thumbs.db
 /python-debugging/bin
 /python-debugging/logs
 /python-debugging/plot_logs
+
+# output files of testing scripts
 /testing/config.json
-testing/sprt.pgn
+/testing/sprt.pgn
+/testing/current
+/testing/previous
