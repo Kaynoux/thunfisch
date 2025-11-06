@@ -30,15 +30,16 @@ build() {
 run_sprt() {
     # todo: name the new engine after the branch or sth
     cd $ROOT_DIR/testing
+    rm sprt.pgn
     fastchess \
         -engine cmd=$NEW_VERSION name=current -engine cmd=$PREVIOUS_VERSION name=previous \
-        -each proto=uci tc=5+0.5 \
+        -each proto=uci tc=10+1 \
         -pgnout file=sprt.pgn \
         -openings file=8moves_v3.pgn format=pgn order=random \
         -concurrency 4 \
         -rounds 5000 \
         -recover \
-        -sprt elo0=0 elo1=100 alpha=0.005 beta=0.005
+        -sprt elo0=0 elo1=2 alpha=0.005 beta=0.005
 }
 
 build && run_sprt

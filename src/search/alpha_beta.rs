@@ -36,11 +36,9 @@ pub fn alpha_beta(
     // doing it the other way around yield the TT score instead of the draw score for a repetition
     // also probe the TT bfore the QS, because QS is expensive
     let hash = board.hash();
-    if settings::TRANSPOSITION_TABLE {
-        if let Some(tt_hit) = TT.probe(hash, alpha, beta, depth) {
-            search_info.total_tt_hits.fetch_add(1, Ordering::Relaxed);
-            return (Some(tt_hit.1), tt_hit.0);
-        }
+    if let Some(tt_hit) = TT.probe(hash, alpha, beta, depth) {
+        search_info.total_tt_hits.fetch_add(1, Ordering::Relaxed);
+        return (Some(tt_hit.1), tt_hit.0);
     }
 
     if depth == 0 {
