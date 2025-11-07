@@ -1,6 +1,9 @@
 use crate::{prelude::*, settings::settings};
 use once_cell::sync::Lazy;
-use std::sync::atomic::{AtomicI32, AtomicU8, AtomicU32, AtomicU64, AtomicUsize, Ordering};
+use std::{
+    fmt,
+    sync::atomic::{AtomicI32, AtomicU8, AtomicU32, AtomicU64, AtomicUsize, Ordering},
+};
 
 #[derive(Debug, PartialEq)]
 pub enum ScoreType {
@@ -55,6 +58,23 @@ struct TTEntry {
     mv: AtomicU32,
     eval: AtomicI32,
     flags: TTFlags,
+}
+
+impl fmt::Display for TTEntry {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let (depth, score_type) = self.flags.decode();
+        write!(
+            f,
+            "key: {}\neval: {}\nmv: {}\ndepth: {}\nscore_type: {:?}",
+            self.key.load(Ordering::Relaxed),
+            self.eval.load(Ordering::Relaxed),
+            EncodedMove((self.mv.load(Ordering::Relaxed) - 1) as u16)
+                .decode()
+                .to_coords(),
+            depth,
+            score_type
+        )
+    }
 }
 
 /// https://www.chessprogramming.org/Transposition_Table
@@ -171,6 +191,36 @@ impl TranspositionTable {
         let f = self.filled.load(Ordering::Relaxed);
         let c = self.entries.len();
         (f, c, f as f64 * 100.0 / c as f64)
+    }
+
+    pub fn clear(&self) {
+        self.entries.iter().for_each(|f| {
+            f.key.store(0, Ordering::Relaxed);
+            f.eval.store(0, Ordering::Relaxed);
+            f.flags.0.store(0, Ordering::Relaxed);
+            f.mv.store(0, Ordering::Relaxed);
+        });
+        self.filled.store(0, Ordering::Relaxed);
+    }
+
+    pub fn handle_debug(&self, args: &[&str], hash: u64) -> Result<String, String> {
+        match args.get(0) {
+            Some(&"help") => Ok("usage: tt [fill | clear | probe]".to_owned()),
+            Some(&"clear") => {
+                self.clear();
+                Ok(format!("{:?}", self.fill_ratio()))
+            }
+            Some(&"fill") => Ok(format!("{:?}", self.fill_ratio())),
+            Some(&"probe") => {
+                let entry = &self.entries[self.index(hash)];
+                if entry.key.load(Ordering::Relaxed) != hash {
+                    return Ok("No Entry".to_owned());
+                }
+                Ok(format!("{}", entry))
+            },
+            Some(cmd) => Err(format!("Unknown command: tt {}", cmd)),
+            None => Err("Argument Required".to_owned()),
+        }
     }
 }
 

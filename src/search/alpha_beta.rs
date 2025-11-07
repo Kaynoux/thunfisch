@@ -32,14 +32,6 @@ pub fn alpha_beta(
         return (None, 0);
     }
 
-    // only probe TT after draw detection, because the TT does not remember move history
-    // doing it the other way around yield the TT score instead of the draw score for a repetition
-    // also probe the TT bfore the QS, because QS is expensive
-    let hash = board.hash();
-    if let Some(tt_hit) = TT.probe(hash, alpha, beta, depth) {
-        search_info.total_tt_hits.fetch_add(1, Ordering::Relaxed);
-        return (Some(tt_hit.1), tt_hit.0);
-    }
 
     if depth == 0 {
         if settings::QUIESCENCE_SEARCH {
@@ -58,6 +50,14 @@ pub fn alpha_beta(
         }
         return (None, board.evaluate());
     };
+
+    // only probe TT after draw detection, because the TT does not remember move history
+    // doing it the other way around yield the TT score instead of the draw score for a repetition
+    let hash = board.hash();
+    if let Some(tt_hit) = TT.probe(hash, alpha, beta, depth) {
+        search_info.total_tt_hits.fetch_add(1, Ordering::Relaxed);
+        return (Some(tt_hit.1), tt_hit.0);
+    }
 
     // cancels search if time is over
     if stop.load(Ordering::Relaxed) {

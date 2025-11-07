@@ -33,10 +33,10 @@ pub fn quiescence_search(
     }
 
     let hash = board.hash();
-    // if let Some(tt_hit) = TT.probe(hash, alpha, beta, depth) {
-    //     search_info.total_tt_hits.fetch_add(1, Ordering::Relaxed);
-    //     return tt_hit.0;
-    // }
+    if let Some(tt_hit) = TT.probe(hash, alpha, beta, depth) {
+        search_info.total_tt_hits.fetch_add(1, Ordering::Relaxed);
+        return tt_hit.0;
+    }
 
     if depth == 0 {
         let eval = board.evaluate();
