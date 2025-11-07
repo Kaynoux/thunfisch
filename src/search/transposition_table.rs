@@ -173,6 +173,11 @@ impl TranspositionTable {
         }
         let idx = self.index(hash);
         let entry = &self.entries[idx];
+        // don't overwrite exact scores with imprecise ones
+        if score_type != ScoreType::Exact && entry.flags.decode().1 == ScoreType::Exact {
+            return;
+        }
+
         let prev = entry.key.swap(hash, Ordering::Relaxed);
         if prev == 0 {
             self.filled.fetch_add(1, Ordering::Relaxed);
@@ -186,7 +191,6 @@ impl TranspositionTable {
         entry.flags.store(depth, score_type);
     }
 
-    //todo figure out whether there actually is a difference between f and c
     pub fn fill_ratio(&self) -> (usize, usize, f64) {
         let f = self.filled.load(Ordering::Relaxed);
         let c = self.entries.len();
