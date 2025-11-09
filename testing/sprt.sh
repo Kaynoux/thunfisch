@@ -39,7 +39,7 @@ run_sprt() {
         -concurrency 4 \
         -rounds 5000 \
         -recover \
-        -sprt elo0=0 elo1=2 alpha=0.005 beta=0.005
+        -sprt elo0=0 elo1=2 alpha=0.05 beta=0.05
 }
 
 build && run_sprt

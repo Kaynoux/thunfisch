@@ -32,6 +32,14 @@ pub fn alpha_beta(
         return (None, 0);
     }
 
+    let hash = board.hash();
+
+    // only probe TT after draw detection, because the TT does not remember move history
+    // doing it the other way around yield the TT score instead of the draw score for a repetition
+    if let Some(tt_hit) = TT.probe(hash, alpha, beta, depth) {
+        search_info.total_tt_hits.fetch_add(1, Ordering::Relaxed);
+        return (Some(tt_hit.1), tt_hit.0);
+    }
 
     if depth == 0 {
         if settings::QUIESCENCE_SEARCH {
@@ -45,19 +53,12 @@ pub fn alpha_beta(
                 ply,
                 local_seldepth,
             );
-            // QS stores its own TT results -> do nothing here
+
+            TT.store(hash, None, qs_result, depth, ScoreType::Exact);
             return (None, qs_result);
         }
         return (None, board.evaluate());
     };
-
-    // only probe TT after draw detection, because the TT does not remember move history
-    // doing it the other way around yield the TT score instead of the draw score for a repetition
-    let hash = board.hash();
-    if let Some(tt_hit) = TT.probe(hash, alpha, beta, depth) {
-        search_info.total_tt_hits.fetch_add(1, Ordering::Relaxed);
-        return (Some(tt_hit.1), tt_hit.0);
-    }
 
     // cancels search if time is over
     if stop.load(Ordering::Relaxed) {
@@ -83,6 +84,7 @@ pub fn alpha_beta(
     if settings::MOVE_ORDERING {
         move_ordering::order_moves(&mut moves, board);
     }
+
 
     if let Some((_, tt_mv)) = TT.probe(hash, alpha, beta, depth) {
         if let Some(pos) = moves.iter().position(|&m| m == tt_mv) {
@@ -129,7 +131,7 @@ pub fn alpha_beta(
         }
     }
 
-    TT.store(hash, best_move, alpha, depth, score_type);
+    TT.store(hash, best_move, best_eval, depth, score_type);
 
     (best_move, best_eval)
 }

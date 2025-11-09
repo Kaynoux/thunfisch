@@ -85,7 +85,7 @@ pub struct TranspositionTable {
 }
 
 /// Transposition Table shared between all search threads
-pub static TT: Lazy<TranspositionTable> = Lazy::new(|| TranspositionTable::new(512));
+pub static TT: Lazy<TranspositionTable> = Lazy::new(|| TranspositionTable::new(128));
 
 impl TranspositionTable {
     pub fn new(mb: usize) -> Self {
@@ -143,15 +143,15 @@ impl TranspositionTable {
         match e_type {
             ScoreType::Exact => Some((eval, best_mv)),
             ScoreType::LowerBound => {
-                if eval <= alpha {
-                    Some((eval, best_mv))
+                if eval >= beta {
+                    Some((beta, best_mv))
                 } else {
                     None
                 }
             }
             ScoreType::UpperBound => {
-                if eval >= beta {
-                    Some((eval, best_mv))
+                if eval <= alpha {
+                    Some((alpha, best_mv))
                 } else {
                     None
                 }
