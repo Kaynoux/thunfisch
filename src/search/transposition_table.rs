@@ -85,7 +85,7 @@ pub struct TranspositionTable {
 }
 
 /// Transposition Table shared between all search threads
-pub static TT: Lazy<TranspositionTable> = Lazy::new(|| TranspositionTable::new(128));
+pub static TT: Lazy<TranspositionTable> = Lazy::new(|| TranspositionTable::new(512));
 
 impl TranspositionTable {
     pub fn new(mb: usize) -> Self {
@@ -173,10 +173,6 @@ impl TranspositionTable {
         }
         let idx = self.index(hash);
         let entry = &self.entries[idx];
-        // don't overwrite exact scores with imprecise ones
-        if score_type != ScoreType::Exact && entry.flags.decode().1 == ScoreType::Exact {
-            return;
-        }
 
         let prev = entry.key.swap(hash, Ordering::Relaxed);
         if prev == 0 {

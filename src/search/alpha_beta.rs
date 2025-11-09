@@ -85,7 +85,7 @@ pub fn alpha_beta(
         move_ordering::order_moves(&mut moves, board);
     }
 
-
+    // Probe again as there's a chance a different thread updated the TT since we last probed it
     if let Some((_, tt_mv)) = TT.probe(hash, alpha, beta, depth) {
         if let Some(pos) = moves.iter().position(|&m| m == tt_mv) {
             moves.swap(0, pos);
