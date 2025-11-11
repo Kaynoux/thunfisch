@@ -62,7 +62,7 @@ pub fn iterative_deepening(
                     1,
                     &mut local_seldepth,
                 );
-                eval -= eval;
+                eval *= -1;
                 pv.extend(vec![mv]);
                 (pv, eval, local_seldepth)
             })
@@ -136,5 +136,5 @@ pub fn iterative_deepening(
         }
     }
 
-    best_pv.get(0).cloned()
+    best_pv.last().cloned()
 }
