@@ -13,6 +13,8 @@ const MATE_SCORE: i32 = 100000;
 const MAX_QUIESCENCE_SEARCH_DEPTH: usize = 12;
 
 /// https://www.chessprogramming.org/Alpha-Beta
+/// Returns the pv, and the associated evaluation
+/// Note that the pv is reversed, i.e. the best move at this depth is at the end of the list
 pub fn alpha_beta(
     board: &mut Board,
     depth: usize,

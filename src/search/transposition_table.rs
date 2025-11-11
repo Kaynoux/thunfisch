@@ -5,6 +5,22 @@ use std::{
     sync::atomic::{AtomicI32, AtomicU8, AtomicU32, AtomicU64, AtomicUsize, Ordering},
 };
 
+/// Encoding:
+/// [depth (6 bit) | score type (2 bit)]
+struct TTFlags(AtomicU8);
+
+impl TTFlags {
+    fn decode(&self) -> (usize, ScoreType) {
+        let asu8 = self.0.load(Ordering::Relaxed);
+        ((asu8 >> 2) as usize, ScoreType::from(asu8))
+    }
+
+    fn store(&self, depth: usize, score_type: ScoreType) {
+        let encoded = (((depth & 0x3f) as u8) << 2) | score_type.to_u8();
+        self.0.store(encoded, Ordering::Relaxed);
+    }
+}
+
 #[derive(Debug, PartialEq)]
 pub enum ScoreType {
     Exact,
@@ -29,22 +45,6 @@ impl ScoreType {
             ScoreType::LowerBound => 1,
             ScoreType::UpperBound => 2,
         }
-    }
-}
-
-/// Encoding:
-/// [depth (6 bit) | score type (2 bit)]
-struct TTFlags(AtomicU8);
-
-impl TTFlags {
-    fn decode(&self) -> (usize, ScoreType) {
-        let asu8 = self.0.load(Ordering::Relaxed);
-        ((asu8 >> 2) as usize, ScoreType::from(asu8))
-    }
-
-    fn store(&self, depth: usize, score_type: ScoreType) {
-        let encoded = (((depth & 0x3f) as u8) << 2) | score_type.to_u8();
-        self.0.store(encoded, Ordering::Relaxed);
     }
 }
 
@@ -86,7 +86,6 @@ pub struct TranspositionTable {
 
 /// Transposition Table shared between all search threads
 pub static TT: Lazy<TranspositionTable> = Lazy::new(|| TranspositionTable::new(512));
-// pub static TT: OnceLock<TranspositionTable> = OnceLock::new();
 
 impl TranspositionTable {
     pub fn new(mb: usize) -> Self {
@@ -218,7 +217,7 @@ impl TranspositionTable {
                     return Ok("No Entry".to_owned());
                 }
                 Ok(format!("{}", entry))
-            },
+            }
             Some(cmd) => Err(format!("Unknown command: tt {}", cmd)),
             None => Err("Argument Required".to_owned()),
         }
@@ -239,16 +238,6 @@ mod test_tt_encodings {
             }
         }
     }
-
-    #[test]
-    fn test_size_of_struct() {
-        println!("{}", size_of::<TTEntry>());
-        println!("{}", size_of::<TTFlags>());
-        println!("{}", size_of::<AtomicU32>());
-        println!("{}", size_of::<AtomicI32>());
-        println!("{}", size_of::<AtomicU64>());
-    }
-
     #[test]
     fn test_depth_type_encoding() {
         let depth: usize = 15;

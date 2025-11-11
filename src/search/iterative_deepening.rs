@@ -45,7 +45,7 @@ pub fn iterative_deepening(
             move_ordering::order_moves(&mut root_moves, board);
         }
 
-        // format: z(best move, evaluation after move is made, seldepth)
+        // format: (pv, evaluation after move is made, seldepth)
         let results: Vec<(Vec<EncodedMove>, i32, usize)> = root_moves
             .par_iter()
             .map(|&mv| {
@@ -68,11 +68,9 @@ pub fn iterative_deepening(
             })
             .collect();
 
-        let best_result_local = results
-            .iter()
-            .max_by_key(|&(_mv, eval, _seldepth)| eval);
+        let best_result_local = results.iter().max_by_key(|&(_mv, eval, _seldepth)| eval);
 
-        let (best_move_local, best_eval_local, best_seldepth) = match best_result_local {
+        let (best_pv_local, best_eval_local, best_seldepth) = match best_result_local {
             Some((mv, eval, seldepth)) => (mv.clone(), *eval, *seldepth),
             None => (vec![], 0, 0),
         };
@@ -81,7 +79,7 @@ pub fn iterative_deepening(
             .timeout_occurred
             .load(Ordering::Relaxed)
         {
-            best_pv = best_move_local;
+            best_pv = best_pv_local;
             best_eval_overall = best_eval_local;
         }
 
