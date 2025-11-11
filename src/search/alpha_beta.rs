@@ -113,7 +113,7 @@ pub fn alpha_beta(
             local_seldepth,
         );
         // do the negamax negation here since we can't negate a tuple above
-        eval -= eval;
+        eval *= -1;
         board.unmake_move();
 
         if eval > best_eval {

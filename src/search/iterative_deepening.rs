@@ -47,7 +47,7 @@ pub fn iterative_deepening(
 
         // format: z(best move, evaluation after move is made, seldepth)
         let results: Vec<(Vec<EncodedMove>, i32, usize)> = root_moves
-            .iter()
+            .par_iter()
             .map(|&mv| {
                 let mut b = board.clone(); // Board muss Clone implementieren
                 b.make_move(&mv.decode());
@@ -91,54 +91,6 @@ pub fn iterative_deepening(
             .map(|emv| emv.decode().to_coords())
             .collect::<Vec<_>>()
             .join(" ");
-
-        // Lazy way to promote always to Queen because my evaluation is dumb sometimes
-        // - if it thinks it looses the piece fast it tries to minimize the cost by selecting a worse piece to begin with
-        // let mv_type = mv.mv_type;
-        // mv.mv_type = match mv_type {
-        //     MoveType::RookPromoCapture
-        //     | MoveType::BishopPromoCapture
-        //     | MoveType::KnightPromoCapture => MoveType::QueenPromoCapture,
-        //     MoveType::RookPromo | MoveType::BishopPromo | MoveType::KnightPromo => {
-        //         MoveType::QueenPromo
-        //     }
-        //     _ => mv_type,
-        // };
-
-        // // Generate the PV String (= the predicted line where both sides play optimally)
-        // // Starts by doing the current best move and adds it to the pv string this is then repeated by always doing the bestmove and then looking up the best move from the tt table again and again until the tt does not contain a bestmove for the board state at that moment
-        // let pv_string = if let Some(root_mv) = best_pv {
-        //     let mut pv_moves = Vec::new();
-        //     pv_moves.push(root_mv);
-
-        //     let mut b = board.clone();
-        //     b.make_move(&root_mv.decode());
-
-        //     let mut cnt = 1;
-        //     while cnt < depth {
-        //         // If threefold repetition occurs, we force stop generating the PV
-        //         if b.is_threefold_repetition() || b.is_50_move_rule() {
-        //             break;
-        //         }
-        //         // probe the tt with values that guarantee returning the actual entry
-        //         if let Some((_, mv)) = TT.probe(b.hash(), -i32::MAX, i32::MAX, 0) {
-        //             b.make_move(&mv.decode());
-        //             pv_moves.push(mv);
-        //         } else {
-        //             break;
-        //         }
-        //         cnt += 1;
-        //     }
-
-        //     // convert to coords
-        //     pv_moves
-        //         .iter()
-        //         .map(|m| m.decode().to_coords())
-        //         .collect::<Vec<_>>()
-        //         .join(" ")
-        // } else {
-        //     String::new()
-        // };
 
         let iteration_ab_nodes = iteration_search_info
             .total_alpha_beta_nodes
