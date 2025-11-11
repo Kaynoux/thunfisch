@@ -1,7 +1,7 @@
-use crate::move_generator::generator::ARRAY_LENGTH;
 use crate::prelude::*;
 use crate::search::move_ordering;
 use crate::settings::settings;
+use crate::{move_generator::generator::ARRAY_LENGTH};
 use arrayvec::ArrayVec;
 
 use std::sync::{
@@ -31,8 +31,10 @@ pub fn quiescence_search(
         return 0;
     }
 
+
     if depth == 0 {
-        return board.evaluate();
+        let eval = board.evaluate();
+        return eval;
     }
 
     search_info.total_qs_nodes.fetch_add(1, Ordering::Relaxed);
@@ -86,7 +88,7 @@ pub fn quiescence_search(
             best_score = score;
         }
         if score > alpha {
-            alpha = score
+            alpha = score;
         }
     }
 

@@ -37,6 +37,8 @@ pub fn handle_input(board: &mut Board, args: &[&str]) {
                     "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10 ", // Pos 6
                     "6Q1/pp6/8/8/1kp2N2/1n2R1P1/3r4/1K6 b - - 0 1", // 7 - Threefold Repetition,  Kasparov v. Deep Blue (somewhere on https://en.wikipedia.org/wiki/Threefold_repetition)
                     "1kr5/6pp/R1P2p2/1N6/8/1P6/P2q1PPP/6K1 w - - 0 1", // 8 - Forced perpetual check (3-fold repetition after 8 ply) to avoid checkmate
+                    "r1b1k2r/1pqp1ppp/p2bpnn1/6Q1/2BNP3/2N1B3/PPP2PPP/2KR3R w kq - 8 12", // 9 - Position where including the TT with the QS blunders its queen
+                    "8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - - 0 1", // 10 - Endgame Position taken from Sebatian Lague forcing a Triangulation (through a1b1 instead of a1b2) to win
                 ];
 
                 iter.next();

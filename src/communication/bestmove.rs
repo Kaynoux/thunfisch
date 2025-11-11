@@ -130,7 +130,7 @@ pub fn bestmove(args: Vec<&str>, board: &mut Board) {
             Duration::from_millis(time_per_move)
         };
 
-        println!("{:?}", movetime);
+        println!("movetime {:?}", movetime);
 
         let best_move = iterative_deepening::iterative_deepening(board, 100, search_time);
 

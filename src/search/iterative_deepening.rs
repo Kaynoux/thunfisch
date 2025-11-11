@@ -6,6 +6,7 @@ use crate::settings::settings;
 use rayon::iter::IntoParallelRefIterator;
 use rayon::iter::ParallelIterator;
 
+use std::i32;
 use std::time::Instant;
 use std::{
     sync::{
@@ -31,7 +32,7 @@ pub fn iterative_deepening(
         });
     }
 
-    let mut best_move_overall: Option<EncodedMove> = None;
+    let mut best_pv: Vec<EncodedMove> = vec![];
     let mut best_eval_overall = i32::MIN;
     let global_start = Instant::now();
 
@@ -44,14 +45,14 @@ pub fn iterative_deepening(
             move_ordering::order_moves(&mut root_moves, board);
         }
 
-        // format: z(best move, evaluation after move is made, seldepth)
-        let results: Vec<(EncodedMove, i32, usize)> = root_moves
+        // format: (pv, evaluation after move is made, seldepth)
+        let results: Vec<(Vec<EncodedMove>, i32, usize)> = root_moves
             .par_iter()
             .map(|&mv| {
                 let mut b = board.clone(); // Board muss Clone implementieren
                 b.make_move(&mv.decode());
                 let mut local_seldepth = 1;
-                let eval = -alpha_beta::alpha_beta(
+                let (mut pv, mut eval) = alpha_beta::alpha_beta(
                     &mut b,
                     depth - 1,
                     -i32::MAX,
@@ -60,82 +61,34 @@ pub fn iterative_deepening(
                     &iteration_search_info,
                     1,
                     &mut local_seldepth,
-                )
-                .1;
-                (mv, eval, local_seldepth)
+                );
+                eval *= -1;
+                pv.extend(vec![mv]);
+                (pv, eval, local_seldepth)
             })
             .collect();
 
-        let best_result_local = results
-            .into_iter()
-            .max_by_key(|&(_mv, eval, _seldepth)| eval);
+        let best_result_local = results.iter().max_by_key(|&(_mv, eval, _seldepth)| eval);
 
-        let (best_move_local, best_eval_local, best_seldepth) = match best_result_local {
-            Some((mv, eval, seldepth)) => (Some(mv), eval, seldepth),
-            None => (None, 0, 0),
+        let (best_pv_local, best_eval_local, best_seldepth) = match best_result_local {
+            Some((mv, eval, seldepth)) => (mv.clone(), *eval, *seldepth),
+            None => (vec![], 0, 0),
         };
 
         if !iteration_search_info
             .timeout_occurred
             .load(Ordering::Relaxed)
         {
-            best_move_overall = best_move_local;
+            best_pv = best_pv_local;
             best_eval_overall = best_eval_local;
         }
 
-        let mut mv = match best_move_overall {
-            Some(mv) => mv.decode(),
-            None => {
-                return best_move_overall;
-            }
-        };
-
-        // Lazy way to promote always to Queen because my evaluation is dumb sometimes
-        // - if it thinks it looses the piece fast it tries to minimize the cost by selecting a worse piece to begin with
-        let mv_type = mv.mv_type;
-        mv.mv_type = match mv_type {
-            MoveType::RookPromoCapture
-            | MoveType::BishopPromoCapture
-            | MoveType::KnightPromoCapture => MoveType::QueenPromoCapture,
-            MoveType::RookPromo | MoveType::BishopPromo | MoveType::KnightPromo => {
-                MoveType::QueenPromo
-            }
-            _ => mv_type,
-        };
-
-        // Generate the PV String (= the predicted line where both sides play optimally)
-        // Starts by doing the current best move and adds it to the pv string this is then repeated by always doing the bestmove and then looking up the best move from the tt table again and again until the tt does not contain a bestmove for the board state at that moment
-        let pv_string = if let Some(root_mv) = best_move_overall {
-            let mut pv_moves = Vec::new();
-            pv_moves.push(root_mv);
-
-            let mut b = board.clone();
-            b.make_move(&root_mv.decode());
-
-            let mut cnt = 1;
-            while cnt < depth {
-                // If threefold repetition occurs, we force stop generating the PV
-                if b.is_threefold_repetition() || b.is_50_move_rule() {
-                    break;
-                }
-                if let Some(mv) = TT.probe(b.hash()) {
-                    b.make_move(&mv.decode());
-                    pv_moves.push(mv);
-                } else {
-                    break;
-                }
-                cnt += 1;
-            }
-
-            // convert to coords
-            pv_moves
-                .iter()
-                .map(|m| m.decode().to_coords())
-                .collect::<Vec<_>>()
-                .join(" ")
-        } else {
-            String::new()
-        };
+        let pv = best_pv
+            .iter()
+            .rev()
+            .map(|emv| emv.decode().to_coords())
+            .collect::<Vec<_>>()
+            .join(" ");
 
         let iteration_ab_nodes = iteration_search_info
             .total_alpha_beta_nodes
@@ -144,16 +97,18 @@ pub fn iterative_deepening(
         let iteration_eval_nodes = iteration_search_info
             .total_eval_nodes
             .load(Ordering::Relaxed);
+        let iteration_tt_hits = iteration_search_info.total_tt_hits.load(Ordering::Relaxed);
 
         let iteration_not_eval_nodes = iteration_ab_nodes + iteration_qs_nodes;
         let iteration_nodes = iteration_not_eval_nodes + iteration_eval_nodes;
 
         let iteration_duration = iteration_start.elapsed();
         let global_duration = global_start.elapsed();
-        let nodes_per_seconds = (iteration_nodes as f64 / iteration_duration.as_secs_f64()) as usize;
+        let nodes_per_seconds =
+            (iteration_nodes as f64 / iteration_duration.as_secs_f64()) as usize;
 
         println!(
-            "info  depth {} seldepth {}  score cp {} nodes {} nps {} time {} tt {} pv {} | nodes_ab {} nodes_qs {} timeout {} total_time {}",
+            "info  depth {} seldepth {}  score cp {} nodes {} nps {} time {} tt {} pv {} | nodes_ab {} nodes_qs {} tt_hits {} timeout {} total_time {}",
             depth,
             best_seldepth,
             best_eval_overall,
@@ -161,9 +116,10 @@ pub fn iterative_deepening(
             nodes_per_seconds,
             iteration_duration.as_millis(),
             TT.fill_ratio().2 as usize,
-            pv_string,
+            pv,
             iteration_ab_nodes,
             iteration_qs_nodes,
+            iteration_tt_hits,
             iteration_search_info
                 .timeout_occurred
                 .load(Ordering::Relaxed),
@@ -178,5 +134,5 @@ pub fn iterative_deepening(
         }
     }
 
-    best_move_overall
+    best_pv.last().cloned()
 }

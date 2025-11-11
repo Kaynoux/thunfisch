@@ -4,6 +4,7 @@ use crate::debug::visualize;
 use crate::move_generator::masks;
 use crate::move_generator::pinmask;
 use crate::prelude::*;
+use crate::search::transposition_table::TT;
 use std::io::{self, BufRead, Write};
 
 pub fn handle_uci_communication() {
@@ -75,6 +76,7 @@ pub fn handle_uci_communication() {
                 println!("  black              - Black Squares Bitboard");
                 println!("  occupied           - Occupied Squares Bitboard");
                 println!("  hash               - Current board hash");
+                println!("  tt <parameters>    - Perform actions with the Transposition table");
             }
             Some("uci") => {
                 println!("id name Thunfisch");
@@ -141,6 +143,13 @@ pub fn handle_uci_communication() {
             }
             Some("hash") => {
                 println!("{:?}", board.hash());
+            }
+            Some("tt") => {
+                let args: Vec<&str> = parts.collect();
+                match TT.handle_debug(&args, board.hash()) {
+                    Err(e) => eprintln!("{}", e),
+                    Ok(v) => println!("{}", v),
+                }
             }
             Some("quit") => break,
             Some(cmd) => {
