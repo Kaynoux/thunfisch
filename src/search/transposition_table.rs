@@ -86,6 +86,7 @@ pub struct TranspositionTable {
 
 /// Transposition Table shared between all search threads
 pub static TT: Lazy<TranspositionTable> = Lazy::new(|| TranspositionTable::new(512));
+// pub static TT: OnceLock<TranspositionTable> = OnceLock::new();
 
 impl TranspositionTable {
     pub fn new(mb: usize) -> Self {
