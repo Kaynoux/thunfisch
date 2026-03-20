@@ -1,4 +1,4 @@
-/// Black Magic Bitboards
+/// Fixed shift white magics found by Volker Annuss.
 /// Source: Volker Annus http://www.talkchess.com/forum/viewtopic.php?p=727500&t=64790
 /// Explained here https://www.chessprogramming.org/Magic_Bitboards#Black_Magic_Bitboards
 /// These are used to index the sliding target lookup table

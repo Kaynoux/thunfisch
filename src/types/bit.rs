@@ -190,3 +190,9 @@ impl BitOrAssign<Bit> for Bit {
         self.0 |= rhs.0;
     }
 }
+
+impl From<Bitboard> for Bit {
+    fn from(bitboard: Bitboard) -> Self {
+        Bit(bitboard.0)
+    }
+}

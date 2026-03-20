@@ -1,9 +1,8 @@
 use crate::prelude::*;
 use std::fmt;
-use std::ops::BitXor;
 use std::{
     arch::asm,
-    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not},
+    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, Not, Sub},
 };
 
 /// the bits the are set represent a position on the board with the bit being the index of the chess position
@@ -52,11 +51,11 @@ impl Bitboard {
 
     #[inline(always)]
     pub fn pop_lsb_position(&mut self) -> Option<Bit> {
-        if self.0 == 0 {
+        if *self == Bitboard(0) {
             None
         } else {
-            let pos = Bit(self.0 & self.0.wrapping_neg());
-            self.0 &= self.0 - 1;
+            let pos = Bit::from(*self & self.0.wrapping_neg());
+            *self &= *self - Bitboard(1);
             Some(pos)
         }
     }
@@ -189,5 +188,21 @@ impl BitAndAssign<Bitboard> for Bitboard {
     #[inline(always)]
     fn bitand_assign(&mut self, rhs: Bitboard) {
         self.0 &= rhs.0;
+    }
+}
+
+impl Sub for Bitboard {
+    type Output = Self;
+    #[inline(always)]
+    fn sub(self, rhs: Bitboard) -> Self::Output {
+        Bitboard(self.0 - rhs.0)
+    }
+}
+
+impl BitAnd<u64> for Bitboard {
+    type Output = Self;
+    #[inline(always)]
+    fn bitand(self, rhs: u64) -> Self::Output {
+        Bitboard(self.0 & rhs)
     }
 }
