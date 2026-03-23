@@ -32,6 +32,7 @@ pub struct Board {
 }
 
 impl Board {
+    /// WARNING: This does not set the hash correctly
     pub const EMPTY: Board = Board {
         color_bbs: [Bitboard::EMPTY; 2],
         occupied: Bitboard::EMPTY,

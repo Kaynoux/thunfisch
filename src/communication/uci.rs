@@ -144,6 +144,14 @@ pub fn handle_uci_communication() {
             Some("hash") => {
                 println!("{:?}", board.hash());
             }
+            Some("hashtest") => {
+                println!("Incremental Hash: {:#x} {:?}", board.hash(), board.hash());
+                println!(
+                    "Hash from Scratch: {:#x} {:?}",
+                    board.generate_hash(),
+                    board.generate_hash()
+                )
+            }
             Some("tt") => {
                 let args: Vec<&str> = parts.collect();
                 match TT.handle_debug(&args, board.hash()) {
