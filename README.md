@@ -4,30 +4,28 @@
 
 # thunfisch [![Thunfisch](https://github.com/Kaynoux/thunfisch/actions/workflows/thunfisch.yml/badge.svg)](https://github.com/Kaynoux/thunfisch/actions/workflows/thunfisch.yml)
 
-thunfisch is a UCI-compatible chess engine written from scratch in Rust. It uses magic‐bitboard move generation, iterative deepening with alpha-beta and quiescence search and a transposition table.
+Thunfisch is a UCI-compatible chess engine written from scratch in Rust. It uses magic‐bitboard move generation, iterative deepening with alpha-beta and quiescence search and a transposition table. For evaluation, Piece-Square Tables are used.
 
 It is a listed Bot-Account on Lichess. If it is online you can challenge it [here](https://lichess.org/@/thunfisch-bot).
 
-## 🚀 Quick Start
+## How to Play Locally
+Thunfisch is a command-line application that implements the Universal Chess Interface (UCI). To play against it comfortably, you should load the compiled binary into a chess GUI. We recommend [Cutechess](https://github.com/cutechess/cutechess). There are instruction on how to add the bot to the gui [here](https://lczero.org/play/gui/cutechess/).
 
-1. Clone the repository
+**General Setup Steps:**
+1. Build the engine using `cargo build --release`.
+2. Locate the compiled executable at `target/release/thunfisch` (or `thunfisch.exe` on Windows).
+3. Open your preferred chess GUI and look for an "Add Engine" or "Manage Engines" option in the settings.
+4. Point the GUI to the executable file. You can then start a new game and select Thunfisch as your opponent.
 
-   ```bash
-   git clone https://github.com/Kaynoux/thunfisch.git
-   cd thunfisch
-   ```
-
-2. Run the tests
-
-   ```bash
-   cargo test --release
-   ```
-
-3. Run the engine
-
-   ```bash
-   cargo run --release
-   ```
+## Codebase Overview
+- `src/types/`: Core data structures representing the chess board, pieces, bitboards, and moves.
+- `src/move_generator/`: Logic for generating legal chess moves efficiently using magic bitboards and pre-calculated masks.
+- `src/search/`: The primary chess intelligence containing alpha-beta pruning, iterative deepening, quiescence search, move ordering, and the static evaluation function.
+- `src/utils/`: Helper functions including make/unmake move mechanics and Zobrist hashing for the transposition table.
+- `src/communication/`: UCI protocol parser and FEN string handling.
+- `src/debug/`: Performance testing (`perft`) algorithms and visualization tools for debugging the board state.
+- `python-debugging/`: Python scripts for advanced visualization, depth/time plotting, and log analysis.
+- `testing/`: Scripts for engine match testing (SPRT).
 
 ## Commands
 ```
@@ -80,3 +78,28 @@ Debugging:
   occupied           - Occupied Squares Bitboard
   hash               - Current board hash
 ```
+
+## Development Quickstart
+1. Clone the repository
+
+   ```bash
+   git clone https://github.com/Kaynoux/thunfisch.git
+   cd thunfisch
+   ```
+
+2. Run the tests
+
+   ```bash
+   cargo test --release
+   ```
+
+3. Run the engine
+
+   ```bash
+   cargo run --release
+   ```
+
+
+## License
+This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
+
