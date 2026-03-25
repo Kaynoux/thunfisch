@@ -134,12 +134,12 @@ correspondence:
 challenge: # Incoming challenges.
   concurrency: 1 # Number of games to play simultaneously.
   sort_by: "best" # Possible values: "best" and "first".
-  preference: "none" # Possible values: "none", "human", "bot".
+  preference: "human" # Possible values: "none", "human", "bot".
   accept_bot: true # Accepts challenges coming from other bots.
   only_bot: false # Accept challenges by bots only.
-  max_increment: 10 # Maximum amount of increment to accept a challenge in seconds. The max is 180. Set to 0 for no increment.
+  max_increment: 100 # Maximum amount of increment to accept a challenge in seconds. The max is 180. Set to 0 for no increment.
   min_increment: 0 # Minimum amount of increment to accept a challenge in seconds.
-  max_base: 1200 # Maximum amount of base time to accept a challenge in seconds. The max is 10800 (3 hours).
+  max_base: 1800 # Maximum amount of base time to accept a challenge in seconds. The max is 10800 (3 hours).
   min_base: 10 # Minimum amount of base time to accept a challenge in seconds.
   max_days:
     14 # Maximum number of days per move to accept a challenge for a correspondence game.
@@ -159,8 +159,8 @@ challenge: # Incoming challenges.
   time_controls: # Time controls to accept (bots are not allowed to play ultraBullet).
     - bullet
     - blitz
-    # - rapid
-    # - classical
+    - rapid
+    - classical
   #   - correspondence
   modes: # Game modes to accept.
     - casual # Unrated games.
