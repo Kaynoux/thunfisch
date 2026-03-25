@@ -152,14 +152,14 @@ impl TranspositionTable {
             ScoreType::Exact => Some((eval, best_mv)),
             ScoreType::LowerBound => {
                 if eval >= beta {
-                    Some((beta, best_mv))
+                    Some((eval, best_mv))
                 } else {
                     None
                 }
             }
             ScoreType::UpperBound => {
                 if eval <= alpha {
-                    Some((alpha, best_mv))
+                    Some((eval, best_mv))
                 } else {
                     None
                 }
