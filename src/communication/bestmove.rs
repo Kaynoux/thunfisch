@@ -3,14 +3,19 @@ use std::time::Duration;
 use crate::debug::perft;
 use crate::prelude::*;
 use crate::search::iterative_deepening;
+
 pub fn bestmove(args: Vec<&str>, board: &mut Board) {
+    // Both just relevant for printing debug information
+    let debug = args.iter().any(|&flag| flag == "--debug"); // Debug does not work with uci
+    let help = args.iter().any(|&flag| flag == "--help");
+
+    // Handle perft
     if args.len() >= 2 && args[0] == "perft" {
         let depth: usize = match args[1].parse() {
             Ok(d) => d,
             Err(_) => 0,
         };
 
-        let debug = args.iter().any(|&flag| flag == "--debug");
         let perftree = args.iter().any(|&flag| flag == "--perftree");
         let rayon = args.iter().any(|&flag| flag == "--rayon");
 
@@ -23,27 +28,21 @@ pub fn bestmove(args: Vec<&str>, board: &mut Board) {
         } else {
             perft::perft(board, depth);
         }
-    } else if args.len() >= 2 && args[0] == "depth" {
-        let depth: usize = match args[1].parse() {
+
+        return;
+    }
+
+    // Handle normale search
+    let mut depth = 100; // upper limit with tc
+    let mut time_limit = Duration::new(24 * 3600, 0); // 24h as upper time limit
+
+    // Fixed Depth
+    if args.len() >= 2 && args[0] == "depth" {
+        depth = match args[1].parse() {
             Ok(d) => d,
             Err(_) => 0,
         };
-
-        let best_move = iterative_deepening::iterative_deepening(
-            board,
-            depth,
-            Duration::new(24 * 3600, 0), // use 24h as upper limit
-        );
-
-        if let Some(best_move) = best_move {
-            println!("bestmove {}", best_move.decode().to_coords());
-        } else {
-            if board.is_in_check() {
-                println!("Game over: Checkmate!");
-            } else {
-                println!("Game over: Stalemate!");
-            }
-        }
+    // Time control
     } else {
         let mut wtime: u64 = 0;
         let mut btime: u64 = 0;
@@ -98,7 +97,7 @@ pub fn bestmove(args: Vec<&str>, board: &mut Board) {
 
         // Calculate time budget
         let have_tc = wtime > 0 || btime > 0 || movetime > 0 || fixtime > 0;
-        let search_time = if !have_tc {
+        time_limit = if !have_tc {
             // no time control at all
             Duration::new(24 * 3600, 0)
         } else if fixtime != 0 {
@@ -129,18 +128,16 @@ pub fn bestmove(args: Vec<&str>, board: &mut Board) {
             }
             Duration::from_millis(time_per_move)
         };
+    }
 
-        println!("movetime {:?}", movetime);
+    let best_move = iterative_deepening::iterative_deepening(board, depth, time_limit, debug, help);
 
-        let best_move = iterative_deepening::iterative_deepening(board, 100, search_time);
-
-        if let Some(mv) = best_move {
-            println!("info pv {}", mv.decode().to_coords());
-            println!("bestmove {}", mv.decode().to_coords());
-        } else if board.is_in_check() {
-            println!("Game over: Checkmate!");
-        } else {
-            println!("Game over: Stalemate!");
-        }
+    if let Some(mv) = best_move {
+        println!("info pv {}", mv.decode().to_coords());
+        println!("bestmove {}", mv.decode().to_coords());
+    } else if board.is_in_check() {
+        println!("Game over: Checkmate!");
+    } else {
+        println!("Game over: Stalemate!");
     }
 }

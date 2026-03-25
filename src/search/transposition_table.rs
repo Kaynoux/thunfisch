@@ -91,7 +91,15 @@ impl TranspositionTable {
     pub fn new(mb: usize) -> Self {
         let bytes = mb * 1024 * 1024;
         let entry_size = size_of::<TTEntry>();
-        let cap = (bytes / entry_size).next_power_of_two();
+
+        // Calculate max entries to the next lower power of 2
+        let max_entries = bytes / entry_size;
+        let cap = if max_entries > 0 {
+            1_usize << max_entries.ilog2() // ilog2 gets rounded down next log2 
+        } else {
+            1
+        };
+
         let entries = (0..cap)
             .map(|_| TTEntry {
                 key: AtomicU64::new(0),
@@ -187,10 +195,16 @@ impl TranspositionTable {
         entry.flags.store(depth, score_type);
     }
 
-    pub fn fill_ratio(&self) -> (usize, usize, f64) {
-        let f = self.filled.load(Ordering::Relaxed);
-        let c = self.entries.len();
-        (f, c, f as f64 * 100.0 / c as f64)
+    pub fn info(&self) -> (usize, usize, f64, usize) {
+        let filled_entries = self.filled.load(Ordering::Relaxed);
+        let total_entries = self.entries.len();
+        let size_in_bytes = total_entries * size_of::<TTEntry>();
+        (
+            filled_entries,
+            total_entries,
+            filled_entries as f64 * 100.0 / total_entries as f64,
+            size_in_bytes,
+        )
     }
 
     pub fn clear(&self) {
@@ -208,9 +222,9 @@ impl TranspositionTable {
             Some(&"help") => Ok("usage: tt [fill | clear | probe]".to_owned()),
             Some(&"clear") => {
                 self.clear();
-                Ok(format!("{:?}", self.fill_ratio()))
+                Ok(format!("{:?}", self.info()))
             }
-            Some(&"fill") => Ok(format!("{:?}", self.fill_ratio())),
+            Some(&"fill") => Ok(format!("{:?}", self.info())),
             Some(&"probe") => {
                 let entry = &self.entries[self.index(hash)];
                 if entry.key.load(Ordering::Relaxed) != hash {
