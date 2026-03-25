@@ -5,6 +5,7 @@ use crate::move_generator::masks;
 use crate::move_generator::pinmask;
 use crate::prelude::*;
 use crate::search::transposition_table::TT;
+use crate::settings::settings;
 use std::io::{self, BufRead, Write};
 
 pub fn handle_uci_communication() {
@@ -152,6 +153,14 @@ pub fn handle_uci_communication() {
                     board.generate_hash()
                 )
             }
+            Some("about") => {
+                println!("Activated Features: ");
+                println!("Quiescence Search   {:?} ", settings::QUIESCENCE_SEARCH);
+                println!("Transposition Table {:?}", settings::TRANSPOSITION_TABLE);
+                println!("Move Ordering       {:?}", settings::MOVE_ORDERING);
+                println!("Alpha Beta          {:?}", settings::ALPHA_BETA);
+            }
+
             Some("tt") => {
                 let args: Vec<&str> = parts.collect();
                 match TT.handle_debug(&args, board.hash()) {

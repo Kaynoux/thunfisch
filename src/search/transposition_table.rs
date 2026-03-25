@@ -6,7 +6,7 @@ use std::{
 };
 
 /// Encoding:
-/// [depth (6 bit) | score type (2 bit)]
+/// [depth (6 bit) | score type (2 bit)] (could be risky if we go over a depth of 63)
 struct TTFlags(AtomicU8);
 
 impl TTFlags {
@@ -255,5 +255,53 @@ mod test_tt_encodings {
 
         let encoded = TTFlags(AtomicU8::new(0b00001111));
         assert_eq!(encoded.decode(), (3, ScoreType::UpperBound));
+    }
+
+    #[test]
+    fn test_tt_store_and_probe() {
+        let tt = TranspositionTable::new(1); // 1 MB should be plenty for tests
+        let hash = 0x1234567890ABCDEF; // random hash for testing
+        let mv = EncodedMove::encode(Square(12), Square(13), MoveType::Quiet);
+
+        // 1. Test Exact Score
+        tt.store(hash, Some(mv), 100, 5, ScoreType::Exact);
+
+        // Probe with same depth, should succeed
+        assert_eq!(tt.probe(hash, -10000, 10000, 5), Some((100, mv)));
+        // Probe with lesser depth, should succeed
+        assert_eq!(tt.probe(hash, -10000, 10000, 3), Some((100, mv)));
+        // Probe with greater depth, should fail (return None)
+        assert_eq!(tt.probe(hash, -10000, 10000, 6), None);
+        // Probe with wrong hash, should fail
+        assert_eq!(tt.probe(hash + 1, -10000, 10000, 5), None);
+
+        // 2. Test LowerBound (Fail High)
+        // TT contains LowerBound of 200 at depth 5
+        tt.store(hash, Some(mv), 200, 5, ScoreType::LowerBound);
+
+        // Beta is 150. Eval (200) >= Beta (150) -> Cutoff! Returns Beta
+        assert_eq!(tt.probe(hash, -10000, 150, 5), Some((150, mv)));
+        // Beta is 250. Eval (200) < Beta (250) -> No cutoff! Returns None
+        assert_eq!(tt.probe(hash, -10000, 250, 5), None);
+
+        // 3. Test UpperBound (Fail Low)
+        // TT contains UpperBound of -50 at depth 5
+        tt.store(hash, Some(mv), -50, 5, ScoreType::UpperBound);
+
+        // Alpha is -20. Eval (-50) <= Alpha (-20) -> Cutoff! Returns Alpha
+        assert_eq!(tt.probe(hash, -20, 10000, 5), Some((-20, mv)));
+        // Alpha is -100. Eval (-50) > Alpha (-100) -> No cutoff! Returns None
+        assert_eq!(tt.probe(hash, -100, 10000, 5), None);
+
+        // 4. Test Replacement Scheme
+        let new_hash = 0xAAAABBBBCCCCDDDD;
+        let new_mv = EncodedMove(99);
+        tt.store(new_hash, Some(new_mv), 300, 6, ScoreType::Exact);
+        assert_eq!(tt.probe(new_hash, -10000, 10000, 6), Some((300, new_mv)));
+
+        // 5. Test Clear
+        tt.clear();
+        assert_eq!(tt.probe(new_hash, -10000, 10000, 6), None);
+        assert_eq!(tt.probe(hash, -10000, 10000, 5), None);
     }
 }
