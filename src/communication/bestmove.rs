@@ -3,6 +3,7 @@ use std::time::Duration;
 use crate::debug::perft;
 use crate::prelude::*;
 use crate::search::iterative_deepening;
+use crate::search::transposition_table::TT;
 
 pub fn bestmove(args: Vec<&str>, board: &mut Board) {
     // Both just relevant for printing debug information
@@ -140,4 +141,6 @@ pub fn bestmove(args: Vec<&str>, board: &mut Board) {
     } else {
         println!("Game over: Stalemate!");
     }
+
+    TT.increase_age();
 }

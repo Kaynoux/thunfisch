@@ -10,7 +10,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
 };
 
-pub const MATE_SCORE: i32 = 100000;
+pub const MATE_SCORE: i32 = 30_000;
 const MAX_QUIESCENCE_SEARCH_DEPTH: usize = 12;
 
 /// https://www.chessprogramming.org/Alpha-Beta
@@ -35,49 +35,46 @@ pub fn alpha_beta(
         return (vec![], 0);
     }
 
-    let hash = board.hash();
-    // let mut eval = board.evaluate();
+    let original_alpha = alpha;
+
+    //let mut eval = board.evaluate(); // CONSIDER PERFORMANCE: not yet used but important for pruning (for example null move pruning)
     let mut tt_move: Option<EncodedMove> = None;
     let mut tt_score = i32::MIN + 1;
 
-    let pv_node = beta > alpha + 1; // TODO
+    // TODO: Implement Proper PVS if you want to use pv_node checks
+    //let pv_node = beta > alpha + 1; // TODO
 
-    if settings::TRANSPOSITION_TABLE {
-        // only probe TT after draw detection, because the TT does not remember move history
-        // doing it the other way around yield the TT score instead of the draw score for a repetition
-        if let Some(tt_hit) = TT.probe(hash, ply as i32) {
+    if settings::TT_AB {
+        // TODO: legal detection to prevent collisions
+        if let Some(tt_hit) = TT.probe(board.hash(), ply as i32) {
             search_info.total_tt_hits.fetch_add(1, Ordering::Relaxed);
 
             let bound = tt_hit.bound();
             // let depth_cond = tt_hit.depth() >= depth as i32 - 3;
 
-            tt_move = Some(tt_hit.best_move());
+            tt_move = tt_hit.best_move();
             tt_score = tt_hit.score();
 
-            if !pv_node
-                && depth as i32 <= tt_hit.depth()
-                && match bound {
-                    Bound::Lower => tt_score >= beta,
-                    Bound::Upper => tt_score <= alpha,
-                    Bound::Exact => true,
-                    Bound::None => false,
-                }
-            {
-                print!("Here");
-                return (vec![tt_move.unwrap()], tt_score);
-            }
+            // When using pvs add !pv_node as additionell condition
+            let depth_req = depth as i32 + i32::from(tt_score >= beta);
 
-            // use tt score instead of static eval
-            // if !((eval > tt_score && bound == Bound::Lower)
-            //     || (eval < tt_score && bound == Bound::Upper))
-            // {
-            //     eval = tt_score;
-            // }
+            if settings::TT_CUTTOFFS {
+                if tt_hit.depth() >= depth_req as i32
+                    && match bound {
+                        Bound::Lower => tt_score >= beta,
+                        Bound::Upper => tt_score <= alpha,
+                        Bound::Exact => true,
+                        _ => false,
+                    }
+                {
+                    return (vec![], tt_score);
+                }
+            }
         }
     }
 
     if depth == 0 {
-        if settings::QUIESCENCE_SEARCH {
+        if settings::QS {
             let qs_result = quiescence_search::quiescence_search(
                 board,
                 alpha,
@@ -107,17 +104,17 @@ pub fn alpha_beta(
 
     let mut moves = board.generate_moves::<false>();
 
-    // returns the mate score (very low) when in check but subtracts the depth to give a later check a better eval because the depth is lowers the further you go
+    // returns the mate score (very low) when in check but adds the ply to give a later check a better eval because the depth is lowers the further you go
     if moves.is_empty() {
         if board.is_in_check() {
-            return (vec![], -MATE_SCORE - (depth as i32));
+            return (vec![], -MATE_SCORE + (ply as i32));
         } else {
             return (vec![], 0);
         }
     }
 
-    if settings::MOVE_ORDERING {
-        move_ordering::order_moves(&mut moves, board);
+    if settings::MVV_LVA {
+        move_ordering::order_moves(&mut moves, board, tt_move);
     }
 
     // Probe again as there's a chance a different thread updated the TT since we last probed it
@@ -128,7 +125,6 @@ pub fn alpha_beta(
     //     }
     // }
 
-    // let mut score_type = ScoreType::UpperBound;
     let mut pv = vec![];
     for mv in moves {
         // cancels search if time is over
@@ -153,25 +149,38 @@ pub fn alpha_beta(
 
         if eval > best_eval {
             best_eval = eval;
-            best_move = Some(mv);
-            local_pv.extend(vec![mv]);
-            pv = local_pv;
             if eval > alpha {
-                alpha = eval;
-                // score_type = ScoreType::Exact;
+                best_move = Some(mv);
+                alpha = eval
             }
-        }
 
-        if settings::ALPHA_BETA {
-            if eval >= beta {
-                // beta cutoff -> there could be better moves we didn't see, so the score is lower bound
-                // TT.store(hash, best_move, eval, depth, ScoreType::LowerBound);
-                return (pv, best_eval);
+            if settings::AB {
+                if alpha >= beta {
+                    break;
+                }
             }
         }
     }
 
-    // TT.store(hash, best_move, best_eval, depth, score_type);
+    let bound = if best_eval >= beta {
+        Bound::Lower
+    } else if best_eval > original_alpha {
+        Bound::Exact
+    } else {
+        Bound::Upper
+    };
+
+    if settings::TT_AB {
+        TT.store(
+            board.hash(),
+            best_move,
+            best_eval,
+            depth as i8,
+            ply as i32,
+            bound,
+            false,
+        );
+    }
 
     (pv, best_eval)
 }

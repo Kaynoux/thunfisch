@@ -61,14 +61,20 @@ pub fn iterative_deepening(
             println!()
         }
         println!(
-            "Activated Features: QuiescenceSearch={:?} TranspositionTable={:?} MoveOrdering={:?} AlphaBeta={:?}",
-            settings::QUIESCENCE_SEARCH,
-            settings::TRANSPOSITION_TABLE,
-            settings::MOVE_ORDERING,
-            settings::ALPHA_BETA
+            "Activated Features: AB={:?} QS={:?} TT-AB={:?} TT-QS={:?} MVV-LVA={:?} QS-Check-Evasion-Limit={:?} Order-TT-Moves-First={:?} Depth-Penalty-Per-Age={:?} ReplacementStrategy={:?}",
+            settings::AB,
+            settings::QS,
+            settings::TT_AB,
+            settings::TT_QS,
+            settings::MVV_LVA,
+            settings::QS_CHECK_EVASION_LIMIT,
+            settings::ORDER_TT_MV_FIRST,
+            settings::DEPTH_PENALTY_PER_AGE,
+            settings::REPLACEMENT_STRATEGY
         );
         println!(
-            "TT: {} of {} Entries {} % full  Allocated Size: {}B",
+            "TT: Age={}   {} of {} Entries {} % full  Allocated Size: {}B",
+            TT.get_age(),
             format_usize(TT.info().0),
             format_usize(TT.info().1),
             format_f64(TT.info().2,),
@@ -104,9 +110,21 @@ pub fn iterative_deepening(
         let iteration_search_info = SearchInfo::new();
 
         let mut root_moves = board.generate_moves::<false>();
-        if settings::MOVE_ORDERING {
-            move_ordering::order_moves(&mut root_moves, board);
+
+        let mut tt_move: Option<EncodedMove> = None;
+        if settings::TT_AB {
+            // only probe TT after draw detection, because the TT does not remember move history
+            // doing it the other way around yield the TT score instead of the draw score for a repetition
+            if let Some(tt_hit) = TT.probe(board.hash(), 0) {
+                iteration_search_info
+                    .total_tt_hits
+                    .fetch_add(1, Ordering::Relaxed);
+
+                tt_move = tt_hit.best_move();
+            }
         }
+
+        move_ordering::order_moves(&mut root_moves, board, tt_move);
 
         // format: (pv, evaluation after move is made, seldepth)
         let results: Vec<(Vec<EncodedMove>, i32, usize)> = root_moves

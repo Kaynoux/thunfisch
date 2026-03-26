@@ -1,9 +1,16 @@
 use crate::{prelude::*, search::alpha_beta::MATE_SCORE, settings::settings};
 use once_cell::sync::Lazy;
-use std::{
-    fmt,
-    sync::atomic::{AtomicI32, AtomicU8, AtomicU32, AtomicU64, AtomicUsize, Ordering},
-};
+use std::sync::atomic::{AtomicU8, AtomicU64, Ordering};
+#[allow(dead_code)] // because of const settings
+#[derive(Clone, Copy, Debug, PartialEq)]
+
+pub enum ReplacementStrategy {
+    AlwaysReplace,
+    Aging,
+}
+
+const MAX_AGE: u8 = 1 << 5; // needs to match TTInfo layout
+const AGE_MASK: u8 = MAX_AGE - 1;
 
 // Inspired by Viridithas
 /// Holds the age, pv flag, and bound type packed into a single byte.
@@ -109,8 +116,12 @@ impl DecodedTTEntry {
         i32::from(self.score)
     }
 
-    pub fn best_move(&self) -> EncodedMove {
-        self.best_move
+    pub fn best_move(&self) -> Option<EncodedMove> {
+        if self.best_move.0 == 0 {
+            return None;
+        }
+
+        Some(self.best_move)
     }
 
     pub fn from_internal(atom: EncodedHashEntry) -> Self {
@@ -176,7 +187,7 @@ impl TranspositionTable {
     // Adds one but limits age to 63
     pub fn increase_age(&self) {
         self.age
-            .store(63.min(self.get_age() + 1), Ordering::Relaxed);
+            .store((self.get_age() + 1) & AGE_MASK, Ordering::Relaxed);
     }
 
     pub fn get_age(&self) -> u8 {
@@ -198,29 +209,35 @@ impl TranspositionTable {
         let idx = (hash as usize) & (self.entries.len() - 1); // hash index for new entry, works because table size is power of 2
         let previous_entry = DecodedTTEntry::from_internal(self.entries[idx].clone());
 
-        // Replacement strategy:
-        // we dont store new entry if:
-        // - we are not at the root
-        // - we are at the same position
-        // - the new entry depth is lower than old depth + a penalty for its age
-        let diff = self.get_age().saturating_sub(previous_entry.info.age());
-        if ply > 0
-            && key == previous_entry.key
-            && depth as u8 + 2 * diff < previous_entry.depth as u8
-        {
-            return;
+        if settings::REPLACEMENT_STRATEGY == ReplacementStrategy::Aging {
+            // Replacement strategy:
+            // we dont store new entry if:
+            // - we are not at the root
+            // - we are at the same position
+            // - the new entry depth is lower than old depth + a penalty for its age
+            let diff = (self.get_age() + MAX_AGE - previous_entry.info.age()) & AGE_MASK;
+            if ply > 0
+                && key == previous_entry.key
+                && depth as u8 + settings::DEPTH_PENALTY_PER_AGE * diff < previous_entry.depth as u8
+            {
+                return;
+            }
         }
 
-        // replace entry
         // if score is a mate we add ply to make the score independant of position (we added ply previously)
         // not 100% tested tbh
-        score += if score.abs() > MATE_SCORE {
+        score += if score.abs() > (MATE_SCORE - 256) {
             score.signum() * ply
         } else {
             0
         };
 
         let best_move = mv.unwrap_or(EncodedMove(0));
+
+        debug_assert!(
+            score >= i16::MIN as i32 && score <= i16::MAX as i32,
+            "Score must fit into i16"
+        );
 
         let new_entry = DecodedTTEntry {
             key,
@@ -242,7 +259,7 @@ impl TranspositionTable {
             return None;
         }
 
-        entry.score -= if entry.score.abs() > MATE_SCORE as i16 {
+        entry.score -= if entry.score.abs() > (MATE_SCORE - 256) as i16 {
             entry.score.signum() * ply as i16
         } else {
             0
@@ -369,33 +386,81 @@ mod test_tt_encodings {
         assert_eq!(probed.depth(), 5);
         assert_eq!(probed.bound(), Bound::Exact);
         assert!(probed.info.pv());
-        assert_eq!(probed.best_move(), mv);
+        assert_eq!(probed.best_move().unwrap(), mv);
 
         // Probe with incorrect hash (colliding index, different upper bits)
         assert!(tt.probe(hash ^ (1 << 50), 0).is_none());
     }
 
     #[test]
-    fn test_mate_score_adjustment() {
+    fn test_mate_score_adjustment_comprehensive() {
         let tt = TranspositionTable::new(1);
-        let hash = 0xAAABBBCCCDDDEEEF;
+        let hash_win = 0xAAABBBCCCDDDEEEF;
+        let hash_loss = 0x1112223334445556;
         let mv = EncodedMove(111);
 
-        // Let's pretend we found a mate at ply 2
-        let raw_mate_score = MATE_SCORE + 10;
+        // --- Positive Mate Score (we are winning) ---
+        // A score of MATE_SCORE - 5 (Mate in 5 half-moves) found at ply 2.
+        let mate_in_5 = MATE_SCORE - 5;
+        tt.store(hash_win, Some(mv), mate_in_5, 10, 2, Bound::Exact, false);
 
-        // Storing it from ply 2. Internally: score + ply = score + 2
-        tt.store(hash, Some(mv), raw_mate_score, 10, 2, Bound::Exact, false);
+        // When probed at the same depth (ply 2), the score must remain exactly the same.
+        let probed_win_same_ply = tt.probe(hash_win, 2).unwrap();
+        assert_eq!(probed_win_same_ply.score(), mate_in_5);
 
-        // If we probe it from ply 2, we should get exactly the same raw_mate_score
-        // Internally: (stored_score + 2) - 2
-        let probed_at_2 = tt.probe(hash, 2).unwrap();
-        assert_eq!(probed_at_2.score(), raw_mate_score);
+        // If the same TT position is found at ply 4, the mate is closer relative to the new node (Mate in 3).
+        let probed_win_deeper = tt.probe(hash_win, 4).unwrap();
+        assert_eq!(probed_win_deeper.score(), MATE_SCORE - 7);
 
-        // If we probe from ply 5 (3 plies deeper).
-        // Internally: (stored_score + 2) - 5 = raw_mate_score - 3
-        let probed_at_5 = tt.probe(hash, 5).unwrap();
-        assert_eq!(probed_at_5.score(), raw_mate_score - 3);
+        // --- Negative Mate Score (we are being mated) ---
+        // A score of -MATE_SCORE + 5 (we are mated in 5 half-moves) at ply 2.
+        let mated_in_5 = -MATE_SCORE + 5;
+        tt.store(hash_loss, Some(mv), mated_in_5, 10, 2, Bound::Exact, false);
+
+        // Probed at the same depth:
+        let probed_loss_same_ply = tt.probe(hash_loss, 2).unwrap();
+        assert_eq!(probed_loss_same_ply.score(), mated_in_5);
+
+        // Probed at ply 4 (only 3 half-moves left until we lose):
+        let probed_loss_deeper = tt.probe(hash_loss, 4).unwrap();
+        assert_eq!(probed_loss_deeper.score(), -MATE_SCORE + 7);
+    }
+
+    #[test]
+    fn test_aging_replacement_strategy() {
+        let tt = TranspositionTable::new(1);
+        let hash = 0x5555666677778888;
+        let mv_deep = EncodedMove(10);
+        let mv_shallow = EncodedMove(20);
+
+        // 1. Initial storage with high depth
+        tt.store(hash, Some(mv_deep), 100, 10, 1, Bound::Exact, false);
+
+        // 2. Attempt to overwrite with lower depth (should fail because age diff = 0)
+        tt.store(hash, Some(mv_shallow), 200, 2, 1, Bound::Exact, false);
+
+        let probed = tt.probe(hash, 1).unwrap();
+        assert_eq!(probed.depth(), 10); // The old entry should still be present
+        assert_eq!(probed.score(), 100);
+
+        // 3. Simulate several search iterations (engine ages the TT)
+        // How often we need to age depends on settings::DEPTH_PENALTY_PER_AGE
+        // Assuming Penalty is 2, we need diff = 5 (2 + 2*5 = 12 > 10)
+        for _ in 0..10 {
+            tt.increase_age();
+        }
+
+        // 4. Store again. Since the old entry is now "old", the penalty should apply
+        tt.store(hash, Some(mv_shallow), 200, 2, 1, Bound::Exact, false);
+
+        let probed_new = tt.probe(hash, 1).unwrap();
+
+        // Verification: If the aging strategy is active, the entry should now be overwritten
+        if settings::REPLACEMENT_STRATEGY == ReplacementStrategy::Aging {
+            assert_eq!(probed_new.depth(), 2);
+            assert_eq!(probed_new.score(), 200);
+            assert_eq!(probed_new.best_move().unwrap(), mv_shallow);
+        }
     }
 
     #[test]
@@ -413,7 +478,7 @@ mod test_tt_encodings {
         let probed = tt.probe(hash, 0).unwrap();
         assert_eq!(probed.depth(), 6);
         assert_eq!(probed.score(), 50);
-        assert_eq!(probed.best_move(), EncodedMove(1));
+        assert_eq!(probed.best_move().unwrap(), EncodedMove(1));
 
         // 3. Try overwriting at root (ply = 0) even with lower depth.
         // Always Replace overrides everything at ply = 0
@@ -423,7 +488,7 @@ mod test_tt_encodings {
         let probed_root = tt.probe(hash, 0).unwrap();
         assert_eq!(probed_root.score(), 150);
         assert_eq!(probed_root.depth(), 2);
-        assert_eq!(probed_root.best_move(), EncodedMove(3));
+        assert_eq!(probed_root.best_move().unwrap(), EncodedMove(3));
         assert_eq!(probed_root.bound(), Bound::Lower);
     }
 }

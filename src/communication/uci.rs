@@ -153,13 +153,6 @@ pub fn handle_uci_communication() {
                     board.generate_hash()
                 )
             }
-            Some("about") => {
-                println!("Activated Features: ");
-                println!("Quiescence Search   {:?} ", settings::QUIESCENCE_SEARCH);
-                println!("Transposition Table {:?}", settings::TRANSPOSITION_TABLE);
-                println!("Move Ordering       {:?}", settings::MOVE_ORDERING);
-                println!("Alpha Beta          {:?}", settings::ALPHA_BETA);
-            }
 
             // Some("tt") => {
             //     let args: Vec<&str> = parts.collect();
