@@ -181,4 +181,52 @@ mod tests {
             "EP Test: En passant target should be cleared"
         );
     }
+
+    #[test]
+    fn test_null_move_reversibility() {
+        let mut board =
+            Board::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+
+        // Store initial state
+        let initial_color = board.current_color();
+        let initial_halfmove_counter = board.total_halfmove_counter();
+        let initial_ep_target = board.ep_target();
+
+        // Store all pieces on the board
+        let mut initial_board_state = Vec::new();
+        for i in 0..64 {
+            initial_board_state.push(board.figures(Square(i)));
+        }
+
+        // Make and unmake a null move
+        board.make_null_move();
+        board.unmake_null_move();
+
+        // Verify the board state is restored
+        assert_eq!(
+            board.current_color(),
+            initial_color,
+            "Color to move should be restored"
+        );
+        assert_eq!(
+            board.total_halfmove_counter(),
+            initial_halfmove_counter,
+            "Total halfmove counter should be restored"
+        );
+        assert_eq!(
+            board.ep_target(),
+            initial_ep_target,
+            "En passant target should be restored"
+        );
+
+        // Verify all pieces are in their original positions
+        for i in 0..64 {
+            assert_eq!(
+                board.figures(Square(i)),
+                initial_board_state[i],
+                "Piece at square {} should be restored",
+                i
+            );
+        }
+    }
 }
