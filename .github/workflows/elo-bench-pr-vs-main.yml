@@ -112,20 +112,6 @@ jobs:
       - name: Verify fastchess installation
         run: fastchess --version
 
-      # - name: Run benchmark script
-      #   run: |
-      #     fastchess \
-      #     -engine cmd=./testing/current \
-      #     name=current \
-      #     -engine cmd=./testing/previous \
-      #     name=previous \
-      #     -each proto=uci \
-      #     -each tc=0/0:8+0.8 \
-      #     -pgnout file=./testing/games.pgn \
-      #     -rounds 1 \
-      #     -concurrency 2 \
-      #     -openings file=./testing/8moves_v3.pgn format=pgn order=random \
-      #     | tee benchmark_summary.txt 2>&1
       - name: Run SPRT
         run: |
           fastchess \
@@ -133,7 +119,7 @@ jobs:
             -engine cmd=./testing/previous name=main \
             -each proto=uci tc=8+0.08 \
             -concurrency 2 \
-            -rounds 2 \
+            -rounds 5000 \
             -repeat \
             -recover \
             -openings file=./testing/8moves_v3.pgn format=pgn order=random \
