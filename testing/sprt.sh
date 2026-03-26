@@ -13,7 +13,7 @@ NEW_VERSION=./current
 
 build() {
     cd $ROOT_DIR
-    branch=$(git branch | grep -P "^\* " | cut -c 3-)
+    branch=$(git branch | grep -E "^\* " | cut -c 3-)
     git stash drop && git stash
     git checkout master
     git fetch && git pull
