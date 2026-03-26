@@ -10,6 +10,14 @@ jobs:
     runs-on: self-hosted
     container: ubuntu:latest
     steps:
+      - name: Check tooling
+        working-directory: pr
+        run: |
+            apt-get install -y curl
+            curl --version
+            which git
+            uname -r
+
       - name: Checkout PR (current)
         uses: actions/checkout@v4
         with:
@@ -26,12 +34,6 @@ jobs:
         run: |
           git worktree add -f ../master origin/master
           git worktree list
-
-      - name: Check tooling
-        working-directory: pr
-        run: |
-            apt-get install -y curl
-            curl --version
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
@@ -65,15 +67,16 @@ jobs:
     runs-on: self-hosted
     container: ubuntu:latest
     steps:
-      - name: Checkout PR (current)
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
       - name: Check tooling
         working-directory: pr
         run: |
             apt-get install -y curl
             curl --version
+            which git
+      - name: Checkout PR (current)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
