@@ -3,8 +3,9 @@ use super::transposition_table::{TT, TTInfo};
 use crate::prelude::*;
 use crate::search::quiescence_search;
 use crate::search::transposition_table::Bound;
-use crate::settings::settings;
+use crate::settings::settings::{self, NULL_MOVE_PRUNING};
 
+use std::cmp::min;
 use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
@@ -101,22 +102,25 @@ pub fn alpha_beta(
 
     // Null move pruning
     // Do this before move generation to avoid costs induced by that
-    if null_move_allowed && !board.is_in_check() {
-        board.make_null_move();
-        let reduction = 4 + depth / 6; // stolen from smol.cs
-        let (_, eval) = alpha_beta(
-            board,
-            depth - reduction,
-            -beta,
-            -alpha,
-            stop,
-            search_info,
-            ply + 1,
-            local_seldepth,
-            false,
-        );
-        if eval >= beta {
-            return (vec![], beta);
+    if NULL_MOVE_PRUNING {
+        if null_move_allowed && !board.is_in_check() {
+            board.make_null_move();
+            let reduction = min(depth, 4);
+            let (_, eval) = alpha_beta(
+                board,
+                depth - reduction,
+                -beta,
+                -alpha,
+                stop,
+                search_info,
+                ply + 1,
+                local_seldepth,
+                false,
+            );
+            board.unmake_null_move();
+            if eval >= beta {
+                return (vec![], beta);
+            }
         }
     }
 
