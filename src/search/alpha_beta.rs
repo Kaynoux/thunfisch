@@ -25,6 +25,7 @@ pub fn alpha_beta(
     search_info: &SearchInfo,
     ply: usize,
     local_seldepth: &mut usize,
+    null_move_allowed: bool,
 ) -> (Vec<EncodedMove>, i32) {
     *local_seldepth = (*local_seldepth).max(ply);
     search_info
@@ -98,6 +99,27 @@ pub fn alpha_beta(
         return (vec![], 0);
     }
 
+    // Null move pruning
+    // Do this before move generation to avoid costs induced by that
+    if null_move_allowed && !board.is_in_check() {
+        board.make_null_move();
+        let reduction = 4 + depth / 6; // stolen from smol.cs
+        let (_, eval) = alpha_beta(
+            board,
+            depth - reduction,
+            -beta,
+            -alpha,
+            stop,
+            search_info,
+            ply + 1,
+            local_seldepth,
+            false,
+        );
+        if eval >= beta {
+            return (vec![], beta);
+        }
+    }
+
     // set the best evaluation very low to begin with
     let mut best_eval = i32::MIN + 1;
     let mut best_move: Option<EncodedMove> = None;
@@ -143,6 +165,7 @@ pub fn alpha_beta(
             search_info,
             ply + 1,
             local_seldepth,
+            true,
         );
         // do the negamax negation here since we can't negate a tuple above
         eval *= -1;

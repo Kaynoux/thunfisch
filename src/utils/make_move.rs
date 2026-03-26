@@ -114,6 +114,16 @@ impl Board {
             }
         }
     }
+    pub fn make_null_move(&mut self){
+        let null_move = EncodedMove(0);
+
+        self.push_unmake_info_stack(null_move, Figure::Empty);
+        self.push_repetition_stack();
+
+        self.toggle_current_color();
+        self.increase_halfmove_clock();
+        self.set_total_halfmove_counter(self.total_halfmove_counter() + 1);
+    }
 }
 
 #[cfg(test)]
