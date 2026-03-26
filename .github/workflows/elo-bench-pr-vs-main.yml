@@ -27,6 +27,12 @@ jobs:
           git worktree add -f ../master origin/master
           git worktree list
 
+      - name: Check tooling
+        working-directory: pr
+        run: |
+            apt-get install -y curl
+            curl --version
+
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@stable
         with:
