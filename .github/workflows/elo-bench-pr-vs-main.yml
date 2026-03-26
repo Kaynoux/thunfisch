@@ -8,15 +8,8 @@ on:
 jobs:
   build-master:
     runs-on: self-hosted
-    container: ubuntu:latest
+    container: heofthetea/thunfischsdk:latest
     steps:
-      - name: Check tooling
-        working-directory: pr
-        run: |
-            apt-get install -y curl
-            curl --version
-            which git
-            uname -r
 
       - name: Checkout PR (current)
         uses: actions/checkout@v4
@@ -34,11 +27,6 @@ jobs:
         run: |
           git worktree add -f ../master origin/master
           git worktree list
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
 
       - name: Cache cargo (master)
         uses: actions/cache@v4
@@ -65,23 +53,12 @@ jobs:
 
   build-current:
     runs-on: self-hosted
-    container: ubuntu:latest
+    container: heofthetea/thunfischsdk:latest
     steps:
-      - name: Check tooling
-        working-directory: pr
-        run: |
-            apt-get install -y curl
-            curl --version
-            which git
       - name: Checkout PR (current)
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
-
-      - name: Setup Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
 
       - name: Cache cargo (PR)
         uses: actions/cache@v4
@@ -108,7 +85,7 @@ jobs:
   benchmark:
     needs: [build-master, build-current]
     runs-on: self-hosted
-    container: ubuntu:latest
+    container: heofthetea/thunfischsdk:latest
     permissions:
       pull-requests: write
     defaults:
@@ -132,13 +109,13 @@ jobs:
         run: |
           ls -la ./testing/
           chmod +x ./testing/previous ./testing/current
-      - name: Install fastchess
-        run: |
-          cd /tmp
-          wget https://github.com/Disservin/fastchess/releases/download/v1.6.0-alpha/fastchess-linux-x86-64.tar
-          tar -xf fastchess-linux-x86-64.tar
-          # Add the directory containing the executable to the system PATH
-          echo "/tmp/fastchess-linux-x86-64" >> $GITHUB_PATH
+      # - name: Install fastchess
+      #   run: |
+      #     cd /tmp
+      #     wget https://github.com/Disservin/fastchess/releases/download/v1.6.0-alpha/fastchess-linux-x86-64.tar
+      #     tar -xf fastchess-linux-x86-64.tar
+      #     # Add the directory containing the executable to the system PATH
+      #     echo "/tmp/fastchess-linux-x86-64" >> $GITHUB_PATH
       - name: Verify fastchess installation
         run: fastchess --version
 
