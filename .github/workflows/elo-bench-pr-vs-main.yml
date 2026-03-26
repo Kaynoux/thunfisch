@@ -8,6 +8,7 @@ on:
 jobs:
   build-master:
     runs-on: self-hosted
+    container: ubuntu-latest
     steps:
       - name: Checkout PR (current)
         uses: actions/checkout@v4
@@ -56,6 +57,7 @@ jobs:
 
   build-current:
     runs-on: self-hosted
+    container: ubuntu-latest
     steps:
       - name: Checkout PR (current)
         uses: actions/checkout@v4
@@ -92,6 +94,7 @@ jobs:
   benchmark:
     needs: [build-master, build-current]
     runs-on: self-hosted
+    container: ubuntu-latest
     permissions:
       pull-requests: write
     defaults:
