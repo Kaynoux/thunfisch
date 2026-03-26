@@ -1,49 +1,83 @@
-use crate::{prelude::*, settings::settings};
+use crate::{prelude::*, search::alpha_beta::MATE_SCORE, settings::settings};
 use once_cell::sync::Lazy;
 use std::{
     fmt,
     sync::atomic::{AtomicI32, AtomicU8, AtomicU32, AtomicU64, AtomicUsize, Ordering},
 };
 
-/// Encoding:
-/// [depth (6 bit) | score type (2 bit)] (could be risky if we go over a depth of 63)
-struct TTFlags(AtomicU8);
-
-impl TTFlags {
-    fn decode(&self) -> (usize, ScoreType) {
-        let asu8 = self.0.load(Ordering::Relaxed);
-        ((asu8 >> 2) as usize, ScoreType::from(asu8))
-    }
-
-    fn store(&self, depth: usize, score_type: ScoreType) {
-        let encoded = (((depth & 0x3f) as u8) << 2) | score_type.to_u8();
-        self.0.store(encoded, Ordering::Relaxed);
-    }
+// Inspired by Viridithas
+/// Holds the age, pv flag, and bound type packed into a single byte.
+///
+/// Bit layout:
+/// - Bits 0-1 (2 bits): Bound (00 = None, 01 = Upper, 10 = Lower, 11 = Exact)
+/// - Bit 2    (1 bit) : pv flag (1 = PV node, 0 = Non-PV node)
+/// - Bits 3-7 (5 bits): age (0 to 31)
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TTInfo {
+    data: u8,
 }
 
-#[derive(Debug, PartialEq)]
-pub enum ScoreType {
-    Exact,
-    LowerBound,
-    UpperBound,
-}
+impl TTInfo {
+    const fn encode(age: u8, flag: Bound, is_pv: bool) -> Self {
+        Self {
+            data: (age << 3) | ((is_pv as u8) << 2) | flag as u8,
+        }
+    }
+    const fn age(self) -> u8 {
+        self.data >> 3
+    }
 
-impl ScoreType {
-    fn from(enc: u8) -> ScoreType {
-        match enc & 3 {
-            0 => ScoreType::Exact,
-            1 => ScoreType::LowerBound,
-            2 => ScoreType::UpperBound,
-            // we don't have a use for `0b11`
-            _ => ScoreType::UpperBound,
+    const fn bound(self) -> Bound {
+        match self.data & 0b11 {
+            0 => Bound::None,
+            1 => Bound::Upper,
+            2 => Bound::Lower,
+            3 => Bound::Exact,
+            _ => unreachable!(),
         }
     }
 
-    fn to_u8(&self) -> u8 {
+    const fn pv(self) -> bool {
+        self.data & 0b100 != 0
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[repr(u8)]
+pub enum Bound {
+    None = 0,
+    Upper = 1,
+    Lower = 2,
+    Exact = 3,
+}
+
+impl Bound {
+    pub fn is_lower(self) -> bool {
+        self as u8 & 0b10 != 0
+    }
+
+    pub fn is_upper(self) -> bool {
+        self as u8 & 0b01 != 0
+    }
+
+    pub fn invert(self) -> Self {
         match self {
-            ScoreType::Exact => 0,
-            ScoreType::LowerBound => 1,
-            ScoreType::UpperBound => 2,
+            Self::Upper => Self::Lower,
+            Self::Lower => Self::Upper,
+            x => x,
+        }
+    }
+}
+
+#[derive(Default)]
+pub struct EncodedHashEntry {
+    data: AtomicU64,
+}
+
+impl Clone for EncodedHashEntry {
+    fn clone(&self) -> Self {
+        Self {
+            data: AtomicU64::new(self.data.load(Ordering::Relaxed)),
         }
     }
 }
@@ -53,35 +87,62 @@ impl ScoreType {
 /// this needs to be fixed in the future
 /// Also the Score being 4 bytes leads to the struct being padded to 24 bytes (from the 17 it actually needs)
 /// should also be fixed
-struct TTEntry {
-    key: AtomicU64,
-    mv: AtomicU32,
-    eval: AtomicI32,
-    flags: TTFlags,
-}
 
-impl fmt::Display for TTEntry {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let (depth, score_type) = self.flags.decode();
-        write!(
-            f,
-            "key: {}\neval: {}\nmv: {}\ndepth: {}\nscore_type: {:?}",
-            self.key.load(Ordering::Relaxed),
-            self.eval.load(Ordering::Relaxed),
-            EncodedMove((self.mv.load(Ordering::Relaxed) - 1) as u16)
-                .decode()
-                .to_coords(),
-            depth,
-            score_type
-        )
+#[repr(C)]
+pub struct DecodedTTEntry {
+    key: u16,
+    best_move: EncodedMove,
+    score: i16,
+    depth: i8,
+    info: TTInfo,
+}
+impl DecodedTTEntry {
+    pub fn depth(&self) -> i32 {
+        i32::from(self.depth)
+    }
+
+    pub fn bound(&self) -> Bound {
+        self.info.bound()
+    }
+
+    pub fn score(&self) -> i32 {
+        i32::from(self.score)
+    }
+
+    pub fn best_move(&self) -> EncodedMove {
+        self.best_move
+    }
+
+    pub fn from_internal(atom: EncodedHashEntry) -> Self {
+        unsafe { std::mem::transmute(atom.data.load(Ordering::Relaxed)) } // should probably measure how much we actually benefit from unsafe
+    }
+
+    pub fn to_u64(self) -> u64 {
+        unsafe { std::mem::transmute(self) }
     }
 }
 
+// impl fmt::Display for DecodedTTEntry {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         let (depth, score_type) = self.flags.decode();
+//         write!(
+//             f,
+//             "key: {}\neval: {}\nmv: {}\ndepth: {}\nscore_type: {:?}",
+//             self.key.load(Ordering::Relaxed),
+//             self.eval.load(Ordering::Relaxed),
+//             EncodedMove((self.mv.load(Ordering::Relaxed) - 1) as u16)
+//                 .decode()
+//                 .to_coords(),
+//             depth,
+//             score_type
+//         )
+//     }
+// }
+
 /// https://www.chessprogramming.org/Transposition_Table
 pub struct TranspositionTable {
-    entries: Vec<TTEntry>,
-    mask: usize,
-    filled: AtomicUsize,
+    entries: Vec<EncodedHashEntry>,
+    age: AtomicU8,
 }
 
 /// Transposition Table shared between all search threads
@@ -90,7 +151,7 @@ pub static TT: Lazy<TranspositionTable> = Lazy::new(|| TranspositionTable::new(5
 impl TranspositionTable {
     pub fn new(mb: usize) -> Self {
         let bytes = mb * 1024 * 1024;
-        let entry_size = size_of::<TTEntry>();
+        let entry_size = size_of::<EncodedHashEntry>();
 
         // Calculate max entries to the next lower power of 2
         let max_entries = bytes / entry_size;
@@ -101,70 +162,25 @@ impl TranspositionTable {
         };
 
         let entries = (0..cap)
-            .map(|_| TTEntry {
-                key: AtomicU64::new(0),
-                mv: AtomicU32::new(0),
-                eval: AtomicI32::new(0),
-                flags: TTFlags(AtomicU8::new(0)),
+            .map(|_| EncodedHashEntry {
+                data: AtomicU64::new(0),
             })
             .collect();
+
         TranspositionTable {
             entries,
-            mask: cap - 1,
-            filled: AtomicUsize::new(0),
+            age: AtomicU8::new(0),
         }
     }
 
-    #[inline]
-    fn index(&self, hash: u64) -> usize {
-        (hash as usize) & self.mask
+    // Adds one but limits age to 63
+    pub fn increase_age(&self) {
+        self.age
+            .store(63.min(self.get_age() + 1), Ordering::Relaxed);
     }
 
-    /// See http://web.archive.org/web/20071031100051/http://www.brucemo.com:80/compchess/programming/hashing.htm
-    /// for how the returns work on this
-    pub fn probe(
-        &self,
-        hash: u64,
-        alpha: i32,
-        beta: i32,
-        depth: usize,
-    ) -> Option<(i32, EncodedMove)> {
-        if !settings::TRANSPOSITION_TABLE {
-            return None;
-        }
-        let e = &self.entries[self.index(hash)];
-        if e.key.load(Ordering::Relaxed) != hash {
-            return None;
-        }
-        let (e_depth, e_type) = e.flags.decode();
-        let best_mv = e.mv.load(Ordering::Relaxed);
-        let eval = e.eval.load(Ordering::Relaxed);
-
-        if e_depth < depth {
-            return None;
-        }
-        if best_mv == 0 {
-            return None;
-        }
-
-        let best_mv = EncodedMove((best_mv - 1) as u16); // converting here for readable returns below
-        match e_type {
-            ScoreType::Exact => Some((eval, best_mv)),
-            ScoreType::LowerBound => {
-                if eval >= beta {
-                    Some((eval, best_mv))
-                } else {
-                    None
-                }
-            }
-            ScoreType::UpperBound => {
-                if eval <= alpha {
-                    Some((eval, best_mv))
-                } else {
-                    None
-                }
-            }
-        }
+    pub fn get_age(&self) -> u8 {
+        self.age.load(Ordering::Relaxed)
     }
 
     /// Currently uses ALWAYS REPLACE scheme for collisions
@@ -172,150 +188,242 @@ impl TranspositionTable {
         &self,
         hash: u64,
         mv: Option<EncodedMove>,
-        eval: i32,
-        depth: usize,
-        score_type: ScoreType,
+        mut score: i32,
+        depth: i8,
+        ply: i32,
+        bound: Bound,
+        is_pv: bool,
     ) {
-        if !settings::TRANSPOSITION_TABLE {
+        let key = (hash >> 48) as u16; // highest 16 bits of zobrist board hash as key
+        let idx = (hash as usize) & (self.entries.len() - 1); // hash index for new entry, works because table size is power of 2
+        let previous_entry = DecodedTTEntry::from_internal(self.entries[idx].clone());
+
+        // Replacement strategy:
+        // we dont store new entry if:
+        // - we are not at the root
+        // - we are at the same position
+        // - the new entry depth is lower than old depth + a penalty for its age
+        let diff = self.get_age().saturating_sub(previous_entry.info.age());
+        if ply > 0
+            && key == previous_entry.key
+            && depth as u8 + 2 * diff < previous_entry.depth as u8
+        {
             return;
         }
-        let idx = self.index(hash);
-        let entry = &self.entries[idx];
 
-        let prev = entry.key.swap(hash, Ordering::Relaxed);
-        if prev == 0 {
-            self.filled.fetch_add(1, Ordering::Relaxed);
+        // replace entry
+        // if score is a mate we add ply to make the score independant of position (we added ply previously)
+        // not 100% tested tbh
+        score += if score.abs() > MATE_SCORE {
+            score.signum() * ply
+        } else {
+            0
+        };
+
+        let best_move = mv.unwrap_or(EncodedMove(0));
+
+        let new_entry = DecodedTTEntry {
+            key,
+            best_move: best_move,
+            score: score as i16,
+            depth,
+            info: TTInfo::encode(self.get_age(), bound, is_pv),
         }
-        // store mv.0+1 as u32
-        // if mv is none, represent this as 0
-        entry
-            .mv
-            .store(mv.map_or(0, |mv| mv.0 as u32 + 1), Ordering::Relaxed);
-        entry.eval.store(eval, Ordering::Relaxed);
-        entry.flags.store(depth, score_type);
+        .to_u64();
+
+        self.entries[idx].data.store(new_entry, Ordering::Relaxed);
+    }
+
+    pub fn probe(&self, hash: u64, ply: i32) -> Option<DecodedTTEntry> {
+        let idx = (hash as usize) & (self.entries.len() - 1);
+        let mut entry = DecodedTTEntry::from_internal(self.entries[idx].clone());
+
+        if entry.key != (hash >> 48) as u16 {
+            return None;
+        }
+
+        entry.score -= if entry.score.abs() > MATE_SCORE as i16 {
+            entry.score.signum() * ply as i16
+        } else {
+            0
+        };
+
+        Some(entry)
     }
 
     pub fn info(&self) -> (usize, usize, f64, usize) {
-        let filled_entries = self.filled.load(Ordering::Relaxed);
+        // Sample up to 1000 entries to estimate fill percentage (standard UCI behavior)
+        let sample_size = self.entries.len().min(1000);
+        let mut filled_sample = 0;
+
+        for i in 0..sample_size {
+            if self.entries[i].data.load(Ordering::Relaxed) != 0 {
+                filled_sample += 1;
+            }
+        }
+
+        let fill_rate = if sample_size > 0 {
+            filled_sample as f64 / sample_size as f64
+        } else {
+            0.0
+        };
+
         let total_entries = self.entries.len();
-        let size_in_bytes = total_entries * size_of::<TTEntry>();
+        let filled_entries = (total_entries as f64 * fill_rate) as usize;
+        let size_in_bytes = total_entries * std::mem::size_of::<EncodedHashEntry>();
+
         (
             filled_entries,
             total_entries,
-            filled_entries as f64 * 100.0 / total_entries as f64,
+            fill_rate * 100.0,
             size_in_bytes,
         )
     }
 
+    /// Clears the transposition table by resetting all entries and the age to 0.
     pub fn clear(&self) {
-        self.entries.iter().for_each(|f| {
-            f.key.store(0, Ordering::Relaxed);
-            f.eval.store(0, Ordering::Relaxed);
-            f.flags.0.store(0, Ordering::Relaxed);
-            f.mv.store(0, Ordering::Relaxed);
-        });
-        self.filled.store(0, Ordering::Relaxed);
+        for entry in &self.entries {
+            entry.data.store(0, Ordering::Relaxed);
+        }
+        self.age.store(0, Ordering::Relaxed);
     }
 
-    pub fn handle_debug(&self, args: &[&str], hash: u64) -> Result<String, String> {
-        match args.get(0) {
-            Some(&"help") => Ok("usage: tt [fill | clear | probe]".to_owned()),
-            Some(&"clear") => {
-                self.clear();
-                Ok(format!("{:?}", self.info()))
-            }
-            Some(&"fill") => Ok(format!("{:?}", self.info())),
-            Some(&"probe") => {
-                let entry = &self.entries[self.index(hash)];
-                if entry.key.load(Ordering::Relaxed) != hash {
-                    return Ok("No Entry".to_owned());
-                }
-                Ok(format!("{}", entry))
-            }
-            Some(cmd) => Err(format!("Unknown command: tt {}", cmd)),
-            None => Err("Argument Required".to_owned()),
-        }
-    }
+    // pub fn handle_debug(&self, args: &[&str], hash: u64) -> Result<String, String> {
+    //     match args.get(0) {
+    //         Some(&"help") => Ok("usage: tt [fill | clear | probe]".to_owned()),
+    //         Some(&"clear") => {
+    //             self.clear();
+    //             Ok(format!("{:?}", self.info()))
+    //         }
+    //         Some(&"fill") => Ok(format!("{:?}", self.info())),
+    //         Some(&"probe") => {
+    //             let entry = &self.entries[self.index(hash)];
+    //             if entry.key.load(Ordering::Relaxed) != hash {
+    //                 return Ok("No Entry".to_owned());
+    //             }
+    //             Ok(format!("{}", entry))
+    //         }
+    //         Some(cmd) => Err(format!("Unknown command: tt {}", cmd)),
+    //         None => Err("Argument Required".to_owned()),
+    //     }
+    // }
 }
 
 #[cfg(test)]
 mod test_tt_encodings {
     use super::*;
 
-    // implementing clone makes no sense for the main project but for the tests it does so
-    impl Clone for ScoreType {
-        fn clone(&self) -> Self {
-            match self {
-                Self::Exact => Self::Exact,
-                Self::LowerBound => Self::LowerBound,
-                Self::UpperBound => Self::UpperBound,
-            }
-        }
-    }
     #[test]
-    fn test_depth_type_encoding() {
-        let depth: usize = 15;
-        let score_type = ScoreType::Exact;
-        let encoded = TTFlags(AtomicU8::new(0));
-        encoded.store(depth, score_type.clone());
-        assert_eq!(encoded.0.load(Ordering::Relaxed), 0b00111100);
-        assert_eq!(encoded.decode(), (depth, score_type));
+    fn test_ttinfo_encoding() {
+        let info = TTInfo::encode(13, Bound::Exact, true);
+        assert_eq!(info.age(), 13);
+        assert_eq!(info.bound(), Bound::Exact);
+        assert!(info.pv());
 
-        let depth: usize = 4;
-        let score_type = ScoreType::UpperBound;
-        encoded.store(depth, score_type.clone());
-        assert_eq!(encoded.0.load(Ordering::Relaxed), 0b00010010);
-        assert_eq!(encoded.decode(), (depth, score_type));
+        let info2 = TTInfo::encode(31, Bound::Upper, false);
+        assert_eq!(info2.age(), 31);
+        assert_eq!(info2.bound(), Bound::Upper);
+        assert!(!info2.pv());
+    }
 
-        let encoded = TTFlags(AtomicU8::new(0b00001111));
-        assert_eq!(encoded.decode(), (3, ScoreType::UpperBound));
+    #[test]
+    fn test_tt_entry_packing() {
+        let info = TTInfo::encode(7, Bound::Lower, true);
+        let entry = DecodedTTEntry {
+            key: 0xABCD,
+            best_move: EncodedMove(0x1234),
+            score: -150, // Test with negative score to ensure sign bit extension doesn't ruin upper bits
+            depth: 8,
+            info,
+        };
+
+        let packed = entry.to_u64();
+        let unpacked = DecodedTTEntry::from_internal(EncodedHashEntry {
+            data: AtomicU64::new(packed),
+        });
+
+        assert_eq!(unpacked.key, 0xABCD);
+        assert_eq!(unpacked.best_move.0, 0x1234);
+        assert_eq!(unpacked.score, -150);
+        assert_eq!(unpacked.depth, 8);
+        assert_eq!(unpacked.info.age(), 7);
+        assert_eq!(unpacked.info.bound(), Bound::Lower);
+        assert!(unpacked.info.pv());
     }
 
     #[test]
     fn test_tt_store_and_probe() {
-        let tt = TranspositionTable::new(1); // 1 MB should be plenty for tests
-        let hash = 0x1234567890ABCDEF; // random hash for testing
-        let mv = EncodedMove::encode(Square(12), Square(13), MoveType::Quiet);
+        // Temporarily enable TT if it'settings behind a static setting flag in tests
+        // (Assuming settings::TRANSPOSITION_TABLE is true during tests or mocked)
 
-        // 1. Test Exact Score
-        tt.store(hash, Some(mv), 100, 5, ScoreType::Exact);
+        let tt = TranspositionTable::new(1); // 1 MB
+        let hash = 0x1234567890ABCDEF;
+        let mv = EncodedMove(42);
 
-        // Probe with same depth, should succeed
-        assert_eq!(tt.probe(hash, -10000, 10000, 5), Some((100, mv)));
-        // Probe with lesser depth, should succeed
-        assert_eq!(tt.probe(hash, -10000, 10000, 3), Some((100, mv)));
-        // Probe with greater depth, should fail (return None)
-        assert_eq!(tt.probe(hash, -10000, 10000, 6), None);
-        // Probe with wrong hash, should fail
-        assert_eq!(tt.probe(hash + 1, -10000, 10000, 5), None);
+        // Store exact score
+        tt.store(hash, Some(mv), 100, 5, 0, Bound::Exact, true);
 
-        // 2. Test LowerBound (Fail High)
-        // TT contains LowerBound of 200 at depth 5
-        tt.store(hash, Some(mv), 200, 5, ScoreType::LowerBound);
+        // Probe with correct hash
+        let probed = tt.probe(hash, 0).expect("Entry should be present");
+        assert_eq!(probed.score(), 100);
+        assert_eq!(probed.depth(), 5);
+        assert_eq!(probed.bound(), Bound::Exact);
+        assert!(probed.info.pv());
+        assert_eq!(probed.best_move(), mv);
 
-        // Beta is 150. Eval (200) >= Beta (150) -> Cutoff! Returns Beta
-        assert_eq!(tt.probe(hash, -10000, 150, 5), Some((150, mv)));
-        // Beta is 250. Eval (200) < Beta (250) -> No cutoff! Returns None
-        assert_eq!(tt.probe(hash, -10000, 250, 5), None);
+        // Probe with incorrect hash (colliding index, different upper bits)
+        assert!(tt.probe(hash ^ (1 << 50), 0).is_none());
+    }
 
-        // 3. Test UpperBound (Fail Low)
-        // TT contains UpperBound of -50 at depth 5
-        tt.store(hash, Some(mv), -50, 5, ScoreType::UpperBound);
+    #[test]
+    fn test_mate_score_adjustment() {
+        let tt = TranspositionTable::new(1);
+        let hash = 0xAAABBBCCCDDDEEEF;
+        let mv = EncodedMove(111);
 
-        // Alpha is -20. Eval (-50) <= Alpha (-20) -> Cutoff! Returns Alpha
-        assert_eq!(tt.probe(hash, -20, 10000, 5), Some((-20, mv)));
-        // Alpha is -100. Eval (-50) > Alpha (-100) -> No cutoff! Returns None
-        assert_eq!(tt.probe(hash, -100, 10000, 5), None);
+        // Let's pretend we found a mate at ply 2
+        let raw_mate_score = MATE_SCORE + 10;
 
-        // 4. Test Replacement Scheme
-        let new_hash = 0xAAAABBBBCCCCDDDD;
-        let new_mv = EncodedMove(99);
-        tt.store(new_hash, Some(new_mv), 300, 6, ScoreType::Exact);
-        assert_eq!(tt.probe(new_hash, -10000, 10000, 6), Some((300, new_mv)));
+        // Storing it from ply 2. Internally: score + ply = score + 2
+        tt.store(hash, Some(mv), raw_mate_score, 10, 2, Bound::Exact, false);
 
-        // 5. Test Clear
-        tt.clear();
-        assert_eq!(tt.probe(new_hash, -10000, 10000, 6), None);
-        assert_eq!(tt.probe(hash, -10000, 10000, 5), None);
+        // If we probe it from ply 2, we should get exactly the same raw_mate_score
+        // Internally: (stored_score + 2) - 2
+        let probed_at_2 = tt.probe(hash, 2).unwrap();
+        assert_eq!(probed_at_2.score(), raw_mate_score);
+
+        // If we probe from ply 5 (3 plies deeper).
+        // Internally: (stored_score + 2) - 5 = raw_mate_score - 3
+        let probed_at_5 = tt.probe(hash, 5).unwrap();
+        assert_eq!(probed_at_5.score(), raw_mate_score - 3);
+    }
+
+    #[test]
+    fn test_replacement_scheme() {
+        let tt = TranspositionTable::new(1);
+        let hash = 0x1111222233334444;
+
+        // 1. Initial store at deep depth
+        tt.store(hash, Some(EncodedMove(1)), 50, 6, 0, Bound::Exact, false);
+
+        // 2. Try overwriting with lower depth at non-root (ply > 0)
+        tt.store(hash, Some(EncodedMove(2)), 100, 2, 1, Bound::Upper, false);
+
+        // The deep depth entry should NOT be overwritten (if age penalty didn't kick in)
+        let probed = tt.probe(hash, 0).unwrap();
+        assert_eq!(probed.depth(), 6);
+        assert_eq!(probed.score(), 50);
+        assert_eq!(probed.best_move(), EncodedMove(1));
+
+        // 3. Try overwriting at root (ply = 0) even with lower depth.
+        // Always Replace overrides everything at ply = 0
+        tt.store(hash, Some(EncodedMove(3)), 150, 2, 0, Bound::Lower, true);
+
+        // The entry should now be overwritten
+        let probed_root = tt.probe(hash, 0).unwrap();
+        assert_eq!(probed_root.score(), 150);
+        assert_eq!(probed_root.depth(), 2);
+        assert_eq!(probed_root.best_move(), EncodedMove(3));
+        assert_eq!(probed_root.bound(), Bound::Lower);
     }
 }

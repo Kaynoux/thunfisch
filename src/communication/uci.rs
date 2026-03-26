@@ -161,13 +161,13 @@ pub fn handle_uci_communication() {
                 println!("Alpha Beta          {:?}", settings::ALPHA_BETA);
             }
 
-            Some("tt") => {
-                let args: Vec<&str> = parts.collect();
-                match TT.handle_debug(&args, board.hash()) {
-                    Err(e) => eprintln!("{}", e),
-                    Ok(v) => println!("{}", v),
-                }
-            }
+            // Some("tt") => {
+            //     let args: Vec<&str> = parts.collect();
+            //     match TT.handle_debug(&args, board.hash()) {
+            //         Err(e) => eprintln!("{}", e),
+            //         Ok(v) => println!("{}", v),
+            //     }
+            // }
             Some("quit") => break,
             Some(cmd) => {
                 eprintln!("Unknown command: {}", cmd);

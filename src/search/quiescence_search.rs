@@ -1,7 +1,8 @@
 use crate::prelude::*;
 use crate::search::move_ordering;
+use crate::search::transposition_table::TT;
 use crate::settings::settings;
-use crate::{move_generator::generator::ARRAY_LENGTH};
+use crate::{move_generator::generator::ARRAY_LENGTH, search::transposition_table::Bound};
 use arrayvec::ArrayVec;
 
 use std::sync::{
@@ -31,7 +32,6 @@ pub fn quiescence_search(
         return 0;
     }
 
-
     if depth == 0 {
         let eval = board.evaluate();
         return eval;
@@ -60,6 +60,9 @@ pub fn quiescence_search(
         move_ordering::order_moves(&mut moves, board);
     }
 
+    let mut best_move: Option<EncodedMove> = None;
+    let mut bound = Bound::Upper;
+
     for mv in moves {
         if stop.load(Ordering::Relaxed) {
             search_info.timeout_occurred.store(true, Ordering::Relaxed);
@@ -86,10 +89,29 @@ pub fn quiescence_search(
 
         if score > best_score {
             best_score = score;
+            best_move = Some(mv);
         }
+
+        if score >= beta {
+            bound = Bound::Lower;
+            break;
+        }
+
         if score > alpha {
             alpha = score;
         }
+    }
+
+    if settings::TRANSPOSITION_TABLE {
+        TT.store(
+            board.hash(),
+            best_move,
+            best_score,
+            depth as i8,
+            ply as i32,
+            bound,
+            false,
+        );
     }
 
     best_score

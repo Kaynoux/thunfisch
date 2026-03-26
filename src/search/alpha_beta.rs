@@ -1,7 +1,8 @@
 use super::move_ordering;
-use super::transposition_table::{ScoreType, TT};
+use super::transposition_table::{TT, TTInfo};
 use crate::prelude::*;
 use crate::search::quiescence_search;
+use crate::search::transposition_table::Bound;
 use crate::settings::settings;
 
 use std::sync::{
@@ -9,7 +10,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
 };
 
-const MATE_SCORE: i32 = 100000;
+pub const MATE_SCORE: i32 = 100000;
 const MAX_QUIESCENCE_SEARCH_DEPTH: usize = 12;
 
 /// https://www.chessprogramming.org/Alpha-Beta
@@ -35,12 +36,44 @@ pub fn alpha_beta(
     }
 
     let hash = board.hash();
+    // let mut eval = board.evaluate();
+    let mut tt_move: Option<EncodedMove> = None;
+    let mut tt_score = i32::MIN + 1;
 
-    // only probe TT after draw detection, because the TT does not remember move history
-    // doing it the other way around yield the TT score instead of the draw score for a repetition
-    if let Some(tt_hit) = TT.probe(hash, alpha, beta, depth) {
-        search_info.total_tt_hits.fetch_add(1, Ordering::Relaxed);
-        return (vec![tt_hit.1], tt_hit.0);
+    let pv_node = beta > alpha + 1; // TODO
+
+    if settings::TRANSPOSITION_TABLE {
+        // only probe TT after draw detection, because the TT does not remember move history
+        // doing it the other way around yield the TT score instead of the draw score for a repetition
+        if let Some(tt_hit) = TT.probe(hash, ply as i32) {
+            search_info.total_tt_hits.fetch_add(1, Ordering::Relaxed);
+
+            let bound = tt_hit.bound();
+            // let depth_cond = tt_hit.depth() >= depth as i32 - 3;
+
+            tt_move = Some(tt_hit.best_move());
+            tt_score = tt_hit.score();
+
+            if !pv_node
+                && depth as i32 <= tt_hit.depth()
+                && match bound {
+                    Bound::Lower => tt_score >= beta,
+                    Bound::Upper => tt_score <= alpha,
+                    Bound::Exact => true,
+                    Bound::None => false,
+                }
+            {
+                print!("Here");
+                return (vec![tt_move.unwrap()], tt_score);
+            }
+
+            // use tt score instead of static eval
+            // if !((eval > tt_score && bound == Bound::Lower)
+            //     || (eval < tt_score && bound == Bound::Upper))
+            // {
+            //     eval = tt_score;
+            // }
+        }
     }
 
     if depth == 0 {
@@ -56,7 +89,7 @@ pub fn alpha_beta(
                 local_seldepth,
             );
 
-            TT.store(hash, None, qs_result, depth, ScoreType::Exact);
+            // TT.store(hash, None, qs_result, depth, ScoreType::Exact);
             return (vec![], qs_result);
         }
         return (vec![], board.evaluate());
@@ -89,13 +122,13 @@ pub fn alpha_beta(
 
     // Probe again as there's a chance a different thread updated the TT since we last probed it
     // Also probe with maximum possible window to ensure we get an entry if it exists
-    if let Some((_, tt_mv)) = TT.probe(hash, i32::MAX, i32::MIN, 0) {
-        if let Some(pos) = moves.iter().position(|&m| m == tt_mv) {
-            moves.swap(0, pos);
-        }
-    }
+    // if let Some((_, tt_mv)) = TT.probe(hash, i32::MAX, i32::MIN, 0) {
+    //     if let Some(pos) = moves.iter().position(|&m| m == tt_mv) {
+    //         moves.swap(0, pos);
+    //     }
+    // }
 
-    let mut score_type = ScoreType::UpperBound;
+    // let mut score_type = ScoreType::UpperBound;
     let mut pv = vec![];
     for mv in moves {
         // cancels search if time is over
@@ -125,20 +158,20 @@ pub fn alpha_beta(
             pv = local_pv;
             if eval > alpha {
                 alpha = eval;
-                score_type = ScoreType::Exact;
+                // score_type = ScoreType::Exact;
             }
         }
 
         if settings::ALPHA_BETA {
             if eval >= beta {
                 // beta cutoff -> there could be better moves we didn't see, so the score is lower bound
-                TT.store(hash, best_move, eval, depth, ScoreType::LowerBound);
+                // TT.store(hash, best_move, eval, depth, ScoreType::LowerBound);
                 return (pv, best_eval);
             }
         }
     }
 
-    TT.store(hash, best_move, best_eval, depth, score_type);
+    // TT.store(hash, best_move, best_eval, depth, score_type);
 
     (pv, best_eval)
 }
