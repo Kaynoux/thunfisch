@@ -1,4 +1,5 @@
 use crate::prelude::*;
+use crate::search::alpha_beta::MATE_SCORE;
 use crate::search::move_ordering;
 use crate::search::transposition_table::TT;
 use crate::settings::settings;
@@ -33,8 +34,6 @@ pub fn quiescence_search(
         return 0;
     }
 
-    //let mut eval = board.evaluate(); // not yet used but important for pruning (for example null move pruning)
-
     if depth == 0 {
         return board.evaluate();
     }
@@ -44,7 +43,10 @@ pub fn quiescence_search(
     let original_alpha = alpha;
     let mut tt_move: Option<EncodedMove> = None;
 
-    let eval = if settings::TT_QS {
+    let static_eval = board.evaluate();
+    let eval = if board.is_in_check() {
+        -MATE_SCORE
+    } else if settings::TT_QS {
         // only probe TT after draw detection, because the TT does not remember move history
         // doing it the other way around yield the TT score instead of the draw score for a repetition
         if let Some(tt_hit) = TT.probe(board.hash(), ply as i32) {
@@ -65,30 +67,35 @@ pub fn quiescence_search(
                 return tt_score;
             }
 
-            tt_score
+            // Use TT score as eval when it refines the static eval:
+            // - Exact: TT score is the true value, always better than static eval
+            // - Upper (score <= tt): if tt < static, the position is worse than eval suggests
+            // - Lower (score >= tt): if tt > static, the position is better than eval suggests
+            // Otherwise fall back to static eval, as the bound doesn't contradict it.
+            match tt_hit.bound() {
+                Bound::Exact => tt_score,
+                Bound::Upper if tt_score < static_eval => tt_score,
+                Bound::Lower if tt_score > static_eval => tt_score,
+                _ => static_eval,
+            }
         } else {
             // need normal eval when no tt hit
-            board.evaluate()
+            static_eval
         }
     } else {
         // ofc need normal eval when tt is completly disabled aswell
         board.evaluate()
     };
 
-    let in_check = board.is_in_check();
-
-    // Stand pat score
-    if !in_check {
-        if eval >= beta {
-            if settings::TT_QS {
-                TT.store(board.hash(), None, eval, 0, ply as i32, Bound::Lower, false);
-            }
-            return eval;
+    if eval >= beta {
+        if settings::TT_QS {
+            TT.store(board.hash(), None, eval, 0, ply as i32, Bound::Lower, false);
         }
+        return eval;
+    }
 
-        if alpha < eval {
-            alpha = eval;
-        }
+    if alpha < eval {
+        alpha = eval;
     }
 
     let mut moves: ArrayVec<EncodedMove, ARRAY_LENGTH> =
@@ -145,7 +152,7 @@ pub fn quiescence_search(
         Bound::Upper
     };
 
-    if settings::TT_AB {
+    if settings::TT_QS {
         TT.store(
             board.hash(),
             best_move,
