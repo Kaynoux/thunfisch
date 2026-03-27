@@ -9,4 +9,5 @@ pub mod settings {
     pub const ORDER_TT_MV_FIRST: bool = true;
     pub const TT_CUTTOFFS: bool = true;
     pub const NMP: bool = true;
+    pub const REVERSE_FUTILITY_PRUNING: bool = true;
 }

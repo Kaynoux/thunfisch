@@ -1,5 +1,5 @@
 use super::move_ordering;
-use super::transposition_table::{TT};
+use super::transposition_table::TT;
 use crate::prelude::*;
 use crate::search::quiescence_search;
 use crate::search::transposition_table::Bound;
@@ -13,6 +13,14 @@ use std::sync::{
 
 pub const MATE_SCORE: i32 = 30_000;
 const MAX_QUIESCENCE_SEARCH_DEPTH: usize = 12;
+
+/// There's different approaches to this one as well. CPW suggests 150 * depth, smol.cs does 75 * depth.
+/// Generally: The smaller `rfp_margin`, the more aggressively we prune.
+/// THIS IS TUNABLE.
+#[inline(always)]
+pub const fn rfp_margin(depth: usize) -> usize {
+    100 * depth
+}
 
 /// https://www.chessprogramming.org/Alpha-Beta
 /// Returns the pv, and the associated evaluation
@@ -36,7 +44,6 @@ pub fn alpha_beta(
     if board.is_threefold_repetition() || board.is_50_move_rule() {
         return (vec![], 0);
     }
-
 
     let original_alpha = alpha;
     let eval = board.evaluate();
@@ -101,8 +108,19 @@ pub fn alpha_beta(
         return (vec![], 0);
     }
 
-    // Null move pruning
-    // Do this before move generation to avoid costs induced by that
+    if REVERSE_FUTILITY_PRUNING {
+        // apparently RFP should only be done in the later parts of the tree. CPW explicitly mentions
+        // pre-frontier nodes, i.e. those nodes where depth == 1. However viridithias, smol.cs and akimbo
+        // use higher values, so this is likely tunable. Stockfish from what I can tell does depth < 2.
+        if depth < 3 && !board.is_in_check() {
+            if eval >= beta + rfp_margin(depth) as i32 {
+                // CPW: Adjusting the return value of RFP is also found to gain strength in some engines. For example, some engines return (eval + beta) / 2 or beta + (eval - beta) / 3 on successful RFP.
+                return (vec![], beta + (eval - beta) / 3);
+            }
+        }
+    }
+
+    // Do this before move generation to avoid generation costs
     if NMP {
         if null_move_allowed
             && !board.is_in_check()
