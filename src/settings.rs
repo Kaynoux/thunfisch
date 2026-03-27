@@ -8,5 +8,6 @@ pub mod settings {
     pub const QS_CHECK_EVASION_LIMIT: usize = 2; //  value to limit full check evasion generation in Quiescence Search in plies
     pub const ORDER_TT_MV_FIRST: bool = true;
     pub const TT_CUTTOFFS: bool = true;
-    pub const NMP: bool = true;
+    pub const NULL_MOVE_PRUNING: bool = true;
+    pub const REVERSE_FUTILITY_PRUNING: bool = true;
 }

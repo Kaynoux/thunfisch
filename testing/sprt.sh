@@ -3,6 +3,10 @@
 ROOT_DIR=$(pwd | sed -E "s#/testing/?##g")
 
 run_sprt() {
+    if [ $# -ne 2 ]; then
+        echo "usage: ./sprt.sh new old"
+        exit 1
+    fi
     # todo: name the new engine after the branch or sth
     cd $ROOT_DIR/testing
     rm sprt.pgn
