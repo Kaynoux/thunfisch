@@ -87,7 +87,6 @@ pub fn alpha_beta(
                 ply,
             );
 
-            // TT.store(hash, None, qs_result, depth, ScoreType::Exact);
             return (vec![], qs_result);
         }
         return (vec![], board.evaluate());

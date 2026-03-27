@@ -305,25 +305,42 @@ impl TranspositionTable {
         self.age.store(0, Ordering::Relaxed);
     }
 
-    // pub fn handle_debug(&self, args: &[&str], hash: u64) -> Result<String, String> {
-    //     match args.get(0) {
-    //         Some(&"help") => Ok("usage: tt [fill | clear | probe]".to_owned()),
-    //         Some(&"clear") => {
-    //             self.clear();
-    //             Ok(format!("{:?}", self.info()))
-    //         }
-    //         Some(&"fill") => Ok(format!("{:?}", self.info())),
-    //         Some(&"probe") => {
-    //             let entry = &self.entries[self.index(hash)];
-    //             if entry.key.load(Ordering::Relaxed) != hash {
-    //                 return Ok("No Entry".to_owned());
-    //             }
-    //             Ok(format!("{}", entry))
-    //         }
-    //         Some(cmd) => Err(format!("Unknown command: tt {}", cmd)),
-    //         None => Err("Argument Required".to_owned()),
-    //     }
-    // }
+    pub fn handle_debug(&self, args: &[&str], hash: u64) -> Result<String, String> {
+        match args.get(0) {
+            Some(&"help") => Ok("usage: tt [fill | clear | probe]".to_owned()),
+            Some(&"clear") => {
+                self.clear();
+                Ok(format!("{:?}", self.info()))
+            }
+            Some(&"fill") => Ok(format!("{:?}", self.info())),
+            Some(&"probe") => {
+                if let Some(entry) = self.probe(hash, 0) {
+                    let move_info = match entry.best_move() {
+                        Some(mv) => {
+                            let decoded = mv.decode();
+                            format!("Encoded({}), Coords: {}", mv.0, decoded.to_coords())
+                        }
+                        None => "None".to_string(),
+                    };
+
+                    Ok(format!(
+                        "Hash Key (16-bit): {:X}\nScore: {}\nDepth: {}\nBound: {:?}\nPV Node: {}\nAge: {}\nMove: [{}]",
+                        entry.key,
+                        entry.score(),
+                        entry.depth(),
+                        entry.bound(),
+                        entry.info.pv(),
+                        entry.info.age(),
+                        move_info
+                    ))
+                } else {
+                    Ok("No Entry".to_owned())
+                }
+            }
+            Some(cmd) => Err(format!("Unknown command: tt {}", cmd)),
+            None => Err("Argument Required".to_owned()),
+        }
+    }
 }
 
 #[cfg(test)]
