@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-base:
-    if: github.event.action != 'labeled'
+    if: contains(github.event.pull_request.labels.*.name, 'run-benchmark')
     runs-on: self-hosted
     container: heofthetea/thunfischsdk:latest-arm
     steps:
@@ -52,7 +52,7 @@ jobs:
           retention-days: 1
 
   build-current:
-    if: github.event.action != 'labeled'
+    if: contains(github.event.pull_request.labels.*.name, 'run-benchmark')
     runs-on: self-hosted
     container: heofthetea/thunfischsdk:latest-arm
     steps:
