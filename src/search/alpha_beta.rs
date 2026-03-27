@@ -3,7 +3,7 @@ use super::transposition_table::TT;
 use crate::prelude::*;
 use crate::search::quiescence_search;
 use crate::search::transposition_table::Bound;
-use crate::settings::settings::{self, NMP};
+use crate::settings::settings::{self, NULL_MOVE_PRUNING};
 
 use std::cmp::min;
 use std::sync::{
@@ -120,7 +120,7 @@ pub fn alpha_beta(
     }
 
     // Do this before move generation to avoid generation costs
-    if NMP {
+    if NULL_MOVE_PRUNING {
         if null_move_allowed
             && !board.is_in_check()
             && !board.is_king_pawn_endgame()
