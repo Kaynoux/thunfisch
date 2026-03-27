@@ -76,6 +76,7 @@ pub fn handle_uci_communication() {
                 println!("  white              - White Squares Bitboard");
                 println!("  black              - Black Squares Bitboard");
                 println!("  occupied           - Occupied Squares Bitboard");
+                println!("  piece [pbnrqk]     - All squares occupied by the specified pieces");
                 println!("  hash               - Current board hash");
                 println!("  tt <parameters>    - Perform actions with the Transposition table");
             }
@@ -141,6 +142,32 @@ pub fn handle_uci_communication() {
             }
             Some("occupied") => {
                 println!("{:?}", board.occupied());
+            }
+            Some("piece") => {
+                if let Some(&args) = parts.take(1).collect::<Vec<&str>>().get(0) {
+                    let mut parse_error_occurred = false;
+
+                    let bitboard = args
+                        .chars()
+                        .into_iter()
+                        .map(|c| c.to_ascii_lowercase())
+                        .map_while(|c| {
+                            Piece::from_lowercase_char(c)
+                                .inspect_err(|_| {
+                                    println!("invalid character: {}", c);
+                                    parse_error_occurred = true
+                                })
+                                .ok()
+                        })
+                        .map(|piece| {
+                            board.figure_bb(Color::White, piece)
+                                ^ board.figure_bb(Color::Black, piece)
+                        }).reduce(|a, b| a | b);
+
+                    if !parse_error_occurred && let Some(piece_bb) = bitboard {
+                        println!("{:?}", piece_bb)
+                    }
+                };
             }
             Some("hash") => {
                 println!("{:?}", board.hash());

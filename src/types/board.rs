@@ -10,6 +10,7 @@ pub struct Board {
     /// -> where are pieces (independent of colour)
     occupied: Bitboard,
     /// for individual pieces
+    /// HOW IS IT INDEXED????
     figure_bbs: [Bitboard; 13],
     /// 'naive' representation of a board (including colour information)
     figures: [Figure; 64],
@@ -199,6 +200,17 @@ impl Board {
         self.figure_bbs[idx]
     }
 
+    /// Determines whether there are only Kings and Pawns left on the board.
+    /// This is used to avoid null move pruning in Zugzwang positions in a King-Pawn endgame.
+    pub fn is_king_pawn_endgame(&self) -> bool {
+        return vec![Knight, Bishop, Rook, Queen]
+            .into_iter()
+            .map(|piece| self.figure_bb(Color::White, piece) ^ self.figure_bb(Color::Black, piece))
+            .reduce(|a, b| a | b)
+            .map(|bitboard| bitboard.is_empty())
+            .unwrap_or(true); // REsult of reduce should never be None because map should always yield a non-empty iterator
+    }
+
     #[inline(always)]
     pub fn king(&self, color: Color) -> Bit {
         match color {
@@ -375,5 +387,37 @@ impl Board {
             hash ^= zobrist::ep_key(ep.to_square())
         }
         hash
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::prelude::*;
+
+    #[test]
+    fn test_is_king_pawn_endgame_true() {
+        let board = Board::from_fen("8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - - 0 1");
+        assert!(
+            board.is_king_pawn_endgame(),
+            "Position with only kings and pawns should return true"
+        );
+    }
+
+    #[test]
+    fn test_is_king_pawn_endgame_false_complex_position() {
+        let board = Board::from_fen("r1b1k2r/1pqp1ppp/p2bpnn1/6Q1/2BNP3/2N1B3/PPP2PPP/2KR3R w kq - 8 12");
+        assert!(
+            !board.is_king_pawn_endgame(),
+            "Position with multiple pieces should return false"
+        );
+    }
+
+    #[test]
+    fn test_is_king_pawn_endgame_false_with_knight() {
+        let board = Board::from_fen("8/k7/3p4/p2P1p2/P2P1P2/1N6/8/K7 w - - 0 1");
+        assert!(
+            !board.is_king_pawn_endgame(),
+            "King-pawn endgame with a white knight should return false"
+        );
     }
 }

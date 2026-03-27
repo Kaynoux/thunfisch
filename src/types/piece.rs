@@ -85,6 +85,21 @@ impl Piece {
         }
     }
 
+    /// Construct a piece from a lowercase character.
+    /// Returns Err(()) if there's no matching piece for the character.
+    pub fn from_lowercase_char(c: char) -> Result<Piece, ()> {
+        match c {
+            '_' => Ok(Empty),
+            'p' => Ok(Pawn),
+            'n' => Ok(Knight),
+            'b' => Ok(Bishop),
+            'r' => Ok(Rook),
+            'q' => Ok(Queen),
+            'k' => Ok(King),
+            _ => Err(()),
+        }
+    }
+
     pub const fn to_color_piece(self, color: Color) -> Figure {
         Figure::from_idx((self as usize) * 2 + (color as usize))
     }

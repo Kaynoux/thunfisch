@@ -107,7 +107,11 @@ pub fn alpha_beta(
     // Null move pruning
     // Do this before move generation to avoid costs induced by that
     if NULL_MOVE_PRUNING {
-        if null_move_allowed && !board.is_in_check() && eval >= beta {
+        if null_move_allowed
+            && !board.is_in_check()
+            && !board.is_king_pawn_endgame()
+            && eval >= beta
+        {
             board.make_null_move();
             let reduction = min(depth, 4);
             let (_, mut eval) = alpha_beta(
