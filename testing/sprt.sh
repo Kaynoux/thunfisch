@@ -3,7 +3,7 @@
 ROOT_DIR=$(pwd | sed -E "s#/testing/?##g")
 
 run_sprt() {
-    if [$# -ne 2]; then
+    if [ $# -ne 2 ]; then
         echo "usage: ./sprt.sh new old"
         exit 1
     fi

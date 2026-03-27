@@ -19,7 +19,7 @@ const MAX_QUIESCENCE_SEARCH_DEPTH: usize = 12;
 /// THIS IS TUNABLE.
 #[inline(always)]
 pub const fn rfp_margin(depth: usize) -> usize {
-    100 * depth
+    75 * depth
 }
 
 /// https://www.chessprogramming.org/Alpha-Beta
@@ -112,10 +112,9 @@ pub fn alpha_beta(
         // apparently RFP should only be done in the later parts of the tree. CPW explicitly mentions
         // pre-frontier nodes, i.e. those nodes where depth == 1. However viridithias, smol.cs and akimbo
         // use higher values, so this is likely tunable. Stockfish from what I can tell does depth < 2.
-        if depth < 3 && !board.is_in_check() {
+        if depth < 2 && !board.is_in_check() && eval >= beta{
             if eval >= beta + rfp_margin(depth) as i32 {
-                // CPW: Adjusting the return value of RFP is also found to gain strength in some engines. For example, some engines return (eval + beta) / 2 or beta + (eval - beta) / 3 on successful RFP.
-                return (vec![], beta + (eval - beta) / 3);
+                return (vec![], eval);
             }
         }
     }
