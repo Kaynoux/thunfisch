@@ -55,7 +55,7 @@ pub fn alpha_beta(
             tt_move = tt_hit.best_move();
             tt_score = tt_hit.score();
 
-            // When using pvs add !pv_node as additionell condition
+            // TODO: When using pvs add !pv_node as additionell condition
             let depth_req = depth as i32 + i32::from(tt_score >= beta);
 
             if settings::TT_CUTTOFFS {
@@ -124,6 +124,7 @@ pub fn alpha_beta(
     //         moves.swap(0, pos);
     //     }
     // }
+    // TODO: Figure out whether that is actually needed
 
     let mut pv = vec![];
     for mv in moves {
