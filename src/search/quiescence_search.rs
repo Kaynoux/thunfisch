@@ -20,6 +20,7 @@ pub fn quiescence_search(
     search_info: &SearchInfo,
     ply: usize,
     local_seldepth: &mut usize,
+    ab_ply: usize,
 ) -> i32 {
     *local_seldepth = (*local_seldepth).max(ply);
 
@@ -91,7 +92,7 @@ pub fn quiescence_search(
     }
 
     let mut moves: ArrayVec<EncodedMove, ARRAY_LENGTH> =
-        if board.is_in_check() && ply < settings::QS_CHECK_EVASION_LIMIT {
+        if board.is_in_check() && (ply - ab_ply) < settings::QS_CHECK_EVASION_LIMIT {
             board.generate_moves::<false>()
         } else {
             board.generate_moves::<true>()
@@ -117,6 +118,7 @@ pub fn quiescence_search(
             search_info,
             ply + 1,
             local_seldepth,
+            ab_ply,
         );
         board.unmake_move();
 
@@ -143,10 +145,11 @@ pub fn quiescence_search(
         Bound::Upper
     };
 
-    if settings::TT_QS {
+    if settings::TT_AB {
+        let store_move = best_move.or(tt_move);
         TT.store(
             board.hash(),
-            best_move,
+            store_move,
             best_score,
             0,
             ply as i32,

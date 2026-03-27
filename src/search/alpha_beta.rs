@@ -84,6 +84,7 @@ pub fn alpha_beta(
                 search_info,
                 ply,
                 local_seldepth,
+                ply,
             );
 
             // TT.store(hash, None, qs_result, depth, ScoreType::Exact);
@@ -171,9 +172,10 @@ pub fn alpha_beta(
     };
 
     if settings::TT_AB {
+        let store_move = best_move.or(tt_move);
         TT.store(
             board.hash(),
-            best_move,
+            store_move,
             best_eval,
             depth as i8,
             ply as i32,
