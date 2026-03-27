@@ -37,7 +37,11 @@ pub fn alpha_beta(
         return (vec![], 0);
     }
 
+
     let original_alpha = alpha;
+    let eval = board.evaluate();
+
+    let hash = board.hash();
 
     //let mut eval = board.evaluate(); // CONSIDER PERFORMANCE: not yet used but important for pruning (for example null move pruning)
     let mut tt_move: Option<EncodedMove> = None;
@@ -91,7 +95,7 @@ pub fn alpha_beta(
 
             return (vec![], qs_result);
         }
-        return (vec![], board.evaluate());
+        return (vec![], eval);
     };
 
     // cancels search if time is over
@@ -103,10 +107,10 @@ pub fn alpha_beta(
     // Null move pruning
     // Do this before move generation to avoid costs induced by that
     if NULL_MOVE_PRUNING {
-        if null_move_allowed && !board.is_in_check() {
+        if null_move_allowed && !board.is_in_check() && eval >= beta {
             board.make_null_move();
             let reduction = min(depth, 4);
-            let (_, eval) = alpha_beta(
+            let (_, mut eval) = alpha_beta(
                 board,
                 depth - reduction,
                 -beta,
@@ -117,6 +121,7 @@ pub fn alpha_beta(
                 local_seldepth,
                 false,
             );
+            eval *= -1;
             board.unmake_null_move();
             if eval >= beta {
                 return (vec![], beta);
