@@ -85,7 +85,7 @@ pub fn alpha_beta(
             let (_, mut eval) = alpha_beta(
                 board,
                 depth - reduction,
-                -beta,
+                -alpha - 1,
                 -alpha,
                 stop,
                 search_info,
