@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-master:
+  build-base:
     runs-on: self-hosted
     container: heofthetea/thunfischsdk:latest-arm
     steps:
@@ -82,7 +82,7 @@ jobs:
           retention-days: 1
 
   benchmark:
-    needs: [build-master, build-current]
+    needs: [build-base, build-current]
     runs-on: self-hosted
     container: heofthetea/thunfischsdk:latest-arm
     permissions:
