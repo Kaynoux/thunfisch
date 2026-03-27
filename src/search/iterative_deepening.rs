@@ -61,7 +61,7 @@ pub fn iterative_deepening(
             println!()
         }
         println!(
-            "Activated Features: AB={:?} QS={:?} TT-AB={:?} TT-QS={:?} MVV-LVA={:?} QS-Check-Evasion-Limit={:?} Order-TT-Moves-First={:?} Depth-Penalty-Per-Age={:?} ReplacementStrategy={:?}",
+            "Activated Features: AB={:?} QS={:?} TT-AB={:?} TT-QS={:?} MVV-LVA={:?} QS-Check-Evasion-Limit={:?} Order-TT-Moves-First={:?}",
             settings::AB,
             settings::QS,
             settings::TT_AB,
@@ -69,8 +69,6 @@ pub fn iterative_deepening(
             settings::MVV_LVA,
             settings::QS_CHECK_EVASION_LIMIT,
             settings::ORDER_TT_MV_FIRST,
-            settings::DEPTH_PENALTY_PER_AGE,
-            settings::REPLACEMENT_STRATEGY
         );
         println!(
             "TT: Age={}   {} of {} Entries {} % full  Allocated Size: {}B",

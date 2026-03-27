@@ -1,16 +1,9 @@
-use crate::{prelude::*, search::alpha_beta::MATE_SCORE, settings::settings};
+use crate::{prelude::*, search::alpha_beta::MATE_SCORE};
 use once_cell::sync::Lazy;
 use std::sync::atomic::{AtomicU8, AtomicU64, Ordering};
-#[allow(dead_code)] // because of const settings
-#[derive(Clone, Copy, Debug, PartialEq)]
 
-pub enum ReplacementStrategy {
-    AlwaysReplace,
-    Aging,
-}
-
-const MAX_AGE: u8 = 1 << 5; // needs to match TTInfo layout
-const AGE_MASK: u8 = MAX_AGE - 1;
+const MAX_AGE: i32 = 1 << 5; // needs to match TTInfo layout
+const AGE_MASK: i32 = MAX_AGE - 1;
 
 // Inspired by Viridithas
 /// Holds the age, pv flag, and bound type packed into a single byte.
@@ -56,24 +49,6 @@ pub enum Bound {
     Upper = 1,
     Lower = 2,
     Exact = 3,
-}
-
-impl Bound {
-    pub fn is_lower(self) -> bool {
-        self as u8 & 0b10 != 0
-    }
-
-    pub fn is_upper(self) -> bool {
-        self as u8 & 0b01 != 0
-    }
-
-    pub fn invert(self) -> Self {
-        match self {
-            Self::Upper => Self::Lower,
-            Self::Lower => Self::Upper,
-            x => x,
-        }
-    }
 }
 
 #[derive(Default)]
@@ -187,68 +162,81 @@ impl TranspositionTable {
     // Adds one but limits age to 63
     pub fn increase_age(&self) {
         self.age
-            .store((self.get_age() + 1) & AGE_MASK, Ordering::Relaxed);
+            .store((self.get_age() + 1) & (AGE_MASK as u8), Ordering::Relaxed);
     }
 
     pub fn get_age(&self) -> u8 {
         self.age.load(Ordering::Relaxed)
     }
 
-    /// Currently uses ALWAYS REPLACE scheme for collisions
     pub fn store(
         &self,
         hash: u64,
-        mv: Option<EncodedMove>,
-        mut score: i32,
+        mut best_move: Option<EncodedMove>,
+        score: i32,
         depth: i8,
         ply: i32,
         bound: Bound,
         is_pv: bool,
     ) {
-        let key = (hash >> 48) as u16; // highest 16 bits of zobrist board hash as key
-        let idx = (hash as usize) & (self.entries.len() - 1); // hash index for new entry, works because table size is power of 2
-        let previous_entry = DecodedTTEntry::from_internal(self.entries[idx].clone());
+        let key = (hash >> 48) as u16;
+        let idx = (hash as usize) & (self.entries.len() - 1);
+        let previous = DecodedTTEntry::from_internal(self.entries[idx].clone());
+        let tt_age = i32::from(self.get_age());
 
-        if settings::REPLACEMENT_STRATEGY == ReplacementStrategy::Aging {
-            // Replacement strategy:
-            // we dont store new entry if:
-            // - we are not at the root
-            // - we are at the same position
-            // - the new entry depth is lower than old depth + a penalty for its age
-            let diff = (self.get_age() + MAX_AGE - previous_entry.info.age()) & AGE_MASK;
-            if ply > 0
-                && key == previous_entry.key
-                && depth as u8 + settings::DEPTH_PENALTY_PER_AGE * diff < previous_entry.depth as u8
-            {
-                return;
+        // if we don't have a best move, and the entry is for the same position,
+        // then we should retain the best move from the previous entry.
+        if best_move.is_none() && previous.key == key {
+            best_move = previous.best_move();
+        }
+
+        // give entries a bonus for type:
+        // exact = 3, lower = 2, upper = 1
+        let insert_flag_bonus = bound as i32;
+        let record_flag_bonus = previous.info.bound() as i32;
+
+        // preferentially overwrite entries that are from searches on previous positions in the game.
+        let age_differential = (MAX_AGE + tt_age - i32::from(previous.info.age())) & AGE_MASK;
+
+        // we use quadratic scaling of the age to allow entries that aren't too old to be kept,
+        // but to ensure that really old entries are overwritten even if they are of high depth.
+        let insert_priority = i32::from(depth)
+            + insert_flag_bonus
+            + (age_differential * age_differential) / 4
+            + i32::from(is_pv);
+        let record_priority = i32::from(previous.depth) + record_flag_bonus;
+
+        // replace the entry if:
+        // 1. the entry is for a different position
+        // 2. it's an exact entry and the old entry is not exact
+        // 3. the new entry is of higher priority than the old entry
+        if previous.key != key
+            || bound == Bound::Exact && previous.info.bound() != Bound::Exact
+            || insert_priority * 3 >= record_priority * 2
+        {
+            // normalise mate  scores:
+            let normalised_score = if score.abs() > (MATE_SCORE - 256) {
+                score + score.signum() * ply
+            } else {
+                score
+            };
+
+            debug_assert!(
+                normalised_score >= i16::MIN as i32 && normalised_score <= i16::MAX as i32,
+                "Score must fit into i16"
+            );
+
+            let new_entry = DecodedTTEntry {
+                key,
+                best_move: best_move.unwrap_or(EncodedMove(0)),
+                score: normalised_score as i16,
+                depth,
+                info: TTInfo::encode(self.get_age(), bound, is_pv),
             }
+            .to_u64();
+
+            self.entries[idx].data.store(new_entry, Ordering::Relaxed);
         }
-
-        // if score is a mate we add ply to make the score independant of position (we added ply previously)
-        // not 100% tested tbh
-        score += if score.abs() > (MATE_SCORE - 256) {
-            score.signum() * ply
-        } else {
-            0
-        };
-
-        let best_move = mv.unwrap_or(EncodedMove(0));
-
-        debug_assert!(
-            score >= i16::MIN as i32 && score <= i16::MAX as i32,
-            "Score must fit into i16"
-        );
-
-        let new_entry = DecodedTTEntry {
-            key,
-            best_move: best_move,
-            score: score as i16,
-            depth,
-            info: TTInfo::encode(self.get_age(), bound, is_pv),
-        }
-        .to_u64();
-
-        self.entries[idx].data.store(new_entry, Ordering::Relaxed);
     }
 
     pub fn probe(&self, hash: u64, ply: i32) -> Option<DecodedTTEntry> {
@@ -444,7 +432,28 @@ mod test_tt_encodings {
     }
 
     #[test]
-    fn test_aging_replacement_strategy() {
+    fn test_priority_replacement_same_age() {
+        let tt = TranspositionTable::new(1);
+        let hash = 0x5555666677778888;
+        let mv_deep = EncodedMove(10);
+        let mv_shallow = EncodedMove(20);
+
+        // 1. Initial storage with high depth (Exact bound = flag bonus 3)
+        // record_priority = 10 + 3 = 13
+        tt.store(hash, Some(mv_deep), 100, 10, 1, Bound::Exact, false);
+
+        // 2. Attempt to overwrite with much lower depth (Exact bound = flag bonus 3)
+        // insert_priority = 2 + 3 + 0 + 0 = 5, record_priority = 13
+        // 5 * 3 = 15 < 13 * 2 = 26 => NOT replaced
+        tt.store(hash, Some(mv_shallow), 200, 2, 1, Bound::Exact, false);
+
+        let probed = tt.probe(hash, 1).unwrap();
+        assert_eq!(probed.depth(), 10); // The old entry should still be present
+        assert_eq!(probed.score(), 100);
+    }
+
+    #[test]
+    fn test_priority_replacement_with_aging() {
         let tt = TranspositionTable::new(1);
         let hash = 0x5555666677778888;
         let mv_deep = EncodedMove(10);
@@ -453,59 +462,81 @@ mod test_tt_encodings {
         // 1. Initial storage with high depth
         tt.store(hash, Some(mv_deep), 100, 10, 1, Bound::Exact, false);
 
-        // 2. Attempt to overwrite with lower depth (should fail because age diff = 0)
-        tt.store(hash, Some(mv_shallow), 200, 2, 1, Bound::Exact, false);
-
-        let probed = tt.probe(hash, 1).unwrap();
-        assert_eq!(probed.depth(), 10); // The old entry should still be present
-        assert_eq!(probed.score(), 100);
-
-        // 3. Simulate several search iterations (engine ages the TT)
-        // How often we need to age depends on settings::DEPTH_PENALTY_PER_AGE
-        // Assuming Penalty is 2, we need diff = 5 (2 + 2*5 = 12 > 10)
+        // 2. Age the TT significantly so old entries become stale
         for _ in 0..10 {
             tt.increase_age();
         }
 
-        // 4. Store again. Since the old entry is now "old", the penalty should apply
+        // 3. Store again with lower depth. The quadratic age bonus should override depth.
+        // age_diff = 10, quadratic bonus = 100/4 = 25
+        // insert_priority = 2 + 3 + 25 + 0 = 30, record_priority = 10 + 3 = 13
+        // 30 * 3 = 90 >= 13 * 2 = 26 => REPLACED
         tt.store(hash, Some(mv_shallow), 200, 2, 1, Bound::Exact, false);
 
-        let probed_new = tt.probe(hash, 1).unwrap();
-
-        // Verification: If the aging strategy is active, the entry should now be overwritten
-        if settings::REPLACEMENT_STRATEGY == ReplacementStrategy::Aging {
-            assert_eq!(probed_new.depth(), 2);
-            assert_eq!(probed_new.score(), 200);
-            assert_eq!(probed_new.best_move().unwrap(), mv_shallow);
-        }
+        let probed = tt.probe(hash, 1).unwrap();
+        assert_eq!(probed.depth(), 2);
+        assert_eq!(probed.score(), 200);
+        assert_eq!(probed.best_move().unwrap(), mv_shallow);
     }
 
     #[test]
-    fn test_replacement_scheme() {
+    fn test_exact_bound_overrides_non_exact() {
         let tt = TranspositionTable::new(1);
         let hash = 0x1111222233334444;
 
-        // 1. Initial store at deep depth
-        tt.store(hash, Some(EncodedMove(1)), 50, 6, 0, Bound::Exact, false);
+        // 1. Store an Upper bound entry at depth 6
+        tt.store(hash, Some(EncodedMove(1)), 50, 6, 0, Bound::Upper, false);
 
-        // 2. Try overwriting with lower depth at non-root (ply > 0)
-        tt.store(hash, Some(EncodedMove(2)), 100, 2, 1, Bound::Upper, false);
+        // 2. Store an Exact entry at lower depth — should always replace a non-Exact entry
+        tt.store(hash, Some(EncodedMove(2)), 100, 2, 0, Bound::Exact, false);
 
-        // The deep depth entry should NOT be overwritten (if age penalty didn't kick in)
         let probed = tt.probe(hash, 0).unwrap();
-        assert_eq!(probed.depth(), 6);
-        assert_eq!(probed.score(), 50);
-        assert_eq!(probed.best_move().unwrap(), EncodedMove(1));
+        assert_eq!(probed.depth(), 2);
+        assert_eq!(probed.score(), 100);
+        assert_eq!(probed.bound(), Bound::Exact);
+        assert_eq!(probed.best_move().unwrap(), EncodedMove(2));
+    }
 
-        // 3. Try overwriting at root (ply = 0) even with lower depth.
-        // Always Replace overrides everything at ply = 0
-        tt.store(hash, Some(EncodedMove(3)), 150, 2, 0, Bound::Lower, true);
+    #[test]
+    fn test_different_position_always_replaced() {
+        let tt = TranspositionTable::new(1);
+        // Two hashes that map to the same index but have different keys
+        let hash1 = 0x1234567890ABCDEF_u64;
+        let idx = (hash1 as usize) & (tt.entries.len() - 1);
+        // Construct hash2 with same lower bits (same index) but different upper 16 bits (different key)
+        let hash2 = (hash1 & !(0xFFFF << 48)) | (0xAAAA_u64 << 48);
+        assert_eq!((hash2 as usize) & (tt.entries.len() - 1), idx);
+        assert_ne!((hash1 >> 48) as u16, (hash2 >> 48) as u16);
 
-        // The entry should now be overwritten
-        let probed_root = tt.probe(hash, 0).unwrap();
-        assert_eq!(probed_root.score(), 150);
-        assert_eq!(probed_root.depth(), 2);
-        assert_eq!(probed_root.best_move().unwrap(), EncodedMove(3));
-        assert_eq!(probed_root.bound(), Bound::Lower);
+        // Store deep entry for position 1
+        tt.store(hash1, Some(EncodedMove(1)), 500, 20, 0, Bound::Exact, true);
+
+        // Store shallow entry for different position — should always replace
+        tt.store(hash2, Some(EncodedMove(2)), 100, 1, 0, Bound::Upper, false);
+
+        let probed = tt.probe(hash2, 0).unwrap();
+        assert_eq!(probed.depth(), 1);
+        assert_eq!(probed.score(), 100);
+    }
+
+    #[test]
+    fn test_best_move_retained_from_previous_entry() {
+        let tt = TranspositionTable::new(1);
+        let hash = 0xAAAABBBBCCCCDDDD;
+        let mv = EncodedMove(42);
+
+        // Store with a best move
+        tt.store(hash, Some(mv), 100, 5, 0, Bound::Exact, false);
+
+        // Store again for the same position without a best move but high enough priority to replace.
+        // The best move from the previous entry should be retained.
+        // insert_priority = 10 + 3 + 0 + 0 = 13, record_priority = 5 + 3 = 8
+        // 13 * 3 = 39 >= 8 * 2 = 16 => REPLACED
+        tt.store(hash, None, 200, 10, 0, Bound::Exact, false);
+
+        let probed = tt.probe(hash, 0).unwrap();
+        assert_eq!(probed.depth(), 10);
+        assert_eq!(probed.score(), 200);
+        assert_eq!(probed.best_move().unwrap(), mv); // best move retained!
     }
 }

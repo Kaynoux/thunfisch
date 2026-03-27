@@ -146,10 +146,9 @@ pub fn quiescence_search(
     };
 
     if settings::TT_AB {
-        let store_move = best_move.or(tt_move);
         TT.store(
             board.hash(),
-            store_move,
+            best_move,
             best_score,
             0,
             ply as i32,

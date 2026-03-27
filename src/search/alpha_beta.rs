@@ -171,10 +171,9 @@ pub fn alpha_beta(
     };
 
     if settings::TT_AB {
-        let store_move = best_move.or(tt_move);
         TT.store(
             board.hash(),
-            store_move,
+            best_move,
             best_eval,
             depth as i8,
             ply as i32,
