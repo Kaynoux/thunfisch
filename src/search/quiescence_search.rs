@@ -1,7 +1,8 @@
 use crate::prelude::*;
 use crate::search::move_ordering;
+use crate::search::transposition_table::TT;
 use crate::settings::settings;
-use crate::{move_generator::generator::ARRAY_LENGTH};
+use crate::{move_generator::generator::ARRAY_LENGTH, search::transposition_table::Bound};
 use arrayvec::ArrayVec;
 
 use std::sync::{
@@ -19,6 +20,7 @@ pub fn quiescence_search(
     search_info: &SearchInfo,
     ply: usize,
     local_seldepth: &mut usize,
+    ab_ply: usize,
 ) -> i32 {
     *local_seldepth = (*local_seldepth).max(ply);
 
@@ -31,34 +33,75 @@ pub fn quiescence_search(
         return 0;
     }
 
+    //let mut eval = board.evaluate(); // not yet used but important for pruning (for example null move pruning)
 
     if depth == 0 {
-        let eval = board.evaluate();
-        return eval;
+        return board.evaluate();
     }
 
     search_info.total_qs_nodes.fetch_add(1, Ordering::Relaxed);
 
-    let stand_pat_score = board.evaluate();
-    let mut best_score = stand_pat_score;
+    let original_alpha = alpha;
+    let mut tt_move: Option<EncodedMove> = None;
 
-    if stand_pat_score >= beta {
-        return stand_pat_score;
-    }
+    let eval = if settings::TT_QS {
+        // only probe TT after draw detection, because the TT does not remember move history
+        // doing it the other way around yield the TT score instead of the draw score for a repetition
+        if let Some(tt_hit) = TT.probe(board.hash(), ply as i32) {
+            search_info.total_tt_hits.fetch_add(1, Ordering::Relaxed);
 
-    if alpha < stand_pat_score {
-        alpha = stand_pat_score;
-    }
+            let tt_score = tt_hit.score();
+            let bound = tt_hit.bound();
 
-    let mut moves: ArrayVec<EncodedMove, ARRAY_LENGTH> = if board.is_in_check() {
-        board.generate_moves::<false>()
+            tt_move = tt_hit.best_move();
+
+            // TODO explain why no deph_req as in ab
+            if match bound {
+                Bound::Lower => tt_score >= beta,
+                Bound::Upper => tt_score <= alpha,
+                Bound::Exact => true,
+                _ => false,
+            } {
+                return tt_score;
+            }
+
+            tt_score
+        } else {
+            // need normal eval when no tt hit
+            board.evaluate()
+        }
     } else {
-        board.generate_moves::<true>()
+        // ofc need normal eval when tt is completly disabled aswell
+        board.evaluate()
     };
 
-    if settings::MOVE_ORDERING {
-        move_ordering::order_moves(&mut moves, board);
+    let in_check = board.is_in_check();
+
+    // Stand pat score
+    if !in_check {
+        if eval >= beta {
+            if settings::TT_QS {
+                TT.store(board.hash(), None, eval, 0, ply as i32, Bound::Lower, false);
+            }
+            return eval;
+        }
+
+        if alpha < eval {
+            alpha = eval;
+        }
     }
+
+    let mut moves: ArrayVec<EncodedMove, ARRAY_LENGTH> =
+        if board.is_in_check() && (ply - ab_ply) < settings::QS_CHECK_EVASION_LIMIT {
+            board.generate_moves::<false>()
+        } else {
+            board.generate_moves::<true>()
+        };
+
+    move_ordering::order_moves(&mut moves, board, tt_move);
+
+    let mut best_score = eval;
+    let mut best_move: Option<EncodedMove> = None;
 
     for mv in moves {
         if stop.load(Ordering::Relaxed) {
@@ -75,21 +118,43 @@ pub fn quiescence_search(
             search_info,
             ply + 1,
             local_seldepth,
+            ab_ply,
         );
         board.unmake_move();
 
-        if settings::ALPHA_BETA {
-            if score >= beta {
-                return score;
-            }
-        }
-
         if score > best_score {
             best_score = score;
+            if score > alpha {
+                best_move = Some(mv);
+                alpha = score
+            }
+
+            if settings::AB {
+                if alpha >= beta {
+                    break;
+                }
+            }
         }
-        if score > alpha {
-            alpha = score;
-        }
+    }
+
+    let bound = if best_score >= beta {
+        Bound::Lower
+    } else if best_score > original_alpha {
+        Bound::Exact
+    } else {
+        Bound::Upper
+    };
+
+    if settings::TT_AB {
+        TT.store(
+            board.hash(),
+            best_move,
+            best_score,
+            0,
+            ply as i32,
+            bound,
+            false,
+        );
     }
 
     best_score

@@ -13,7 +13,13 @@ pub fn print_board(board: &Board, moves: Option<&ArrayVec<EncodedMove, ARRAY_LEN
         board.total_halfmove_counter(),
         board.count_repetitions(),
         board.hash(),
-        board.repetition_stack().iter().rev().take(6).map(|&h| h.to_string().chars().take(4).collect()).collect::<Vec<String>>()
+        board
+            .repetition_stack()
+            .iter()
+            .rev()
+            .take(6)
+            .map(|&h| h.to_string().chars().take(4).collect())
+            .collect::<Vec<String>>()
     );
     println!("FEN: {}", board.generate_fen());
     // println!("Phase: {}", board.get_game_phase());
@@ -126,4 +132,45 @@ pub fn print_moves(moves: &ArrayVec<EncodedMove, ARRAY_LENGTH>) {
         }
     }
     println!();
+}
+
+pub fn format_usize(n: usize) -> String {
+    let n_f = n as f64;
+    let units = ["", "k", "M", "G", "T", "P", "E"];
+
+    if n < 1000 {
+        return format!("{}", n);
+    }
+
+    // Calculates the exponent (0 for <1000, 1 for k, 2 for M, etc.)
+    let exp = (n_f.ln() / 1000.0_f64.ln()).floor() as usize;
+
+    // Ensure we don't go out of bounds of the array
+    let exp = exp.min(units.len() - 1);
+
+    let value = n_f / 1000.0_f64.powi(exp as i32);
+
+    // Formats to a maximum of 1 decimal place, removes .0 if it's an integer
+    format!("{:.1}{}", value, units[exp]).replace(".0", "")
+}
+
+pub fn format_f64(n: f64) -> String {
+    let abs_n = n.abs();
+    let units = ["", "k", "M", "G", "T", "P", "E"];
+    let sign = if n < 0.0 { "-" } else { "" };
+
+    if abs_n < 1000.0 {
+        return format!("{}{:.2}", sign, abs_n);
+    }
+
+    // Calculates the exponent (0 for <1000, 1 for k, 2 for M, etc.)
+    let exp = (abs_n.ln() / 1000.0_f64.ln()).floor() as usize;
+
+    // Ensure we don't go out of bounds of the array
+    let exp = exp.min(units.len() - 1);
+
+    let value = abs_n / 1000.0_f64.powi(exp as i32);
+
+    // Always formats to exactly 2 decimal places
+    format!("{}{:.2}{}", sign, value, units[exp])
 }

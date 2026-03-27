@@ -19,3 +19,14 @@ impl EncodedMove {
         EncodedMove(from_idx as u16 | (to_idx) << 6 | (mv_type as u16))
     }
 }
+
+impl std::fmt::Debug for EncodedMove {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let decoded = self.decode();
+        f.debug_struct("EncodedMove")
+            .field("from", &decoded.from)
+            .field("to", &decoded.to)
+            .field("mv_type", &decoded.mv_type)
+            .finish()
+    }
+}

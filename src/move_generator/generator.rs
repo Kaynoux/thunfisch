@@ -88,7 +88,11 @@ mod test {
     use crate::prelude::*;
 
     #[test]
+    /// Tests the move generation by checking if it finds the correct amount of moves
+    /// Also tests if the hashing works by checking if the incremental hash is the same as a newly calculated one from scratch
     fn test_move_generation() {
+        // Source: https://www.chessprogramming.org/Perft_Results
+        // Position 2 at depth 4 has all types of moves covered
         let fens = [
             "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", // Initial Pos
             "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ", // Pos 2
@@ -107,9 +111,10 @@ mod test {
         ];
 
         for (fen_idx, fen) in fens.iter().enumerate() {
-            for (depth_idx, correct_node_count) in perft_results[fen_idx].iter().enumerate() {
+            for (depth_idx, correct_node_count) in perft_results[fen_idx].iter().take(6).enumerate()
+            {
                 let mut board = Board::from_fen(fen);
-                let calculated_node_count = perft::r_perft_rayon(&mut board, depth_idx + 1);
+                let calculated_node_count = perft::hash_test_perft(&mut board, depth_idx + 1);
                 assert_eq!(
                     *correct_node_count,
                     calculated_node_count,

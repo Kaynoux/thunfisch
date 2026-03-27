@@ -234,7 +234,25 @@ pub fn r_perft_rayon(board: &mut Board, depth: usize) -> usize {
         .map(|mv| {
             let mut b2 = board.clone();
             b2.make_move(&mv.decode());
-            r_perft(&mut b2, depth - 1) // Rückgabe ohne Semikolon
+            r_perft(&mut b2, depth - 1)
+        })
+        .sum::<usize>()
+}
+
+#[cfg(test)]
+pub fn hash_test_perft(board: &mut Board, depth: usize) -> usize {
+    if depth == 0 {
+        return 1;
+    }
+    board
+        .generate_moves::<false>()
+        .par_iter()
+        .map(|mv| {
+            let mut b2 = board.clone();
+            b2.make_move(&mv.decode());
+            // Compare hash from scratch with the incremental hash to test if the hashing works
+            assert_eq!(b2.hash(), b2.generate_hash());
+            r_perft(&mut b2, depth - 1)
         })
         .sum::<usize>()
 }
