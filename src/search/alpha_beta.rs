@@ -1,9 +1,9 @@
 use super::move_ordering;
-use super::transposition_table::{TT, TTInfo};
+use super::transposition_table::{TT};
 use crate::prelude::*;
 use crate::search::quiescence_search;
 use crate::search::transposition_table::Bound;
-use crate::settings::settings::{self, NULL_MOVE_PRUNING};
+use crate::settings::settings::{self, NMP};
 
 use std::cmp::min;
 use std::sync::{
@@ -41,9 +41,6 @@ pub fn alpha_beta(
     let original_alpha = alpha;
     let eval = board.evaluate();
 
-    let hash = board.hash();
-
-    //let mut eval = board.evaluate(); // CONSIDER PERFORMANCE: not yet used but important for pruning (for example null move pruning)
     let mut tt_move: Option<EncodedMove> = None;
     let mut tt_score = i32::MIN + 1;
 
@@ -106,7 +103,7 @@ pub fn alpha_beta(
 
     // Null move pruning
     // Do this before move generation to avoid costs induced by that
-    if NULL_MOVE_PRUNING {
+    if NMP {
         if null_move_allowed
             && !board.is_in_check()
             && !board.is_king_pawn_endgame()

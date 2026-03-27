@@ -5,7 +5,6 @@ use crate::move_generator::masks;
 use crate::move_generator::pinmask;
 use crate::prelude::*;
 use crate::search::transposition_table::TT;
-use crate::settings::settings;
 use std::io::{self, BufRead, Write};
 
 pub fn handle_uci_communication() {
