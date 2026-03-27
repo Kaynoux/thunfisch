@@ -55,7 +55,7 @@ pub fn iterative_deepening(
             println!("QS nodes: Nodes visited in Quiescence search");
             println!("TT Hits : Times a TT entry was reused");
             println!("GlobTime: Total elapsed time since search started (ms)");
-            println!("EBF     : Effective Branch Factor");
+            println!("EBF     : Effective Branch Factor (relative to the previous depth)");
             println!("AB EBF  : Alpha Beta Nodes Only Effective Branch Factor");
             println!("PV      : Sequence of moves that programs consider best");
             println!()
