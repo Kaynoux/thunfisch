@@ -3,7 +3,7 @@ use super::transposition_table::TT;
 use crate::prelude::*;
 use crate::search::quiescence_search;
 use crate::search::transposition_table::Bound;
-use crate::settings::settings::{self, NULL_MOVE_PRUNING};
+use crate::settings::settings::{self, NULL_MOVE_PRUNING, REVERSE_FUTILITY_PRUNING};
 
 use std::cmp::min;
 use std::sync::{
