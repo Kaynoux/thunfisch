@@ -1,9 +1,12 @@
 name: ELO Benchmark between PR and base branch
 on:
+  pull_request:
+    types: [opened, synchronize, reopened, labeled]
   workflow_dispatch:
 
 jobs:
   build-base:
+    if: github.event.action != 'labeled'
     runs-on: self-hosted
     container: heofthetea/thunfischsdk:latest-arm
     steps:
@@ -49,6 +52,7 @@ jobs:
           retention-days: 1
 
   build-current:
+    if: github.event.action != 'labeled'
     runs-on: self-hosted
     container: heofthetea/thunfischsdk:latest-arm
     steps:
@@ -80,6 +84,7 @@ jobs:
           retention-days: 1
 
   benchmark:
+    if: contains(github.event.pull_request.labels.*.name, 'run-benchmark')
     needs: [build-base, build-current]
     runs-on: self-hosted
     container: heofthetea/thunfischsdk:latest-arm
@@ -125,14 +130,13 @@ jobs:
             | tee benchmark_summary.txt 2>&1
 
       - name: Extract benchmark summary
-        if: github.event_name == 'pull_request'
         run: tail -n 10 benchmark_summary.txt > benchmark_for_comment.txt
 
       - name: Post Benchmark Results to PR
-        if: github.event_name == 'pull_request'
         uses: thollander/actions-comment-pull-request@v3
         with:
           file-path: benchmark_for_comment.txt
+
       - name: Export PGN file
         uses: actions/upload-artifact@v4
         with:
