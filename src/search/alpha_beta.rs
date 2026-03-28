@@ -41,6 +41,25 @@ pub fn alpha_beta(
         .total_alpha_beta_nodes
         .fetch_add(1, Ordering::Relaxed);
 
+    if depth == 0 {
+        if settings::QS {
+            let qs_result = quiescence_search::quiescence_search(
+                board,
+                alpha,
+                beta,
+                MAX_QUIESCENCE_SEARCH_DEPTH,
+                stop,
+                search_info,
+                ply,
+                local_seldepth,
+                ply,
+            );
+
+            return (vec![], qs_result);
+        }
+        return (vec![], board.evaluate());
+    };
+
     if board.is_threefold_repetition() || board.is_50_move_rule() {
         return (vec![], 0);
     }
@@ -83,25 +102,6 @@ pub fn alpha_beta(
         }
     }
 
-    if depth == 0 {
-        if settings::QS {
-            let qs_result = quiescence_search::quiescence_search(
-                board,
-                alpha,
-                beta,
-                MAX_QUIESCENCE_SEARCH_DEPTH,
-                stop,
-                search_info,
-                ply,
-                local_seldepth,
-                ply,
-            );
-
-            return (vec![], qs_result);
-        }
-        return (vec![], eval);
-    };
-
     // cancels search if time is over
     if stop.load(Ordering::Relaxed) {
         search_info.timeout_occurred.store(true, Ordering::Relaxed);
@@ -115,7 +115,7 @@ pub fn alpha_beta(
         //
         // NOTE ON THIS: Higher values for depth limiting crash Thunfisch into oblivion.
         // If we get the branching factor under control and consistently hit depth 13-15 we can probably bump this up to ~4
-        if depth < 2 && !board.is_in_check() && eval >= beta{
+        if depth < 2 && !board.is_in_check() && eval >= beta {
             if eval >= beta + rfp_margin(depth) as i32 {
                 return (vec![], eval);
             }
