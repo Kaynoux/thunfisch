@@ -87,6 +87,7 @@ jobs:
     needs: [build-base, build-current]
     runs-on: self-hosted
     container: heofthetea/thunfischsdk:latest-arm
+    timeout-minutes: 720 # 12 hours
     permissions:
       pull-requests: write
     defaults:
