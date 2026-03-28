@@ -1,6 +1,7 @@
 use super::move_ordering;
 use super::transposition_table::TT;
 use crate::prelude::*;
+use crate::search::pv::PVTable;
 use crate::search::quiescence_search;
 use crate::search::transposition_table::Bound;
 use crate::settings::settings::{self, NULL_MOVE_PRUNING, REVERSE_FUTILITY_PRUNING};
@@ -35,7 +36,8 @@ pub fn alpha_beta(
     ply: usize,
     local_seldepth: &mut usize,
     null_move_allowed: bool,
-) -> (Vec<EncodedMove>, i32) {
+    pv: &mut PVTable,
+) -> i32 {
     *local_seldepth = (*local_seldepth).max(ply);
     search_info
         .total_alpha_beta_nodes
@@ -55,13 +57,13 @@ pub fn alpha_beta(
                 ply,
             );
 
-            return (vec![], qs_result);
+            return qs_result;
         }
-        return (vec![], board.evaluate());
+        return board.evaluate();
     };
 
     if board.is_threefold_repetition() || board.is_50_move_rule() {
-        return (vec![], 0);
+        return 0;
     }
 
     let original_alpha = alpha;
@@ -96,7 +98,13 @@ pub fn alpha_beta(
                         _ => false,
                     }
                 {
-                    return (vec![], tt_score);
+                    if bound == Bound::Exact {
+                        pv.push_move(
+                            ply,
+                            tt_move.expect("TT Score is exact but has a null move"),
+                        );
+                    }
+                    return tt_score;
                 }
             }
         }
@@ -105,7 +113,7 @@ pub fn alpha_beta(
     // cancels search if time is over
     if stop.load(Ordering::Relaxed) {
         search_info.timeout_occurred.store(true, Ordering::Relaxed);
-        return (vec![], 0);
+        return 0;
     }
 
     if REVERSE_FUTILITY_PRUNING {
@@ -117,7 +125,7 @@ pub fn alpha_beta(
         // If we get the branching factor under control and consistently hit depth 13-15 we can probably bump this up to ~4
         if depth < 2 && !board.is_in_check() && eval >= beta {
             if eval >= beta + rfp_margin(depth) as i32 {
-                return (vec![], eval);
+                return eval;
             }
         }
     }
@@ -131,7 +139,7 @@ pub fn alpha_beta(
         {
             board.make_null_move();
             let reduction = min(depth, 4);
-            let (_, mut eval) = alpha_beta(
+            let eval = -alpha_beta(
                 board,
                 depth - reduction,
                 -beta,
@@ -141,11 +149,11 @@ pub fn alpha_beta(
                 ply + 1,
                 local_seldepth,
                 false,
+                pv,
             );
-            eval *= -1;
             board.unmake_null_move();
             if eval >= beta {
-                return (vec![], beta);
+                return beta;
             }
         }
     }
@@ -159,9 +167,9 @@ pub fn alpha_beta(
     // returns the mate score (very low) when in check but adds the ply to give a later check a better eval because the depth is lowers the further you go
     if moves.is_empty() {
         if board.is_in_check() {
-            return (vec![], -MATE_SCORE + (ply as i32));
+            return -MATE_SCORE + (ply as i32);
         } else {
-            return (vec![], 0);
+            return 0;
         }
     }
 
@@ -169,24 +177,14 @@ pub fn alpha_beta(
         move_ordering::order_moves(&mut moves, board, tt_move);
     }
 
-    // Probe again as there's a chance a different thread updated the TT since we last probed it
-    // Also probe with maximum possible window to ensure we get an entry if it exists
-    // if let Some((_, tt_mv)) = TT.probe(hash, i32::MAX, i32::MIN, 0) {
-    //     if let Some(pos) = moves.iter().position(|&m| m == tt_mv) {
-    //         moves.swap(0, pos);
-    //     }
-    // }
-    // TODO: Figure out whether that is actually needed
-
-    let mut pv = vec![];
     for mv in moves {
         // cancels search if time is over
         if stop.load(Ordering::Relaxed) {
             search_info.timeout_occurred.store(true, Ordering::Relaxed);
-            return (vec![], 0);
+            return 0;
         }
         board.make_move(&mv.decode());
-        let (mut local_pv, mut eval) = alpha_beta(
+        let eval = -alpha_beta(
             board,
             depth - 1,
             -beta,
@@ -196,16 +194,16 @@ pub fn alpha_beta(
             ply + 1,
             local_seldepth,
             true,
+            pv,
         );
-        // do the negamax negation here since we can't negate a tuple above
-        eval *= -1;
         board.unmake_move();
 
         if eval > best_eval {
             best_eval = eval;
             if eval > alpha {
                 best_move = Some(mv);
-                alpha = eval
+                alpha = eval;
+                pv.push_move(ply, mv);
             }
 
             if settings::AB {
@@ -236,5 +234,5 @@ pub fn alpha_beta(
         );
     }
 
-    (pv, best_eval)
+    best_eval
 }

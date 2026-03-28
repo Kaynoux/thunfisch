@@ -3,6 +3,7 @@ use std::time::Duration;
 use crate::debug::perft;
 use crate::prelude::*;
 use crate::search::iterative_deepening;
+use crate::search::pv::MAX_DEPTH;
 use crate::search::transposition_table::TT;
 
 pub fn bestmove(args: Vec<&str>, board: &mut Board) {
@@ -34,7 +35,7 @@ pub fn bestmove(args: Vec<&str>, board: &mut Board) {
     }
 
     // Handle normale search
-    let mut depth = 100; // upper limit with tc
+    let mut depth = MAX_DEPTH; // upper limit with tc
     let mut time_limit = Duration::new(24 * 3600, 0); // 24h as upper time limit
 
     // Fixed Depth

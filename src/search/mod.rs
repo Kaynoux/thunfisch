@@ -3,5 +3,6 @@ pub mod evaluate;
 pub mod iterative_deepening;
 pub mod move_ordering;
 pub mod mvv_lva;
+pub mod pv;
 pub mod quiescence_search;
 pub mod transposition_table;
