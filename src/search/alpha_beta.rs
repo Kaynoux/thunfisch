@@ -112,6 +112,9 @@ pub fn alpha_beta(
         // apparently RFP should only be done in the later parts of the tree. CPW explicitly mentions
         // pre-frontier nodes, i.e. those nodes where depth == 1. However viridithias, smol.cs and akimbo
         // use higher values, so this is likely tunable. Stockfish from what I can tell does depth < 2.
+        //
+        // NOTE ON THIS: Higher values for depth limiting crash Thunfisch into oblivion.
+        // If we get the branching factor under control and consistently hit depth 13-15 we can probably bump this up to ~4
         if depth < 2 && !board.is_in_check() && eval >= beta{
             if eval >= beta + rfp_margin(depth) as i32 {
                 return (vec![], eval);
