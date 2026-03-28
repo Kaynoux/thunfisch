@@ -1,7 +1,6 @@
 use super::move_ordering;
 use super::transposition_table::TT;
 use crate::prelude::*;
-use crate::search::pv::PVTable;
 use crate::search::quiescence_search;
 use crate::search::transposition_table::Bound;
 use crate::settings::settings::{self, NULL_MOVE_PRUNING, REVERSE_FUTILITY_PRUNING};
@@ -36,7 +35,6 @@ pub fn alpha_beta(
     ply: usize,
     local_seldepth: &mut usize,
     null_move_allowed: bool,
-    pv: &mut PVTable,
 ) -> i32 {
     *local_seldepth = (*local_seldepth).max(ply);
     search_info
@@ -98,12 +96,6 @@ pub fn alpha_beta(
                         _ => false,
                     }
                 {
-                    if bound == Bound::Exact {
-                        pv.push_move(
-                            ply,
-                            tt_move.expect("TT Score is exact but has a null move"),
-                        );
-                    }
                     return tt_score;
                 }
             }
@@ -148,8 +140,7 @@ pub fn alpha_beta(
                 search_info,
                 ply + 1,
                 local_seldepth,
-                false,
-                pv,
+                false
             );
             board.unmake_null_move();
             if eval >= beta {
@@ -194,7 +185,6 @@ pub fn alpha_beta(
             ply + 1,
             local_seldepth,
             true,
-            pv,
         );
         board.unmake_move();
 
@@ -203,7 +193,6 @@ pub fn alpha_beta(
             if eval > alpha {
                 best_move = Some(mv);
                 alpha = eval;
-                pv.push_move(ply, mv);
             }
 
             if settings::AB {

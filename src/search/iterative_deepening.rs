@@ -4,7 +4,7 @@ use crate::debug::visualize::format_usize;
 use crate::prelude::*;
 use crate::search::alpha_beta::alpha_beta;
 use crate::search::move_ordering;
-use crate::search::pv::PVTable;
+
 use crate::settings::settings;
 
 use std::i32;
@@ -26,20 +26,6 @@ pub fn iterative_deepening(
     debug: bool,
     help: bool,
 ) -> Option<EncodedMove> {
-    let stop = Arc::new(AtomicBool::new(false));
-    {
-        let stop_clone = stop.clone();
-        thread::spawn(move || {
-            thread::sleep(time_limit);
-            stop_clone.store(true, Ordering::Relaxed);
-        });
-    }
-
-    let mut best_eval_overall = i32::MIN;
-    let global_start = Instant::now();
-    let mut previouse_iteration_ab_nodes: usize = 0;
-    let mut previouse_iteration_qs_nodes: usize = 0;
-
     if debug {
         if help {
             println!("Depth   : Current iterative deepening depth (plies)");
@@ -102,8 +88,24 @@ pub fn iterative_deepening(
             "PV"
         );
     }
-    // create a new table for every new search
-    let mut pv_table = PVTable::new();
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    let stop = Arc::new(AtomicBool::new(false));
+    {
+        let stop_clone = stop.clone();
+        thread::spawn(move || {
+            thread::sleep(time_limit);
+            stop_clone.store(true, Ordering::Relaxed);
+        });
+    }
+
+    let mut best_eval_overall = i32::MIN;
+    let mut best_pv: Vec<EncodedMove> = Vec::new();
+    let global_start = Instant::now();
+    let mut previouse_iteration_ab_nodes: usize = 0;
+    let mut previouse_iteration_qs_nodes: usize = 0;
+
     for depth in 1..=max_depth {
         let iteration_start = Instant::now();
         let iteration_search_info = SearchInfo::new();
@@ -136,7 +138,6 @@ pub fn iterative_deepening(
             0,
             &mut seldepth,
             false,
-            &mut pv_table,
         );
 
         if iteration_search_info
@@ -147,32 +148,23 @@ pub fn iterative_deepening(
         }
 
         best_eval_overall = best_eval_local;
-        let mut pv_local = Vec::from(pv_table.get_pv(0));
+        let mut pv_local: Vec<EncodedMove> = Vec::new();
 
-        if pv_local.len() < depth {
-            // Additionally TT-walk
-            // We've gone full circle in the end and maybe maintaining the pv table is
-            // unnecessary costly overhead now yeeeey
-            let mut b = board.clone();
-            let mut i = 0;
-            while let Some(pvt_mv) = pv_local.get(i) {
-                if pvt_mv == &EncodedMove(0) {
-                    break;
-                }
-                b.make_move(&pvt_mv.decode());
-                i += 1;
-            }
-            while pv_local.len() < depth {
-                if let Some(tt_entry) = TT.probe(b.hash(), i as i32) {
-                    if let Some(tt_mv) = tt_entry.best_move() {
-                        pv_local.push(tt_mv);
-                        b.make_move(&tt_mv.decode());
-                    }
-                }
-            }
+        // TT-Walk to obtain the PV
+        let mut b = board.clone();
+        let mut ply: i32 = 0;
+        while pv_local.len() < depth
+            && let Some(tt_entry) = TT.probe(b.hash(), ply)
+            && let Some(tt_mv) = tt_entry.best_move()
+        {
+            pv_local.push(tt_mv);
+            b.make_move(&tt_mv.decode());
+            ply += 1;
         }
 
-        let pv_local = pv_local
+        best_pv = pv_local;
+
+        let pv_string = best_pv
             .iter()
             .map(|emv| emv.decode().to_coords())
             .collect::<Vec<_>>()
@@ -203,7 +195,7 @@ pub fn iterative_deepening(
                     nodes_per_seconds,
                     iteration_duration.as_millis(),
                     TT.info().2 as usize,
-                    pv_local,
+                    pv_string,
                 );
             }
             true => {
@@ -238,7 +230,7 @@ pub fn iterative_deepening(
                     format_usize(global_duration.as_millis() as usize),
                     format_f64(ebf),
                     format_f64(ab_ebf),
-                    pv_local
+                    pv_string
                 );
             }
         }
@@ -247,5 +239,5 @@ pub fn iterative_deepening(
         previouse_iteration_qs_nodes = iteration_qs_nodes;
     }
 
-    pv_table.get_bestmove(0)
+    best_pv.first().cloned()
 }

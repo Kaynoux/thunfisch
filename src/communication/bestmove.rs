@@ -3,8 +3,9 @@ use std::time::Duration;
 use crate::debug::perft;
 use crate::prelude::*;
 use crate::search::iterative_deepening;
-use crate::search::pv::MAX_DEPTH;
 use crate::search::transposition_table::TT;
+
+pub const MAX_DEPTH: usize = 128;
 
 pub fn bestmove(args: Vec<&str>, board: &mut Board) {
     // Both just relevant for printing debug information
