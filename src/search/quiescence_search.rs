@@ -43,12 +43,13 @@ pub fn quiescence_search(
     let original_alpha = alpha;
     let mut tt_move: Option<EncodedMove> = None;
 
-    let static_eval = board.evaluate();
-    let eval = if board.is_in_check() {
+    // Choose correct evaluation
+    // Use the MATE eval if in check
+    let is_check = board.is_in_check();
+    let eval = if is_check {
         -MATE_SCORE
     } else if settings::TT_QS {
-        // only probe TT after draw detection, because the TT does not remember move history
-        // doing it the other way around yield the TT score instead of the draw score for a repetition
+        // probe tt
         if let Some(tt_hit) = TT.probe(board.hash(), ply as i32) {
             search_info.total_tt_hits.fetch_add(1, Ordering::Relaxed);
 
@@ -57,30 +58,29 @@ pub fn quiescence_search(
 
             tt_move = tt_hit.best_move();
 
-            // TODO explain why no deph_req as in ab
+            // Handle tt cuttoffs
             if match bound {
                 Bound::Lower => tt_score >= beta,
                 Bound::Upper => tt_score <= alpha,
                 Bound::Exact => true,
-                _ => false,
+                Bound::None => false,
             } {
                 return tt_score;
             }
 
+            let static_eval = board.evaluate();
             // Use TT score as eval when it refines the static eval:
-            // - Exact: TT score is the true value, always better than static eval
             // - Upper (score <= tt): if tt < static, the position is worse than eval suggests
             // - Lower (score >= tt): if tt > static, the position is better than eval suggests
             // Otherwise fall back to static eval, as the bound doesn't contradict it.
             match tt_hit.bound() {
-                Bound::Exact => tt_score,
                 Bound::Upper if tt_score < static_eval => tt_score,
                 Bound::Lower if tt_score > static_eval => tt_score,
                 _ => static_eval,
             }
         } else {
             // need normal eval when no tt hit
-            static_eval
+            board.evaluate()
         }
     } else {
         // ofc need normal eval when tt is completly disabled aswell
