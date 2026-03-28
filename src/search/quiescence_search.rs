@@ -105,6 +105,10 @@ pub fn quiescence_search(
             board.generate_moves::<true>()
         };
 
+    if is_check && moves.is_empty() {
+        return -MATE_SCORE + ply as i32;
+    }
+
     move_ordering::order_moves(&mut moves, board, tt_move);
 
     let mut best_score = eval;
