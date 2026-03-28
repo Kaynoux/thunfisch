@@ -41,6 +41,10 @@ pub fn alpha_beta(
         .total_alpha_beta_nodes
         .fetch_add(1, Ordering::Relaxed);
 
+    if board.is_threefold_repetition() || board.is_50_move_rule() {
+        return 0;
+    }
+
     if depth == 0 {
         if settings::QS {
             let qs_result = quiescence_search::quiescence_search(
@@ -59,10 +63,6 @@ pub fn alpha_beta(
         }
         return board.evaluate();
     };
-
-    if board.is_threefold_repetition() || board.is_50_move_rule() {
-        return 0;
-    }
 
     let original_alpha = alpha;
     let eval = board.evaluate();

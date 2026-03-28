@@ -3,7 +3,6 @@ use crate::debug::visualize::format_f64;
 use crate::debug::visualize::format_usize;
 use crate::prelude::*;
 use crate::search::alpha_beta::alpha_beta;
-use crate::search::move_ordering;
 
 use crate::settings::settings;
 
@@ -109,23 +108,6 @@ pub fn iterative_deepening(
     for depth in 1..=max_depth {
         let iteration_start = Instant::now();
         let iteration_search_info = SearchInfo::new();
-
-        let mut root_moves = board.generate_moves::<false>();
-
-        let mut tt_move: Option<EncodedMove> = None;
-        if settings::TT_AB {
-            // only probe TT after draw detection, because the TT does not remember move history
-            // doing it the other way around yield the TT score instead of the draw score for a repetition
-            if let Some(tt_hit) = TT.probe(board.hash(), 0) {
-                iteration_search_info
-                    .total_tt_hits
-                    .fetch_add(1, Ordering::Relaxed);
-
-                tt_move = tt_hit.best_move();
-            }
-        }
-
-        move_ordering::order_moves(&mut root_moves, board, tt_move);
 
         let mut seldepth = 0;
         let best_eval_local = alpha_beta(
