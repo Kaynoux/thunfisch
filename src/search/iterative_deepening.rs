@@ -119,6 +119,7 @@ pub fn iterative_deepening(
             &iteration_search_info,
             0,
             &mut seldepth,
+            false,
             false
         );
 
