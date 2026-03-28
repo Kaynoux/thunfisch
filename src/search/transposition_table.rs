@@ -169,6 +169,7 @@ impl TranspositionTable {
         self.age.load(Ordering::Relaxed)
     }
 
+    /// For the most part taken from Viridithas
     pub fn store(
         &self,
         hash: u64,

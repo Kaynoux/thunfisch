@@ -147,9 +147,32 @@ pub fn iterative_deepening(
         }
 
         best_eval_overall = best_eval_local;
+        let mut pv_local = Vec::from(pv_table.get_pv(0));
 
-        let pv_local = pv_table
-            .get_pv(0)
+        if pv_local.len() < depth {
+            // Additionally TT-walk
+            // We've gone full circle in the end and maybe maintaining the pv table is
+            // unnecessary costly overhead now yeeeey
+            let mut b = board.clone();
+            let mut i = 0;
+            while let Some(pvt_mv) = pv_local.get(i) {
+                if pvt_mv == &EncodedMove(0) {
+                    break;
+                }
+                b.make_move(&pvt_mv.decode());
+                i += 1;
+            }
+            while pv_local.len() < depth {
+                if let Some(tt_entry) = TT.probe(b.hash(), i as i32) {
+                    if let Some(tt_mv) = tt_entry.best_move() {
+                        pv_local.push(tt_mv);
+                        b.make_move(&tt_mv.decode());
+                    }
+                }
+            }
+        }
+
+        let pv_local = pv_local
             .iter()
             .map(|emv| emv.decode().to_coords())
             .collect::<Vec<_>>()
