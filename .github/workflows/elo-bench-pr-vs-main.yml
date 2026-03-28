@@ -1,7 +1,7 @@
 name: ELO Benchmark between PR and base branch
 on:
   pull_request:
-    types: [opened, synchronize, reopened, labeled]
+    types: [opened, reopened, labeled]
   workflow_dispatch:
 
 jobs:
