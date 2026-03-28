@@ -34,7 +34,7 @@ pub fn alpha_beta(
     search_info: &SearchInfo,
     ply: usize,
     local_seldepth: &mut usize,
-    null_move_allowed: bool,
+    null_move_allowed: bool
 ) -> i32 {
     *local_seldepth = (*local_seldepth).max(ply);
     search_info
@@ -87,7 +87,7 @@ pub fn alpha_beta(
             // TODO: When using pvs add !pv_node as additionell condition
             let depth_req = depth as i32 + i32::from(tt_score >= beta);
 
-            if settings::TT_CUTTOFFS {
+            if settings::TT_CUTTOFFS && board.count_repetitions() == 0 {
                 if tt_hit.depth() >= depth_req as i32
                     && match bound {
                         Bound::Lower => tt_score >= beta,
@@ -140,7 +140,7 @@ pub fn alpha_beta(
                 search_info,
                 ply + 1,
                 local_seldepth,
-                false
+                false,
             );
             board.unmake_null_move();
             if eval >= beta {
@@ -184,7 +184,7 @@ pub fn alpha_beta(
             search_info,
             ply + 1,
             local_seldepth,
-            true,
+            true
         );
         board.unmake_move();
 
