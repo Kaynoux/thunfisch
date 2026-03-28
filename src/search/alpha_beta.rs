@@ -1,10 +1,11 @@
 use super::move_ordering;
-use super::transposition_table::{TT, TTInfo};
+use super::transposition_table::TT;
 use crate::prelude::*;
 use crate::search::quiescence_search;
 use crate::search::transposition_table::Bound;
-use crate::settings::settings;
+use crate::settings::settings::{self, NULL_MOVE_PRUNING, REVERSE_FUTILITY_PRUNING};
 
+use std::cmp::min;
 use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
@@ -12,6 +13,14 @@ use std::sync::{
 
 pub const MATE_SCORE: i32 = 30_000;
 const MAX_QUIESCENCE_SEARCH_DEPTH: usize = 12;
+
+/// There's different approaches to this one as well. CPW suggests 150 * depth, smol.cs does 75 * depth.
+/// Generally: The smaller `rfp_margin`, the more aggressively we prune.
+/// THIS IS TUNABLE.
+#[inline(always)]
+pub const fn rfp_margin(depth: usize) -> usize {
+    75 * depth
+}
 
 /// https://www.chessprogramming.org/Alpha-Beta
 /// Returns the pv, and the associated evaluation
@@ -25,6 +34,7 @@ pub fn alpha_beta(
     search_info: &SearchInfo,
     ply: usize,
     local_seldepth: &mut usize,
+    null_move_allowed: bool,
 ) -> (Vec<EncodedMove>, i32) {
     *local_seldepth = (*local_seldepth).max(ply);
     search_info
@@ -36,8 +46,8 @@ pub fn alpha_beta(
     }
 
     let original_alpha = alpha;
+    let eval = board.evaluate();
 
-    //let mut eval = board.evaluate(); // CONSIDER PERFORMANCE: not yet used but important for pruning (for example null move pruning)
     let mut tt_move: Option<EncodedMove> = None;
     let mut tt_score = i32::MIN + 1;
 
@@ -89,13 +99,52 @@ pub fn alpha_beta(
 
             return (vec![], qs_result);
         }
-        return (vec![], board.evaluate());
+        return (vec![], eval);
     };
 
     // cancels search if time is over
     if stop.load(Ordering::Relaxed) {
         search_info.timeout_occurred.store(true, Ordering::Relaxed);
         return (vec![], 0);
+    }
+
+    if REVERSE_FUTILITY_PRUNING {
+        // apparently RFP should only be done in the later parts of the tree. CPW explicitly mentions
+        // pre-frontier nodes, i.e. those nodes where depth == 1. However viridithias, smol.cs and akimbo
+        // use higher values, so this is likely tunable. Stockfish from what I can tell does depth < 2.
+        if depth < 2 && !board.is_in_check() && eval >= beta{
+            if eval >= beta + rfp_margin(depth) as i32 {
+                return (vec![], eval);
+            }
+        }
+    }
+
+    // Do this before move generation to avoid generation costs
+    if NULL_MOVE_PRUNING {
+        if null_move_allowed
+            && !board.is_in_check()
+            && !board.is_king_pawn_endgame()
+            && eval >= beta
+        {
+            board.make_null_move();
+            let reduction = min(depth, 4);
+            let (_, mut eval) = alpha_beta(
+                board,
+                depth - reduction,
+                -beta,
+                -alpha,
+                stop,
+                search_info,
+                ply + 1,
+                local_seldepth,
+                false,
+            );
+            eval *= -1;
+            board.unmake_null_move();
+            if eval >= beta {
+                return (vec![], beta);
+            }
+        }
     }
 
     // set the best evaluation very low to begin with
@@ -143,6 +192,7 @@ pub fn alpha_beta(
             search_info,
             ply + 1,
             local_seldepth,
+            true,
         );
         // do the negamax negation here since we can't negate a tuple above
         eval *= -1;

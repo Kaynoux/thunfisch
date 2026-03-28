@@ -125,4 +125,20 @@ impl Board {
 
         self.set_hash(prev.hash);
     }
+
+    pub fn unmake_null_move(&mut self) {
+        let prev = match self.pop_unmake_info_stack() {
+            Some(info) => info,
+            None => {
+                println!("info: Could not undo move because there was no previous move");
+                return;
+            }
+        };
+        self.pop_repetition_stack();
+
+        self.toggle_current_color();
+        self.set_total_halfmove_counter(self.total_halfmove_counter() - 1);
+        self.set_halfmove_clock(prev.halfmove_clock);
+        self.set_ep_target(prev.ep_target);
+    }
 }

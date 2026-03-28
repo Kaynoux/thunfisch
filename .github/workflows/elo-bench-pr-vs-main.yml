@@ -1,12 +1,11 @@
-name: ELO Benchmark between PR and master
+name: ELO Benchmark between PR and base branch
 on:
   pull_request:
-    branches: [master]
     types: [opened, synchronize, reopened]
   workflow_dispatch:
 
 jobs:
-  build-master:
+  build-base:
     runs-on: self-hosted
     container: heofthetea/thunfischsdk:latest-arm
     steps:
@@ -17,38 +16,38 @@ jobs:
           fetch-depth: 1
           path: pr
 
-      - name: Fetch master (shallow)
+      - name: Fetch base branch (shallow)
         working-directory: pr
         run: |
-          git fetch origin master --depth=1
+          git fetch origin ${{ github.base_ref }} --depth=1
 
-      - name: Prepare worktree for master
+      - name: Prepare worktree for base branch
         working-directory: pr
         run: |
-          git worktree add -f ../master origin/master
+          git worktree add -f ../base origin/${{ github.base_ref }}
           git worktree list
 
-      - name: Cache cargo (master)
+      - name: Cache cargo (base branch)
         uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
-          key: cargo-${{ runner.os }}-${{ hashFiles('master/Cargo.lock') }}
+          key: cargo-${{ runner.os }}-${{ hashFiles('base/Cargo.lock') }}
           restore-keys: |
             cargo-${{ runner.os }}-
 
-      - name: Build master binary
-        working-directory: master
+      - name: Build base branch binary
+        working-directory: base
         run: |
           cargo build --locked --release
           mv target/release/thunfisch target/release/previous
 
-      - name: Upload master binary as artifact
+      - name: Upload base branch binary as artifact
         uses: actions/upload-artifact@v4
         with:
           name: thunfisch-previous
-          path: master/target/release/previous
+          path: base/target/release/previous
           retention-days: 1
 
   build-current:
@@ -83,7 +82,7 @@ jobs:
           retention-days: 1
 
   benchmark:
-    needs: [build-master, build-current]
+    needs: [build-base, build-current]
     runs-on: self-hosted
     container: heofthetea/thunfischsdk:latest-arm
     permissions:
@@ -116,7 +115,7 @@ jobs:
         run: |
           fastchess \
             -engine cmd=./testing/current name=dev \
-            -engine cmd=./testing/previous name=main \
+            -engine cmd=./testing/previous name=base \
             -each proto=uci tc=8+0.08 \
             -concurrency 2 \
             -rounds 5000 \

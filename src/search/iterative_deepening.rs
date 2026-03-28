@@ -140,6 +140,7 @@ pub fn iterative_deepening(
                     &iteration_search_info,
                     1,
                     &mut local_seldepth,
+                    false
                 );
                 eval *= -1;
                 pv.extend(vec![mv]);
