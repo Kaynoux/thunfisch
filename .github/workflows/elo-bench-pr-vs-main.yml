@@ -1,11 +1,12 @@
 name: ELO Benchmark between PR and base branch
 on:
   pull_request:
-    types: [opened, synchronize, reopened]
+    types: [opened, reopened, labeled]
   workflow_dispatch:
 
 jobs:
   build-base:
+    if: contains(github.event.pull_request.labels.*.name, 'run-benchmark')
     runs-on: self-hosted
     container: heofthetea/thunfischsdk:latest-arm
     steps:
@@ -51,6 +52,7 @@ jobs:
           retention-days: 1
 
   build-current:
+    if: contains(github.event.pull_request.labels.*.name, 'run-benchmark')
     runs-on: self-hosted
     container: heofthetea/thunfischsdk:latest-arm
     steps:
@@ -85,6 +87,7 @@ jobs:
     needs: [build-base, build-current]
     runs-on: self-hosted
     container: heofthetea/thunfischsdk:latest-arm
+    timeout-minutes: 720 # 12 hours
     permissions:
       pull-requests: write
     defaults:
