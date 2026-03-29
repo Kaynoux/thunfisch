@@ -120,7 +120,7 @@ pub fn iterative_deepening(
             0,
             &mut seldepth,
             false,
-            false
+            NodeType::OnPV
         );
 
         if iteration_search_info
