@@ -216,17 +216,15 @@ pub fn alpha_beta(
         Bound::Upper
     };
 
-    if settings::TT_AB {
-        TT.store(
-            board.hash(),
-            best_move,
-            best_eval,
-            depth as i8,
-            ply as i32,
-            bound,
-            false,
-        );
-    }
+    TT.store(
+        board.hash(),
+        best_move,
+        best_eval,
+        depth as i8,
+        ply as i32,
+        bound,
+        false,
+    );
 
     best_eval
 }

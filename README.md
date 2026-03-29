@@ -8,6 +8,19 @@ Thunfisch is a UCI-compatible chess engine written from scratch in Rust. It uses
 
 It is a listed Bot-Account on Lichess. If it is online you can challenge it [here](https://lichess.org/@/thunfisch-bot).
 
+## Build Features
+For easy isolation of individual engine features, these have been added as compiler features to the project. See [Cargo.toml](Cargo.toml) for what features are available, and [settings.rs](src/settings.rs) for how they relate to the code.
+### Building with all features
+``` bash
+cargo build
+# or: cargo build --features all
+````
+
+### Building with only specific features
+For example, say you want *only* Quiescence Search, Alpha Beta and MVV-LVA move ordering enabled. Then run this command:
+```bash
+cargo build --no-default-features --features "ab,qs,mvv-lva"
+```
 ## How to Play Locally
 Thunfisch is a command-line application that implements the Universal Chess Interface (UCI). To play against it comfortably, you should load the compiled binary into a chess GUI. We recommend [Cutechess](https://github.com/cutechess/cutechess). There are instruction on how to add the bot to the gui [here](https://lczero.org/play/gui/cutechess/).
 
@@ -102,4 +115,3 @@ Debugging:
 
 ## License
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
-

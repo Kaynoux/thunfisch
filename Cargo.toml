@@ -3,6 +3,20 @@ name = "thunfisch"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+default = ["all"]
+all = ["ab", "qs", "tt-ab", "tt-qs", "mvv-lva", "order-tt-mv-first", "tt-cuttoffs", "nmp", "rfp"]
+ab = []
+qs = []
+tt-ab = []
+tt-qs = []
+mvv-lva = []
+order-tt-mv-first = []
+tt-cuttoffs = []
+nmp = []
+rfp = []
+
+
 [dependencies]
 colored = "2"
 rayon = "1.10.0"
