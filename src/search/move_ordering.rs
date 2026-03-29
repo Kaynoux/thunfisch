@@ -6,10 +6,9 @@ use arrayvec::ArrayVec;
 use std::cmp::Reverse;
 
 const CAPTURE_BONUS: i32 = 1024;
-// Chosen based on the distribution of the MVV_LVA table, where there's 6 captures types larger than this
-// (all queen captures)
-// This can be played around with I assume
-const KILLER_SCORE: i32 = 70000 + CAPTURE_BONUS;
+// I've experimented a bit with placing killer moves within capture moves
+// However just throwing them at the end seems to work best
+const KILLER_SCORE: i32 = 0 + CAPTURE_BONUS;
 
 /// If we sort good moves to the beginning we can increase cut offs in alpha beta
 /// https://www.chessprogramming.org/Move_Ordering
