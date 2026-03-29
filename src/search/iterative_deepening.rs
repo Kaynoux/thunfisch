@@ -45,16 +45,7 @@ pub fn iterative_deepening(
             println!("PV      : Sequence of moves that programs consider best");
             println!()
         }
-        println!(
-            "Activated Features: AB={:?} QS={:?} TT-AB={:?} TT-QS={:?} MVV-LVA={:?} QS-Check-Evasion-Limit={:?} Order-TT-Moves-First={:?}",
-            settings::AB,
-            settings::QS,
-            settings::TT_AB,
-            settings::TT_QS,
-            settings::MVV_LVA,
-            settings::QS_CHECK_EVASION_LIMIT,
-            settings::ORDER_TT_MV_FIRST,
-        );
+        println!("{}", settings::repr());
         println!(
             "TT: Age={}   {} of {} Entries {} % full  Allocated Size: {}B",
             TT.get_age(),
@@ -120,8 +111,7 @@ pub fn iterative_deepening(
             0,
             &mut seldepth,
             false,
-            false,
-            NodeType::OnPV
+            NodeType::OnPV,
         );
 
         if iteration_search_info
