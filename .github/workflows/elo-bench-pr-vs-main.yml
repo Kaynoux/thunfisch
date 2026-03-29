@@ -1,12 +1,12 @@
 name: ELO Benchmark between PR and base branch
 on:
   pull_request:
-    types: [opened, reopened, labeled]
+    types: [opened, reopened, issue_comment]
   workflow_dispatch:
 
 jobs:
   build-base:
-    if: contains(github.event.pull_request.labels.*.name, 'run-benchmark')
+    if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, '/sprt') }}
     runs-on: self-hosted
     container: heofthetea/thunfischsdk:latest-arm
     steps:
@@ -52,7 +52,7 @@ jobs:
           retention-days: 1
 
   build-current:
-    if: contains(github.event.pull_request.labels.*.name, 'run-benchmark')
+    if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, '/sprt') }}
     runs-on: self-hosted
     container: heofthetea/thunfischsdk:latest-arm
     steps:
