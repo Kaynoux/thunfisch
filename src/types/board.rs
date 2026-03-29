@@ -276,6 +276,7 @@ impl Board {
     }
 
     /// extracted from `is_threefold_repetition` for visualization purposes
+    /// Counts how often the current position appears in the stack in the past.
     pub fn count_repetitions(&self) -> usize {
         self.repetition_stack
             .iter()

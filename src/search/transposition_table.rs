@@ -142,7 +142,7 @@ impl TranspositionTable {
         // Calculate max entries to the next lower power of 2
         let max_entries = bytes / entry_size;
         let cap = if max_entries > 0 {
-            1_usize << max_entries.ilog2() // ilog2 gets rounded down next log2 
+            1_usize << max_entries.ilog2() // ilog2 gets rounded down next log2
         } else {
             1
         };
@@ -169,6 +169,7 @@ impl TranspositionTable {
         self.age.load(Ordering::Relaxed)
     }
 
+    /// For the most part taken from Viridithas
     pub fn store(
         &self,
         hash: u64,

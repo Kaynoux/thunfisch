@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 pub fn print_board(board: &Board, moves: Option<&ArrayVec<EncodedMove, ARRAY_LENGTH>>) {
     println!(
-        "Current Color: {:?}\nHalfmove Clock: {}\nTotal Halfmove Counter: {}\nPrevious occurrences: {}\nHash: {}, Previous: {:?}",
+        "Current Color: {:?}\nHalfmove Clock: {}\nTotal Halfmove Counter: {}\nPrevious occurrences: {}\nHash: {}, Previous (latest first): {:?}",
         board.current_color(),
         board.halfmove_clock(),
         board.total_halfmove_counter(),
@@ -17,7 +17,7 @@ pub fn print_board(board: &Board, moves: Option<&ArrayVec<EncodedMove, ARRAY_LEN
             .repetition_stack()
             .iter()
             .rev()
-            .take(6)
+            .take(10)
             .map(|&h| h.to_string().chars().take(4).collect())
             .collect::<Vec<String>>()
     );

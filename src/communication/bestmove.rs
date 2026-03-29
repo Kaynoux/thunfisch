@@ -5,6 +5,8 @@ use crate::prelude::*;
 use crate::search::iterative_deepening;
 use crate::search::transposition_table::TT;
 
+pub const MAX_DEPTH: usize = 128;
+
 pub fn bestmove(args: Vec<&str>, board: &mut Board) {
     // Both just relevant for printing debug information
     let debug = args.iter().any(|&flag| flag == "--debug"); // Debug does not work with uci
@@ -34,7 +36,7 @@ pub fn bestmove(args: Vec<&str>, board: &mut Board) {
     }
 
     // Handle normale search
-    let mut depth = 100; // upper limit with tc
+    let mut depth = MAX_DEPTH; // upper limit with tc
     let mut time_limit = Duration::new(24 * 3600, 0); // 24h as upper time limit
 
     // Fixed Depth
