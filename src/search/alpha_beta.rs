@@ -3,7 +3,7 @@ use super::transposition_table::TT;
 use crate::prelude::*;
 use crate::search::quiescence_search;
 use crate::search::transposition_table::Bound;
-use crate::settings::settings;
+use crate::settings::settings::{self, PVS};
 
 use std::cmp::min;
 use std::sync::{
@@ -35,6 +35,7 @@ pub fn alpha_beta(
     ply: usize,
     local_seldepth: &mut usize,
     null_move_allowed: bool,
+    tt_cutoffs_allowed: bool,
     node_type: NodeType,
 ) -> i32 {
     *local_seldepth = (*local_seldepth).max(ply);
@@ -88,8 +89,7 @@ pub fn alpha_beta(
             // TODO: When using pvs add !pv_node as additionell condition
             let depth_req = depth as i32 + i32::from(tt_score >= beta);
 
-            if settings::TT_CUTTOFFS
-                && (node_type != NodeType::OnPV || !settings::PVS && board.count_repetitions() != 0)
+            if settings::TT_CUTTOFFS && tt_cutoffs_allowed
             {
                 if tt_hit.depth() >= depth_req as i32
                     && match bound {
@@ -111,7 +111,7 @@ pub fn alpha_beta(
         return 0;
     }
 
-    if node_type != NodeType::OnPV {
+    if node_type != NodeType::OnPV || !settings::PVS {
         if settings::RFP {
             // apparently RFP should only be done in the later parts of the tree. CPW explicitly mentions
             // pre-frontier nodes, i.e. those nodes where depth == 1. However viridithias, smol.cs and akimbo
@@ -131,7 +131,6 @@ pub fn alpha_beta(
             if null_move_allowed
                 && !board.is_in_check()
                 && !board.is_king_pawn_endgame()
-                && node_type != NodeType::OnPV
                 && eval >= beta
             {
                 board.make_null_move();
@@ -146,6 +145,7 @@ pub fn alpha_beta(
                     ply + 1,
                     local_seldepth,
                     false,
+                    true,
                     NodeType::OffPV,
                 );
                 board.unmake_null_move();
@@ -195,6 +195,7 @@ pub fn alpha_beta(
                 ply + 1,
                 local_seldepth,
                 true,
+                board.count_repetitions() == 0,
                 NodeType::OnPV,
             );
         } else {
@@ -207,6 +208,7 @@ pub fn alpha_beta(
                 search_info,
                 ply + 1,
                 local_seldepth,
+                true,
                 true,
                 NodeType::OffPV,
             );
@@ -223,6 +225,7 @@ pub fn alpha_beta(
                     ply + 1,
                     local_seldepth,
                     true,
+                    board.count_repetitions() == 0,
                     NodeType::OnPV,
                 );
             }
