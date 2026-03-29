@@ -156,17 +156,15 @@ pub fn quiescence_search(
         Bound::Upper
     };
 
-    if settings::TT_QS {
-        TT.store(
-            board.hash(),
-            best_move,
-            best_score,
-            0,
-            ply as i32,
-            bound,
-            false,
-        );
-    }
+    TT.store(
+        board.hash(),
+        best_move,
+        best_score,
+        0,
+        ply as i32,
+        bound,
+        false,
+    );
 
     best_score
 }
