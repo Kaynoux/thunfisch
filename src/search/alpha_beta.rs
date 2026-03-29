@@ -3,7 +3,7 @@ use super::transposition_table::TT;
 use crate::prelude::*;
 use crate::search::quiescence_search;
 use crate::search::transposition_table::Bound;
-use crate::settings::settings::{self, PVS};
+use crate::settings::settings;
 
 use std::cmp::min;
 use std::sync::{
@@ -89,8 +89,7 @@ pub fn alpha_beta(
             // TODO: When using pvs add !pv_node as additionell condition
             let depth_req = depth as i32 + i32::from(tt_score >= beta);
 
-            if settings::TT_CUTTOFFS && tt_cutoffs_allowed
-            {
+            if settings::TT_CUTTOFFS && tt_cutoffs_allowed {
                 if tt_hit.depth() >= depth_req as i32
                     && match bound {
                         Bound::Lower => tt_score >= beta,
@@ -111,47 +110,45 @@ pub fn alpha_beta(
         return 0;
     }
 
-    if node_type != NodeType::OnPV || !settings::PVS {
-        if settings::RFP {
-            // apparently RFP should only be done in the later parts of the tree. CPW explicitly mentions
-            // pre-frontier nodes, i.e. those nodes where depth == 1. However viridithias, smol.cs and akimbo
-            // use higher values, so this is likely tunable. Stockfish from what I can tell does depth < 2.
-            //
-            // NOTE ON THIS: Higher values for depth limiting crash Thunfisch into oblivion.
-            // If we get the branching factor under control and consistently hit depth 13-15 we can probably bump this up to ~4
-            if depth < 2 && !board.is_in_check() && eval >= beta {
-                if eval >= beta + rfp_margin(depth) as i32 {
-                    return eval;
-                }
+    if settings::RFP {
+        // apparently RFP should only be done in the later parts of the tree. CPW explicitly mentions
+        // pre-frontier nodes, i.e. those nodes where depth == 1. However viridithias, smol.cs and akimbo
+        // use higher values, so this is likely tunable. Stockfish from what I can tell does depth < 2.
+        //
+        // NOTE ON THIS: Higher values for depth limiting crash Thunfisch into oblivion.
+        // If we get the branching factor under control and consistently hit depth 13-15 we can probably bump this up to ~4
+        if depth < 2 && !board.is_in_check() && eval >= beta {
+            if eval >= beta + rfp_margin(depth) as i32 {
+                return eval;
             }
         }
+    }
 
-        // Do this before move generation to avoid generation costs
-        if settings::NMP {
-            if null_move_allowed
-                && !board.is_in_check()
-                && !board.is_king_pawn_endgame()
-                && eval >= beta
-            {
-                board.make_null_move();
-                let reduction = min(depth, 4);
-                let eval = -alpha_beta(
-                    board,
-                    depth - reduction,
-                    -beta,
-                    -alpha,
-                    stop,
-                    search_info,
-                    ply + 1,
-                    local_seldepth,
-                    false,
-                    true,
-                    NodeType::OffPV,
-                );
-                board.unmake_null_move();
-                if eval >= beta {
-                    return beta;
-                }
+    // Do this before move generation to avoid generation costs
+    if settings::NMP {
+        if null_move_allowed
+            && !board.is_in_check()
+            && !board.is_king_pawn_endgame()
+            && eval >= beta
+        {
+            board.make_null_move();
+            let reduction = min(depth, 4);
+            let eval = -alpha_beta(
+                board,
+                depth - reduction,
+                -beta,
+                -alpha,
+                stop,
+                search_info,
+                ply + 1,
+                local_seldepth,
+                false,
+                true,
+                NodeType::OffPV,
+            );
+            board.unmake_null_move();
+            if eval >= beta {
+                return beta;
             }
         }
     }
@@ -213,8 +210,7 @@ pub fn alpha_beta(
                 NodeType::OffPV,
             );
             // Re-search if OffPV-Node raised alpha
-            // conditions 2 & 3 are from CPW, supposedly preventing re-search of OffPV Nodes
-            if eval > alpha && beta - alpha > 1 && node_type != NodeType::OnPV {
+            if eval > alpha && node_type != NodeType::OnPV {
                 eval = -alpha_beta(
                     board,
                     depth - 1,
