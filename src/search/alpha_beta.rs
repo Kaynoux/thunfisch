@@ -3,7 +3,7 @@ use super::transposition_table::TT;
 use crate::prelude::*;
 use crate::search::quiescence_search;
 use crate::search::transposition_table::Bound;
-use crate::settings::settings::{self, NULL_MOVE_PRUNING, REVERSE_FUTILITY_PRUNING};
+use crate::settings::settings;
 
 use std::cmp::min;
 use std::sync::{
@@ -35,7 +35,7 @@ pub fn alpha_beta(
     ply: usize,
     local_seldepth: &mut usize,
     null_move_allowed: bool,
-    tt_cutoffs_allowed: bool
+    node_type: NodeType,
 ) -> i32 {
     *local_seldepth = (*local_seldepth).max(ply);
     search_info
@@ -88,9 +88,7 @@ pub fn alpha_beta(
             // TODO: When using pvs add !pv_node as additionell condition
             let depth_req = depth as i32 + i32::from(tt_score >= beta);
 
-            // TODO: When using PVS, replace tt_cutoffs_allowed with a check so that we don't
-            // TT-cut ALL PV-nodes
-            if settings::TT_CUTTOFFS && tt_cutoffs_allowed {
+            if settings::TT_CUTTOFFS && (node_type != NodeType::OnPV || !settings::PVS) {
                 if tt_hit.depth() >= depth_req as i32
                     && match bound {
                         Bound::Lower => tt_score >= beta,
@@ -111,48 +109,49 @@ pub fn alpha_beta(
         return 0;
     }
 
-    if REVERSE_FUTILITY_PRUNING {
-        // apparently RFP should only be done in the later parts of the tree. CPW explicitly mentions
-        // pre-frontier nodes, i.e. those nodes where depth == 1. However viridithias, smol.cs and akimbo
-        // use higher values, so this is likely tunable. Stockfish from what I can tell does depth < 2.
-        //
-        // NOTE ON THIS: Higher values for depth limiting crash Thunfisch into oblivion.
-        // If we get the branching factor under control and consistently hit depth 13-15 we can probably bump this up to ~4
-        if depth < 2 && !board.is_in_check() && eval >= beta {
-            if eval >= beta + rfp_margin(depth) as i32 {
-                return eval;
+    if node_type != NodeType::OnPV || !settings::PVS {
+        if settings::RFP {
+            // apparently RFP should only be done in the later parts of the tree. CPW explicitly mentions
+            // pre-frontier nodes, i.e. those nodes where depth == 1. However viridithias, smol.cs and akimbo
+            // use higher values, so this is likely tunable. Stockfish from what I can tell does depth < 2.
+            //
+            // NOTE ON THIS: Higher values for depth limiting crash Thunfisch into oblivion.
+            // If we get the branching factor under control and consistently hit depth 13-15 we can probably bump this up to ~4
+            if depth < 2 && !board.is_in_check() && eval >= beta {
+                if eval >= beta + rfp_margin(depth) as i32 {
+                    return eval;
+                }
+            }
+        }
+
+        // Do this before move generation to avoid generation costs
+        if settings::NMP {
+            if null_move_allowed
+                && !board.is_in_check()
+                && !board.is_king_pawn_endgame()
+                && eval >= beta
+            {
+                board.make_null_move();
+                let reduction = min(depth, 4);
+                let eval = -alpha_beta(
+                    board,
+                    depth - reduction,
+                    -beta,
+                    -alpha,
+                    stop,
+                    search_info,
+                    ply + 1,
+                    local_seldepth,
+                    false,
+                    NodeType::OffPV,
+                );
+                board.unmake_null_move();
+                if eval >= beta {
+                    return beta;
+                }
             }
         }
     }
-
-    // Do this before move generation to avoid generation costs
-    if NULL_MOVE_PRUNING {
-        if null_move_allowed
-            && !board.is_in_check()
-            && !board.is_king_pawn_endgame()
-            && eval >= beta
-        {
-            board.make_null_move();
-            let reduction = min(depth, 4);
-            let eval = -alpha_beta(
-                board,
-                depth - reduction,
-                -beta,
-                -alpha,
-                stop,
-                search_info,
-                ply + 1,
-                local_seldepth,
-                false,
-                true
-            );
-            board.unmake_null_move();
-            if eval >= beta {
-                return beta;
-            }
-        }
-    }
-
     // set the best evaluation very low to begin with
     let mut best_eval = i32::MIN + 1;
     let mut best_move: Option<EncodedMove> = None;
@@ -170,31 +169,70 @@ pub fn alpha_beta(
 
     move_ordering::order_moves(&mut moves, board, tt_move);
 
-    for mv in moves {
+    for (i, mv) in moves.iter().enumerate() {
         // cancels search if time is over
         if stop.load(Ordering::Relaxed) {
             search_info.timeout_occurred.store(true, Ordering::Relaxed);
             return 0;
         }
         board.make_move(&mv.decode());
-        let eval = -alpha_beta(
-            board,
-            depth - 1,
-            -beta,
-            -alpha,
-            stop,
-            search_info,
-            ply + 1,
-            local_seldepth,
-            true,
-            board.count_repetitions() == 0
-        );
+        let mut eval;
+        if i == 0 || !settings::PVS {
+            // Principal Variation Search
+            // We assume that the first move from the move ordering is the PV move;
+            // Since the TT move, if existant, is in first place anyway this automatically includes information from shallower search depths
+
+            eval = -alpha_beta(
+                board,
+                depth - 1,
+                -beta,
+                -alpha,
+                stop,
+                search_info,
+                ply + 1,
+                local_seldepth,
+                true,
+                NodeType::OnPV,
+            );
+        } else {
+            // Search non-PV moves with null window
+            eval = -alpha_beta(
+                board,
+                depth - 1,
+                -alpha - 1,
+                -alpha,
+                stop,
+                search_info,
+                ply + 1,
+                local_seldepth,
+                true,
+                NodeType::OffPV,
+            );
+            // Re-search if non-PV move raised Alpha
+            // ONLY do re-searching if the current Node is on PV - we don't care for re-searching OffPV nodes
+            // (if they actually improve over the PV that variation will be searched again at the last PV node anyway)
+            if eval > alpha && node_type == NodeType::OnPV {
+                eval = -alpha_beta(
+                    board,
+                    depth - 1,
+                    -beta,
+                    -alpha,
+                    stop,
+                    search_info,
+                    ply + 1,
+                    local_seldepth,
+                    true,
+                    NodeType::OnPV,
+                );
+            }
+        }
+
         board.unmake_move();
 
         if eval > best_eval {
             best_eval = eval;
             if eval > alpha {
-                best_move = Some(mv);
+                best_move = Some(*mv);
                 alpha = eval;
             }
 
