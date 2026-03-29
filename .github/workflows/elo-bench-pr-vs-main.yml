@@ -6,7 +6,7 @@ on:
 
 jobs:
   build-base:
-    if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, '/sprt') }}
+    # if: ${{ github.event.issue.pull_request && contains(github.event.comment.body, '/sprt') }}
     runs-on: self-hosted
     container: heofthetea/thunfischsdk:latest-arm
     steps:
