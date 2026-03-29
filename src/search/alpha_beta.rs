@@ -168,9 +168,7 @@ pub fn alpha_beta(
         }
     }
 
-    if settings::MVV_LVA {
-        move_ordering::order_moves(&mut moves, board, tt_move);
-    }
+    move_ordering::order_moves(&mut moves, board, tt_move);
 
     for mv in moves {
         // cancels search if time is over
