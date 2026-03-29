@@ -1,5 +1,6 @@
 use super::move_ordering;
 use super::transposition_table::TT;
+use crate::communication::bestmove::MAX_DEPTH;
 use crate::prelude::*;
 use crate::search::quiescence_search;
 use crate::search::transposition_table::Bound;
@@ -36,6 +37,7 @@ pub fn alpha_beta(
     local_seldepth: &mut usize,
     null_move_allowed: bool,
     node_type: NodeType,
+    killers: &mut [EncodedMove; MAX_DEPTH],
 ) -> i32 {
     *local_seldepth = (*local_seldepth).max(ply);
     search_info
@@ -47,7 +49,7 @@ pub fn alpha_beta(
     }
 
     if depth == 0 {
-        if settings::QS {
+        if settings::QS && ply < MAX_DEPTH - 1 {
             let qs_result = quiescence_search::quiescence_search(
                 board,
                 alpha,
@@ -144,6 +146,7 @@ pub fn alpha_beta(
                     local_seldepth,
                     false,
                     NodeType::OffPV,
+                    killers,
                 );
                 board.unmake_null_move();
                 if eval >= beta {
@@ -167,7 +170,11 @@ pub fn alpha_beta(
         }
     }
 
-    move_ordering::order_moves(&mut moves, board, tt_move);
+    let killer_mv: Option<EncodedMove> = killers
+        .get(ply)
+        .and_then(|&mv| if mv == EncodedMove(0) { None } else { Some(mv) });
+
+    move_ordering::order_moves(&mut moves, board, tt_move, killer_mv);
 
     for (i, mv) in moves.iter().enumerate() {
         // cancels search if time is over
@@ -193,6 +200,7 @@ pub fn alpha_beta(
                 local_seldepth,
                 true,
                 NodeType::OnPV,
+                killers,
             );
         } else {
             // Search non-PV moves with null window
@@ -207,6 +215,7 @@ pub fn alpha_beta(
                 local_seldepth,
                 true,
                 NodeType::OffPV,
+                killers,
             );
             // Re-search if non-PV move raised Alpha
             // ONLY do re-searching if the current Node is on PV - we don't care for re-searching OffPV nodes
@@ -223,6 +232,7 @@ pub fn alpha_beta(
                     local_seldepth,
                     true,
                     NodeType::OnPV,
+                    killers,
                 );
             }
         }
@@ -238,6 +248,9 @@ pub fn alpha_beta(
 
             if settings::AB {
                 if alpha >= beta {
+                    if mv.decode().is_quiet() {
+                        killers[ply] = *mv;
+                    }
                     break;
                 }
             }

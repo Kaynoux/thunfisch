@@ -1,4 +1,5 @@
 use super::transposition_table::TT;
+use crate::communication::bestmove::MAX_DEPTH;
 use crate::debug::visualize::format_f64;
 use crate::debug::visualize::format_usize;
 use crate::prelude::*;
@@ -95,6 +96,7 @@ pub fn iterative_deepening(
     let global_start = Instant::now();
     let mut previouse_iteration_ab_nodes: usize = 0;
     let mut previouse_iteration_qs_nodes: usize = 0;
+    let mut killers = [EncodedMove(0); MAX_DEPTH];
 
     for depth in 1..=max_depth {
         let iteration_start = Instant::now();
@@ -112,6 +114,7 @@ pub fn iterative_deepening(
             &mut seldepth,
             false,
             NodeType::OnPV,
+            &mut killers
         );
 
         if iteration_search_info
