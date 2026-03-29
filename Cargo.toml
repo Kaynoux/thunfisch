@@ -5,7 +5,7 @@ edition = "2024"
 
 [features]
 default = ["all"]
-all = ["ab", "qs", "tt-ab", "tt-qs", "mvv-lva", "order-tt-mv-first", "tt-cuttoffs", "nmp", "rfp"]
+all = ["ab", "qs", "tt-ab", "tt-qs", "mvv-lva", "order-tt-mv-first", "tt-cuttoffs", "nmp", "rfp", "pvs"]
 ab = []
 qs = []
 tt-ab = []
@@ -15,6 +15,7 @@ order-tt-mv-first = []
 tt-cuttoffs = []
 nmp = []
 rfp = []
+pvs = []
 
 
 [dependencies]
