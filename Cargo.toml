@@ -5,7 +5,8 @@ edition = "2024"
 
 [features]
 default = ["all"]
-all = ["ab", "qs", "tt-ab", "tt-qs", "mvv-lva", "order-tt-mv-first", "tt-cuttoffs", "nmp", "rfp", "pvs"]
+all = ["ab", "qs", "tt-ab", "tt-qs", "mvv-lva", "order-tt-mv-first", "tt-cuttoffs", "nmp", "rfp", "pvs", "killers"]
+all-no-killers = ["ab", "qs", "tt-ab", "tt-qs", "mvv-lva", "order-tt-mv-first", "tt-cuttoffs", "nmp", "rfp", "pvs"]
 ab = []
 qs = []
 tt-ab = []
@@ -16,6 +17,7 @@ tt-cuttoffs = []
 nmp = []
 rfp = []
 pvs = []
+killers = []
 
 
 [dependencies]

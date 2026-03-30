@@ -18,6 +18,10 @@ impl DecodedMove {
         }
     }
 
+    pub fn is_quiet(&self) -> bool {
+        return self.mv_type == MoveType::Quiet;
+    }
+
     pub fn from_coords(move_str: String, board: &Board) -> DecodedMove {
         // 4 or 5 character string are valid (5 because of promotion)
         assert!(

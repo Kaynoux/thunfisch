@@ -109,7 +109,7 @@ pub fn quiescence_search(
         return -MATE_SCORE + ply as i32;
     }
 
-    move_ordering::order_moves(&mut moves, board, tt_move);
+    move_ordering::order_moves(&mut moves, board, tt_move, None);
 
     let mut best_score = eval;
     let mut best_move: Option<EncodedMove> = None;

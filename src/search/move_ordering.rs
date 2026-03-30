@@ -6,6 +6,9 @@ use arrayvec::ArrayVec;
 use std::cmp::Reverse;
 
 const CAPTURE_BONUS: i32 = 1024;
+// I've experimented a bit with placing killer moves within capture moves
+// However just throwing them at the end seems to work best
+const KILLER_SCORE: i32 = 0 + CAPTURE_BONUS;
 
 /// If we sort good moves to the beginning we can increase cut offs in alpha beta
 /// https://www.chessprogramming.org/Move_Ordering
@@ -14,6 +17,7 @@ pub fn order_moves(
     moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
     board: &Board,
     tt_mv: Option<EncodedMove>,
+    killer_mv: Option<EncodedMove>,
 ) {
     if settings::MVV_LVA {
         moves.sort_unstable_by_key(|encoded_mv| {
@@ -21,6 +25,12 @@ pub fn order_moves(
                 // give highest score if mv is the tt mv
                 if Some(*encoded_mv) == tt_mv {
                     return Reverse(i32::MAX);
+                }
+            }
+
+            if settings::KILLERS {
+                if Some(*encoded_mv) == killer_mv {
+                    return Reverse(KILLER_SCORE);
                 }
             }
 
@@ -78,11 +88,21 @@ pub fn order_moves(
             // sort descending by highest value first
             Reverse(score)
         });
-    } else if settings::ORDER_TT_MV_FIRST
-        && let Some(tt_mv) = tt_mv
-    {
-        if let Some(pos) = moves.iter().position(|&m| m == tt_mv) {
-            moves[0..=pos].rotate_right(1);
+    } else {
+        if settings::ORDER_TT_MV_FIRST
+            && let Some(tt_mv) = tt_mv
+        {
+            if let Some(pos) = moves.iter().position(|&m| m == tt_mv) {
+                moves[0..=pos].rotate_right(1);
+            }
+        }
+        if settings::KILLERS
+            && let Some(killer_mv) = killer_mv
+        {
+            if let Some(pos) = moves.iter().position(|&m| m == killer_mv) {
+                let target_pos = if settings::ORDER_TT_MV_FIRST {1} else {0};
+                moves[target_pos..=pos].rotate_right(1);
+            }
         }
     }
 }
@@ -109,7 +129,7 @@ mod tests {
         let original_last = tt_move.unwrap();
 
         // Order moves with the TT move
-        order_moves(&mut moves, &board, tt_move);
+        order_moves(&mut moves, &board, tt_move, None);
 
         // The TT move should now be the very first move
         assert_eq!(moves[0], original_last);
@@ -129,7 +149,7 @@ mod tests {
         let mut moves = board.generate_moves::<false>();
 
         // If MVV_LVA setting is enabled globally/by default, this will run the sort rules
-        order_moves(&mut moves, &board, None);
+        order_moves(&mut moves, &board, None, None);
 
         let best_move = moves[0].decode();
         let second_best = moves[1].decode();

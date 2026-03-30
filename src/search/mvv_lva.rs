@@ -45,3 +45,34 @@ pub const MVV_LVA_TABLE: [[i32; 6]; 6] = {
     }
     table
 };
+
+#[cfg(test)]
+mod tests {
+
+    use std::collections::HashMap;
+
+    use super::*;
+
+    #[test]
+    fn print_mvva_lva_table() {
+        let mut value_dist: HashMap<i32, usize> = HashMap::new();
+        for i in 0..6 {
+            for ii in 0..6 {
+                let mvv_lva_val = MVV_LVA_TABLE[i][ii];
+                *value_dist.entry(mvv_lva_val).or_insert(0) += 1;
+            }
+        }
+        let mut value_dist = value_dist.iter().collect::<Vec<(&i32, &usize)>>();
+        value_dist.sort_by_key(|&(key, _)| key);
+        value_dist.sort_by_key(|&(_, val)| val);
+        println!("{:?}", value_dist.iter());
+
+        // This is the output:
+        // [(10000, 1), (19100, 1), (19500, 1), (19680, 1), (19700, 1), (19900, 1),
+        //  (30000, 1), (32000, 1), (39100, 1), (39500, 1), (39680, 1), (39700, 1),
+        //  (39900, 1), (41100, 1), (41500, 1), (41680, 1), (41700, 1), (41900, 1),
+        //  (50000, 1), (59100, 1), (59500, 1), (59680, 1), (59700, 1), (59900, 1),
+        //  (90000, 1), (99100, 1), (99500, 1), (99680, 1), (99700, 1), (99900, 1),
+        //  (0, 6)]
+    }
+}
