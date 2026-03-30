@@ -114,7 +114,7 @@ pub fn iterative_deepening(
             &mut seldepth,
             false,
             NodeType::OnPV,
-            &mut killers
+            &mut killers,
         );
 
         if iteration_search_info

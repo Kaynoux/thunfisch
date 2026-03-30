@@ -60,6 +60,7 @@ pub fn alpha_beta(
                 ply,
                 local_seldepth,
                 ply,
+                node_type,
             );
 
             return qs_result;
@@ -272,7 +273,7 @@ pub fn alpha_beta(
         depth as i8,
         ply as i32,
         bound,
-        false,
+        node_type == NodeType::OnPV,
     );
 
     best_eval

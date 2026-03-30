@@ -22,6 +22,7 @@ pub fn quiescence_search(
     ply: usize,
     local_seldepth: &mut usize,
     ab_ply: usize,
+    node_type: NodeType,
 ) -> i32 {
     *local_seldepth = (*local_seldepth).max(ply);
 
@@ -89,7 +90,15 @@ pub fn quiescence_search(
 
     if eval >= beta {
         if settings::TT_QS {
-            TT.store(board.hash(), None, eval, 0, ply as i32, Bound::Lower, false);
+            TT.store(
+                board.hash(),
+                None,
+                eval,
+                0,
+                ply as i32,
+                Bound::Lower,
+                node_type == NodeType::OnPV,
+            );
         }
         return eval;
     }
@@ -120,6 +129,7 @@ pub fn quiescence_search(
             return 0;
         }
         board.make_move(&mv.decode());
+        // Child nodes of pv are never pv so is_pv is always false
         let score = -quiescence_search(
             board,
             -beta,
@@ -130,6 +140,7 @@ pub fn quiescence_search(
             ply + 1,
             local_seldepth,
             ab_ply,
+            NodeType::OffPV,
         );
         board.unmake_move();
 
@@ -163,7 +174,7 @@ pub fn quiescence_search(
         0,
         ply as i32,
         bound,
-        false,
+        node_type == NodeType::OnPV,
     );
 
     best_score
