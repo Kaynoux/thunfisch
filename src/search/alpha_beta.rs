@@ -2,6 +2,7 @@ use super::move_ordering;
 use super::transposition_table::TT;
 use crate::communication::bestmove::MAX_DEPTH;
 use crate::prelude::*;
+use crate::search::move_picker::MovePicker;
 use crate::search::quiescence_search;
 use crate::search::transposition_table::Bound;
 use crate::settings::settings;
@@ -175,6 +176,7 @@ pub fn alpha_beta(
         .and_then(|&mv| if mv == EncodedMove(0) { None } else { Some(mv) });
 
     move_ordering::order_moves(&mut moves, board, tt_move, killer_mv);
+    // let movepicker = MovePicker::new(board, tt_move, killer_mv);
 
     for (i, mv) in moves.iter().enumerate() {
         // cancels search if time is over

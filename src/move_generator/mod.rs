@@ -6,3 +6,4 @@ pub mod moves;
 pub mod normal_targets;
 pub mod pinmask;
 pub mod sliding_targets;
+pub mod is_legal;

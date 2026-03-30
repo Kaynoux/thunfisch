@@ -1,6 +1,7 @@
 use super::bestmove;
 use crate::communication::generate_board;
 use crate::debug::visualize;
+use crate::move_generator::is_legal;
 use crate::move_generator::masks;
 use crate::move_generator::pinmask;
 use crate::prelude::*;
@@ -68,6 +69,7 @@ pub fn handle_uci_communication() {
                 println!("  moves              - Print legal moves");
                 println!("  eval               - Prints current Evaluation with Depth of 0");
                 println!("  do <move>          - Play move (e.g. do e2e4)");
+                println!("  islegal <move>     - Check whether move is legal (e.g. islegal e2e4)");
                 println!("  pinmask            - Show pin masks");
                 println!("  checkmask          - Show check mask");
                 println!("  attackmask         - Show attack mask");
@@ -110,6 +112,16 @@ pub fn handle_uci_communication() {
                 let mv_str: &str = args[0];
                 let mv = DecodedMove::from_coords(mv_str.to_string(), &board);
                 board.make_move(&mv);
+            },
+            Some("islegal") => {
+                let args: Vec<&str> = parts.collect();
+                let mv_str: &str = args[0];
+                let mv = DecodedMove::from_coords(mv_str.to_string(), &board);
+                if board.is_legal(&mv) {
+                    println!("yes")
+                } else {
+                    println!("no")
+                }
             }
             Some("pinmask") => {
                 let (hv_pinmask, diag_pinmask) = pinmask::generate_pin_masks(&board);
