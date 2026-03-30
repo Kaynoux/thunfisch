@@ -82,7 +82,10 @@ pub fn iterative_deepening(
 
     /////////////////////////////////////////////////////////////////////////////////////////////////////
 
+    let search_start = Instant::now();
+    let mut search_durations: Vec<Duration> = Vec::new();
     let stop = Arc::new(AtomicBool::new(false));
+    // Trigger a stop interrupt through shared state
     {
         let stop_clone = stop.clone();
         thread::spawn(move || {
@@ -100,6 +103,23 @@ pub fn iterative_deepening(
 
     for depth in 1..=max_depth {
         let iteration_start = Instant::now();
+        let remaining_time = time_limit.abs_diff(iteration_start.duration_since(search_start));
+        if let Some(projected_iteration_time) =
+            estimate_iteration_duration(search_durations.last_chunk::<2>())
+            && projected_iteration_time > remaining_time
+        {
+            if debug {
+                println!(
+                    "Cancelled: time_limit: {:?}, remaining time: {:?}, duration of last 2 iterations: {:?}, projected_iteration_time: {:?}",
+                    time_limit,
+                    remaining_time,
+                    search_durations.last_chunk::<2>(),
+                    projected_iteration_time
+                );
+            }
+            break;
+        }
+
         let iteration_search_info = SearchInfo::new();
 
         let mut seldepth = 0;
@@ -114,7 +134,7 @@ pub fn iterative_deepening(
             &mut seldepth,
             false,
             NodeType::OnPV,
-            &mut killers
+            &mut killers,
         );
 
         if iteration_search_info
@@ -160,6 +180,7 @@ pub fn iterative_deepening(
         let iteration_nodes = iteration_not_eval_nodes + iteration_eval_nodes;
 
         let iteration_duration = iteration_start.elapsed();
+        search_durations.push(iteration_duration);
         let nodes_per_seconds =
             (iteration_nodes as f64 / iteration_duration.as_secs_f64()) as usize;
 
@@ -219,4 +240,27 @@ pub fn iterative_deepening(
     }
 
     best_pv.first().cloned()
+}
+
+/// Cautiously estimate how much time we have
+#[inline(always)]
+fn estimate_iteration_duration(last_two_durations: Option<&[Duration; 2]>) -> Option<Duration> {
+    if let Some(d) = last_two_durations {
+        // Don't even bother if we're in this small of a range still
+        // Should also prevent quick TT hits to mess with the estimations; as dividing by such a small
+        // duration would massively overshoot the target
+        // NOTE: 20ms was arbitrarily decided based on time measurements on startpos here and can be tuned
+        if d[0] < Duration::from_millis(20) {
+            return None;
+        }
+        // If durations get shorter, this breaks the exponential growth
+        // fall back to linear estimation
+        if d[1] > d[0] {
+            return d[1].checked_add(d[0]);
+        }
+
+        return Some(d[1].mul_f64(d[1].div_duration_f64(d[0])));
+    }
+    None
+
 }
