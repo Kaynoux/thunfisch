@@ -242,7 +242,9 @@ pub fn iterative_deepening(
     best_pv.first().cloned()
 }
 
-/// Cautiously estimate how much time we have
+/// Cautiously estimate how much time the next iteration will take, based on the last two iterations
+/// Fundamentally assumes an exponential growth and projects d[-1] * d[-2]
+/// Attempts to avoid incorrect blow-ups by ensuring d[-1] > d[-2] and avoiding calcluation if d[-2] is under a certain threshhold
 #[inline(always)]
 fn estimate_iteration_duration(last_two_durations: Option<&[Duration; 2]>) -> Option<Duration> {
     if let Some(d) = last_two_durations {
@@ -262,5 +264,4 @@ fn estimate_iteration_duration(last_two_durations: Option<&[Duration; 2]>) -> Op
         return Some(d[1].mul_f64(d[1].div_duration_f64(d[0])));
     }
     None
-
 }
