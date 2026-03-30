@@ -91,7 +91,7 @@ pub fn iterative_deepening(
         });
     }
 
-    let mut best_eval_overall = i32::MIN;
+    let mut best_eval_overall;
     let mut best_pv: Vec<EncodedMove> = Vec::new();
     let global_start = Instant::now();
     let mut previouse_iteration_ab_nodes: usize = 0;

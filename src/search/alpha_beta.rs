@@ -71,7 +71,7 @@ pub fn alpha_beta(
     let eval = board.evaluate();
 
     let mut tt_move: Option<EncodedMove> = None;
-    let mut tt_score = i32::MIN + 1;
+    let tt_score;
 
     // TODO: Implement Proper PVS if you want to use pv_node checks
     //let pv_node = beta > alpha + 1; // TODO
