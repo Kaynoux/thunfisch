@@ -20,7 +20,7 @@ const MAX_QUIESCENCE_SEARCH_DEPTH: usize = 12;
 /// THIS IS TUNABLE.
 #[inline(always)]
 pub const fn rfp_margin(depth: usize) -> usize {
-    75 * depth
+    50 * depth
 }
 
 /// https://www.chessprogramming.org/Alpha-Beta
@@ -119,7 +119,7 @@ pub fn alpha_beta(
             //
             // NOTE ON THIS: Higher values for depth limiting crash Thunfisch into oblivion.
             // If we get the branching factor under control and consistently hit depth 13-15 we can probably bump this up to ~4
-            if depth < 2 && !board.is_in_check() && eval >= beta {
+            if depth < 4 && !board.is_in_check() && eval >= beta {
                 if eval >= beta + rfp_margin(depth) as i32 {
                     return eval;
                 }
@@ -138,7 +138,7 @@ pub fn alpha_beta(
                 let eval = -alpha_beta(
                     board,
                     depth - reduction,
-                    -beta,
+                    -alpha - 1,
                     -alpha,
                     stop,
                     search_info,
