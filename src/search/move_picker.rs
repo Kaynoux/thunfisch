@@ -8,19 +8,19 @@ enum GenerationState {
     Quiets,
 }
 
-pub struct MovePicker<'b> {
-    board: &'b Board,
+pub struct MovePicker {
+    board: Board,
     tt_move: Option<EncodedMove>,
     killer_mv: Option<EncodedMove>,
     state: GenerationState
 }
 
-impl<'mp> MovePicker<'mp> {
-    pub fn new<'b>(
-        board: &'b Board,
+impl MovePicker {
+    pub fn new(
+        board: Board,
         tt_move: Option<EncodedMove>,
         killer_mv: Option<EncodedMove>,
-    ) -> MovePicker<'b> {
+    ) -> MovePicker {
         MovePicker {
             board,
             tt_move,

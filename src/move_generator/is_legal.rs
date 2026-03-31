@@ -1,5 +1,5 @@
 use crate::{
-    move_generator::{
+    debug::visualize::print_board, move_generator::{
         masks::{self, calculate_attackmask},
         normal_targets::{
             KING_TARGETS, KNIGHT_TARGETS, PAWN_ATTACK_TARGETS, pawn_quiet_double_target,
@@ -7,8 +7,7 @@ use crate::{
         },
         pinmask,
         sliding_targets::{get_bishop_targets, get_rook_targets},
-    },
-    prelude::*,
+    }, prelude::*
 };
 
 impl Board {
@@ -20,7 +19,7 @@ impl Board {
     /// - [x] Target square available
     /// - [ ] castling
     /// TODO: Collapse to gigantic branchless boolean statement ahahahaha
-    pub fn is_legal(&self, mv: &DecodedMove) -> bool {
+    pub fn is_legal(&mut self, mv: &DecodedMove) -> bool {
         let to = mv.to.to_bit();
         // Catch null moves
         if mv.from == mv.to {
@@ -42,19 +41,47 @@ impl Board {
         let (hv_pinmask, diag_pinmask) = pinmask::generate_pin_masks(self);
         let pinmask = hv_pinmask | diag_pinmask;
 
+        // todo
+        // - make move
+        // - check intersection of checkmask on new position with current pinmask and mv.from
 
-        // probably missing an edge case where we're double pinned and move from one pin line to another one
-        if pinmask.is_position_set(mv.from.to_bit()) && !pinmask.is_position_set(to) {
-            return false;
+        self.make_move(mv);
+        // let mut occupied_after_mv = self.occupied();
+        // occupied_after_mv.toggle(mv.from);
+        // occupied_after_mv.toggle(mv.to);
+        // let
+        self.toggle_current_color();
+
+        let (next_pos_checkmark, _) = masks::calc_check_mask(self);
+        println!("{:?}", next_pos_checkmark);
+        println!("{:?}", next_pos_checkmark & pinmask);
+        println!("{:?}", self.current_color());
+        print_board(self, None);
+        self.toggle_current_color();
+        self.unmake_move();
+        println!("{:?}", self.current_color());
+
+
+        if pinmask.is_position_set(mv.from.to_bit()) && (next_pos_checkmark & pinmask).is_position_set(mv.from.to_bit()) {
+            return  false;
         }
+
+        // // probably missing an edge case where we're double pinned and move from one pin line to another one
+        // if pinmask.is_position_set(mv.from.to_bit()) && !pinmask.is_position_set(to) {
+        //     return false;
+        // }
 
         let (check_mask, check_counter) = masks::calc_check_mask(self);
         // Does the king have to move because of double check?
         if check_counter >= 2 && from_figure.piece() != Piece::King {
             return false;
         }
+
         // Does the move block the check?
-        if from_figure.piece() != Piece::King && !check_mask.is_empty() && !check_mask.is_position_set(to) {
+        if from_figure.piece() != Piece::King
+            && !check_mask.is_empty()
+            && !check_mask.is_position_set(to)
+        {
             return false;
         }
 
@@ -88,7 +115,7 @@ impl Board {
                         && opponents.is_position_set(to)
                         || PAWN_ATTACK_TARGETS[1][mv.from.i()].is_position_set(to)
                             && opponents.is_position_set(to)
-                },
+                }
                 MoveType::EpCapture => true,
                 _ => false,
             },

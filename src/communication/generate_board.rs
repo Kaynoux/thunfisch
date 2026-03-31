@@ -39,6 +39,7 @@ pub fn handle_input(board: &mut Board, args: &[&str]) {
                     "1kr5/6pp/R1P2p2/1N6/8/1P6/P2q1PPP/6K1 w - - 0 1", // 8 - Forced perpetual check (3-fold repetition after 8 ply) to avoid checkmate
                     "r1b1k2r/1pqp1ppp/p2bpnn1/6Q1/2BNP3/2N1B3/PPP2PPP/2KR3R w kq - 8 12", // 9 - Position where including the TT with the QS blunders its queen
                     "8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - - 0 1", // 10 - Endgame Position taken from Sebatian Lague forcing a Triangulation (through a1b1 instead of a1b2) to win
+                    "1r5k/8/1Q6/5Pp1/1KB4r/8/8/8 w - - 2 3", // 11 - Test islegal with double pin
                 ];
 
                 iter.next();
