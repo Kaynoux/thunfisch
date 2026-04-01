@@ -48,10 +48,14 @@ impl DecodedMove {
             mv_type = MoveType::Capture;
         }
 
-        if from_piece == King && ((from_pos.to_x() as isize) - (to_pos.to_x() as isize)) == 2 {
+        if from_piece == King
+            && ((from_pos.to_x() as isize) - (to_pos.to_x() as isize)) == 2
+            && (from_pos.to_y() == to_pos.to_y())
+        {
             mv_type = MoveType::QueenCastle;
         } else if from_piece == King
             && ((from_pos.to_x() as isize) - (to_pos.to_x() as isize)) == -2
+            && (from_pos.to_y() == to_pos.to_y())
         {
             mv_type = MoveType::KingCastle;
         }
