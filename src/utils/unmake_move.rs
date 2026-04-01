@@ -142,3 +142,20 @@ impl Board {
         self.set_ep_target(prev.ep_target);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_idempotency_ummake_move() {
+        let mut board =
+            Board::from_fen("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1R1K b kq - 0 1");
+        let before = board.hash();
+        board.make_move(&DecodedMove::from_coords("a8b8".to_owned(), &board));
+        board.toggle_current_color();
+        board.toggle_current_color();
+        board.unmake_move();
+        assert_eq!(board.hash(), before);
+    }
+}

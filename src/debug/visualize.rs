@@ -7,10 +7,11 @@ use std::collections::HashMap;
 
 pub fn print_board(board: &Board, moves: Option<&ArrayVec<EncodedMove, ARRAY_LENGTH>>) {
     println!(
-        "Current Color: {:?}\nHalfmove Clock: {}\nTotal Halfmove Counter: {}\nPrevious occurrences: {}\nHash: {}, Previous (latest first): {:?}",
+        "Current Color: {:?}\nHalfmove Clock: {}\nTotal Halfmove Counter: {}\nEn Passant target:{},\nPrevious occurrences: {}\nHash: {}, Previous (latest first): {:?}",
         board.current_color(),
         board.halfmove_clock(),
         board.total_halfmove_counter(),
+        board.ep_target().map_or("-".to_owned(),|target| target.to_coords()),
         board.count_repetitions(),
         board.hash(),
         board
