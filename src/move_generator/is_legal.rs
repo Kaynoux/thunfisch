@@ -11,13 +11,40 @@ use crate::{
     prelude::*,
 };
 
-enum MoveDirection {
+#[derive(PartialEq, Debug)]
+pub enum MoveDirection {
     HV,
     Diag,
     Knight,
+    Teleport,
 }
 impl DecodedMove {
-    fn move_direction() {}
+    /// Identifies the `MoveDirection` of the move based on where the squares lie relative to
+    /// each other on the chess board.
+    pub fn move_direction(&self) -> MoveDirection {
+        match (self.to - self.from).abs() {
+            // vertical; divisible by 8
+            8 | 16 | 24 | 32 | 40 | 48 | 56 => MoveDirection::HV,
+            // bottom left -> top right; divisible by 9
+            9 | 18 | 27 | 36 | 45 | 54 | 63 => MoveDirection::Diag,
+            // top left -> bottom right; divisible by 7
+            7 | 14 | 21 | 28 | 35 | 42 | 49 => MoveDirection::Diag,
+            // knight
+            10 | 15 | 17 | 22 => MoveDirection::Knight,
+            6 => match self.to.x().abs_diff(self.from.x()) {
+                0 => MoveDirection::HV,
+                1 => MoveDirection::Diag,
+                2 => MoveDirection::Knight,
+                _ => MoveDirection::Teleport,
+            },
+            // horizontal
+            0..=7 => match self.to.y() == self.from.y() {
+                true => MoveDirection::HV,
+                false => MoveDirection::Teleport
+            },
+            _ => MoveDirection::Teleport,
+        }
+    }
 }
 
 impl Board {
@@ -249,7 +276,6 @@ mod tests {
 
 #[cfg(test)]
 mod test_lukas {
-    use crate::move_generator::is_legal;
     use crate::move_generator::{generator::ARRAY_LENGTH, moves};
     use crate::prelude::*;
     use arrayvec::ArrayVec;
@@ -368,5 +394,146 @@ mod test_lukas {
             }
         }
         nodes
+    }
+}
+
+#[cfg(test)]
+mod test_move_direction {
+    use super::*;
+
+    #[test]
+    fn test_knight_move_direction() {
+        // FEN: White king on a1, white knight on e4, black king on h8
+        let fen = "7k/8/8/8/4N3/8/8/K7 w - - 0 1";
+        let mut board = Board::from_fen(fen);
+        let moves = board.generate_moves::<false>();
+
+        for mv in moves {
+            let decoded = mv.decode();
+            let direction = decoded.move_direction();
+            if board.piece_at_position(decoded.from) != Knight {
+                continue;
+            }
+            assert_eq!(
+                direction,
+                MoveDirection::Knight,
+                "Knight move {} should have Knight direction",
+                decoded.to_coords()
+            );
+        }
+    }
+
+    #[test]
+    fn test_bishop_move_direction() {
+        // FEN: White king on a1, white bishop on e4, black king on h8
+        let fen = "7k/8/8/8/4B3/8/8/K7 w - - 0 1";
+        let mut board = Board::from_fen(fen);
+        let moves = board.generate_moves::<false>();
+
+        for mv in moves {
+            let decoded = mv.decode();
+            let direction = decoded.move_direction();
+            if board.piece_at_position(decoded.from) != Bishop {
+                continue;
+            }
+            assert_eq!(
+                direction,
+                MoveDirection::Diag,
+                "Bishop move {} should have Diagonal direction",
+                decoded.to_coords()
+            );
+        }
+    }
+
+    #[test]
+    fn test_rook_move_direction() {
+        // FEN: White king on a1, white rook on e4, black king on h8
+        let fen = "7k/8/8/8/4R3/8/8/K7 w - - 0 1";
+        let mut board = Board::from_fen(fen);
+        let moves = board.generate_moves::<false>();
+
+        for mv in moves {
+            let decoded = mv.decode();
+            let direction = decoded.move_direction();
+            if board.piece_at_position(decoded.from) != Rook {
+                continue;
+            }
+            assert_eq!(
+                direction,
+                MoveDirection::HV,
+                "Rook move {} should have HV direction",
+                decoded.to_coords()
+            );
+        }
+    }
+
+    #[test]
+    fn test_pawn_quiet_move_direction() {
+        // FEN: White king on a1, white pawn on e4 (position allows quiet moves), black king on h8
+        let fen = "7k/8/8/8/4P3/8/8/K7 w - - 0 1";
+        let mut board = Board::from_fen(fen);
+        let moves = board.generate_moves::<false>();
+
+        for mv in moves {
+            let decoded = mv.decode();
+            // Filter for quiet moves only
+            if board.piece_at_position(decoded.from) != Pawn {
+                continue;
+            }
+            if decoded.is_quiet() {
+                let direction = decoded.move_direction();
+                assert_eq!(
+                    direction,
+                    MoveDirection::HV,
+                    "Quiet pawn move {} should have HV direction",
+                    decoded.to_coords()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_pawn_capture_move_direction() {
+        // FEN: White king on a1, white pawn on e4, black pawns on d5 and f5 to test captures
+        let fen = "7k/8/8/3p1p2/4P3/8/8/K7 w - - 0 1";
+        let mut board = Board::from_fen(fen);
+        let moves = board.generate_moves::<false>();
+
+        for mv in moves {
+            let decoded = mv.decode();
+            if board.piece_at_position(decoded.from) != Pawn {
+                continue;
+            }
+            // Filter for capture moves only
+            if !decoded.is_quiet() {
+                let direction = decoded.move_direction();
+                assert_eq!(
+                    direction,
+                    MoveDirection::Diag,
+                    "Capturing pawn move {} should have Diagonal direction",
+                    decoded.to_coords()
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn test_king_move_direction() {
+        // FEN: Black king on a8 (far away), white king on e4 (empty board otherwise)
+        let fen = "k7/8/8/8/4K3/8/8/8 w - - 0 1";
+        let mut board = Board::from_fen(fen);
+        let moves = board.generate_moves::<false>();
+
+        for mv in moves {
+            let decoded = mv.decode();
+            let direction = decoded.move_direction();
+            // King can move diagonally or horizontally/vertically
+            assert!(
+                direction == MoveDirection::Diag || direction == MoveDirection::HV,
+                "King move {} should have either Diagonal or HV direction, got {:?}",
+                decoded.to_coords(),
+                direction
+            );
+        }
     }
 }
