@@ -1,6 +1,6 @@
 use crate::{
     move_generator::{
-        masks::calculate_attackmask,
+        masks::{calc_check_mask, calculate_attackmask},
         normal_targets::{
             KING_TARGETS, KNIGHT_TARGETS, PAWN_ATTACK_TARGETS, pawn_quiet_double_target,
             pawn_quiet_single_target,
@@ -23,14 +23,16 @@ impl DecodedMove {
     /// Identifies the `MoveDirection` of the move based on where the squares lie relative to
     /// each other on the chess board.
     pub fn move_direction(&self) -> MoveDirection {
-
-        match (self.to.x().abs_diff(self.from.x()), self.to.y().abs_diff(self.from.y())) {
+        match (
+            self.to.x().abs_diff(self.from.x()),
+            self.to.y().abs_diff(self.from.y()),
+        ) {
             // null move
             (0, 0) => MoveDirection::Teleport,
             (0, 1..=7) | (1..=7, 0) => MoveDirection::HV,
             (1, 1) | (2, 2) | (3, 3) | (4, 4) | (5, 5) | (6, 6) | (7, 7) => MoveDirection::Diag,
             (1, 2) | (2, 1) => MoveDirection::Knight,
-            _ => MoveDirection::Teleport
+            _ => MoveDirection::Teleport,
         }
     }
 }
@@ -89,14 +91,23 @@ impl Board {
             }
         }
 
+        let (checkmask, check_count) = calc_check_mask(self);
+
+        // does the king need to move because of double check?
+        if check_count >= 2 && from_figure.piece() != Piece::King {
+            return false;
+        }
+
         // Is the piece even allowed to move there?
         let opponents = self.color_bbs_without_king(!self.current_color());
         let attackmask = calculate_attackmask(self, self.occupied(), !self.current_color(), None);
+        let empty_or_opponent = opponents | self.empty();
 
         if !match from_figure.piece() {
             Pawn => match mv.mv_type {
                 MoveType::DoubleMove => {
                     return pawn_quiet_double_target(from_bit, self.current_color()) == to_bit
+                        && (checkmask & self.empty()).is_position_set(to_bit)
                         && self.empty().is_position_set(pawn_quiet_single_target(
                             from_bit,
                             self.current_color(),
@@ -107,37 +118,41 @@ impl Board {
                 | MoveType::BishopPromo
                 | MoveType::RookPromo
                 | MoveType::QueenPromo => {
-                    return (pawn_quiet_single_target(from_bit, self.current_color()) & self.empty()) == to_bit;
+                    return (pawn_quiet_single_target(from_bit, self.current_color())
+                        & self.empty()
+                        & checkmask)
+                        == to_bit;
                 }
                 MoveType::Capture
                 | MoveType::KnightPromoCapture
                 | MoveType::BishopPromoCapture
                 | MoveType::RookPromoCapture
                 | MoveType::QueenPromoCapture => {
-                    PAWN_ATTACK_TARGETS[0][mv.from.i()].is_position_set(to_bit)
-                        && opponents.is_position_set(to_bit)
-                        || PAWN_ATTACK_TARGETS[1][mv.from.i()].is_position_set(to_bit)
-                            && opponents.is_position_set(to_bit)
+                    (PAWN_ATTACK_TARGETS[0][mv.from.i()] & opponents & checkmask)
+                        .is_position_set(to_bit)
+                        || (PAWN_ATTACK_TARGETS[1][mv.from.i()] & opponents & checkmask)
+                            .is_position_set(to_bit)
                 }
-                MoveType::EpCapture => self.ep_target().map_or(false, |target| target == to_bit),
+                MoveType::EpCapture => self.ep_target().map_or(false, |target| {
+                    target == to_bit && checkmask.is_position_set(to_bit)
+                }),
                 _ => false,
             },
-            Knight => {
-                (KNIGHT_TARGETS[mv.from.i()] & (opponents | self.empty())).is_position_set(to_bit)
-            }
-            Bishop => (bishop_targets & (opponents | self.empty())).is_position_set(to_bit),
-            Rook => (rook_targets & (opponents | self.empty())).is_position_set(to_bit),
-            Queen => ((rook_targets & (opponents | self.empty()))
-                | (bishop_targets & (opponents | self.empty())))
-            .is_position_set(to_bit),
+            Knight => (KNIGHT_TARGETS[mv.from.i()] & empty_or_opponent & checkmask)
+                .is_position_set(to_bit),
+            Bishop => (bishop_targets & empty_or_opponent & checkmask).is_position_set(to_bit),
+            Rook => (rook_targets & empty_or_opponent & checkmask).is_position_set(to_bit),
+            Queen => ((rook_targets & empty_or_opponent & checkmask)
+                | (bishop_targets & empty_or_opponent) & checkmask)
+                .is_position_set(to_bit),
             King => {
                 match mv.mv_type {
                     // Note: omit calculating attacks on the king here because we did that earlier
-                    MoveType::Quiet | MoveType::Capture => {
-                        (KING_TARGETS[mv.from.i()] & ((opponents | self.empty()) & !attackmask)).is_position_set(to_bit)
-                    }
+                    MoveType::Quiet | MoveType::Capture => (KING_TARGETS[mv.from.i()]
+                        & (empty_or_opponent & !attackmask))
+                        .is_position_set(to_bit),
                     MoveType::KingCastle | MoveType::QueenCastle => {
-                        self.is_castling_legal(self.current_color(), mv.mv_type)
+                        check_count == 0 && self.is_castling_legal(self.current_color(), mv.mv_type)
                     }
                     // a king move should never be something else but if it is it's certainly illegal
                     _ => false,
@@ -381,10 +396,33 @@ mod test_lukas {
         }
         let mut nodes = 0;
         let moves = is_legal_generate(board);
+        let correct_moves = board.generate_moves::<false>();
+        // if correct_moves.len() != moves.len() {
+        //     let diff: Vec<String> = moves
+        //         .iter()
+        //         .filter(|mv| !correct_moves.contains(mv))
+        //         .map(|mv| mv.decode().to_coords())
+        //         .collect();
+        //     let diff2: Vec<String> = correct_moves
+        //         .iter()
+        //         .filter(|mv| !moves.contains(mv))
+        //         .map(|mv| mv.decode().to_coords())
+        //         .collect();
+
+        //     println!("{:?}", diff);
+        //     println!("{:?}", diff2);
+        //     println!("fen: {}", board.generate_fen());
+        //     assert!(false, "wrong moves generated");
+        // }
         assert!(moves.len() > 0);
 
         for mv in moves {
             if board.is_legal(&mv.decode()) {
+                if !correct_moves.contains(&mv) {
+                    println!("fen: {}", board.generate_fen());
+                    println!("{:?}", mv.decode().to_coords());
+                    assert!(false, "incorrect move");
+                }
                 let mut b2 = board.clone();
                 b2.make_move(&mv.decode());
                 nodes += is_legal_r_perft(&mut b2, depth - 1);
