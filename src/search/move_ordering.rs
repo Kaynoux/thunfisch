@@ -115,6 +115,9 @@ pub fn mvv_lva(
     board: &Board,
     tt_mv: Option<EncodedMove>,
 ) -> bool {
+    if !settings::MVV_LVA {
+        return false;
+    }
     let mut tt_move_occurred = false;
     moves.sort_unstable_by_key(|encoded_mv| {
         // give highest score if mv is the tt mv

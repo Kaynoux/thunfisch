@@ -47,6 +47,7 @@ impl MovePicker {
                 if settings::ORDER_TT_MV_FIRST {
                     if let Some(tt_move) = self.tt_move {
                         if self.board.is_legal(&tt_move.decode()) {
+                            self.state = GenerationState::Captures;
                             return self.tt_move;
                         }
                     }
@@ -57,6 +58,7 @@ impl MovePicker {
             GenerationState::Captures => {
                 let mut capture_moves = self.board.generate_moves::<true>();
                 let tt_move_occurred = mvv_lva(&mut capture_moves, &self.board, self.tt_move);
+
                 self.next_moves.extend(capture_moves);
                 // yeet the tt move if it was part of the captured move, we don't want to try it twice
                 if tt_move_occurred {
@@ -70,12 +72,18 @@ impl MovePicker {
                 self.next()
             }),
             GenerationState::Killer => {
-                None
-                // if let Some(killer) = self.killer_mv {
-
-                // }
+                if settings::KILLERS {
+                    if let Some(killer) = self.killer_mv {
+                        if self.board.is_legal(&killer.decode()) {
+                            self.state = GenerationState::Quiets;
+                            return self.killer_mv;
+                        }
+                    }
+                }
+                self.state = GenerationState::Quiets;
+                self.next()
             }
-            GenerationState::Quiets => todo!(),
+            GenerationState::Quiets => ,
             GenerationState::YieldQuiets => todo!(),
             GenerationState::Done => None,
         }
