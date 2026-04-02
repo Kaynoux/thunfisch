@@ -200,7 +200,7 @@ mod tests {
 
         // Setup a simple position
         let mut board = Board::from_fen("4k3/8/8/8/8/8/4P3/4K3 w - - 0 1");
-        let mut moves = board.generate_moves::<false>();
+        let mut moves = board.generate_moves_legacy::<false>();
 
         // Grab a move that is not currently at the front (e.g., the last one)
         let tt_move = moves.last().copied();
@@ -226,7 +226,7 @@ mod tests {
         // 1. Pawn on d3 can capture Queen on e4 (PxQ - high priority)
         // 2. Rook on e2 can capture Queen on e4 (RxQ - lower priority)
         let mut board = Board::from_fen("4k3/8/8/8/4q3/3P4/4R3/4K3 w - - 0 1");
-        let mut moves = board.generate_moves::<false>();
+        let mut moves = board.generate_moves_legacy::<false>();
 
         // If MVV_LVA setting is enabled globally/by default, this will run the sort rules
         order_moves(&mut moves, &board, None, None);

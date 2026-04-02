@@ -1,5 +1,6 @@
 use super::masks;
 use super::moves;
+use super::moves_legacy;
 use super::pinmask;
 use crate::prelude::*;
 use arrayvec::ArrayVec;
@@ -8,7 +9,9 @@ use arrayvec::ArrayVec;
 pub const ARRAY_LENGTH: usize = 256;
 
 impl Board {
-    pub fn generate_moves<const SPECIAL_MOVES_ONLY: bool>(
+    /// Kept for now to ease SPRT testing
+    /// TODO remove once no longer needed
+    pub fn generate_moves_legacy<const SPECIAL_MOVES_ONLY: bool>(
         &mut self,
     ) -> ArrayVec<EncodedMove, ARRAY_LENGTH> {
         let friendly = self.current_color();
@@ -20,11 +23,11 @@ impl Board {
         let (check_mask, check_counter) = masks::calc_check_mask(self);
 
         if check_counter == 2 {
-            moves::generate_king_move::<false>(&mut moves, friendly, self);
+            moves_legacy::generate_king_move::<false>(&mut moves, friendly, self);
             return moves;
         }
 
-        moves::generate_pawn_moves::<SPECIAL_MOVES_ONLY>(
+        moves_legacy::generate_pawn_moves::<SPECIAL_MOVES_ONLY>(
             &mut moves,
             self,
             friendly,
@@ -32,10 +35,10 @@ impl Board {
             diag_pinmask,
             check_mask,
         );
-        moves::generate_knight_moves::<SPECIAL_MOVES_ONLY>(
+        moves_legacy::generate_knight_moves::<SPECIAL_MOVES_ONLY>(
             &mut moves, pinmask, friendly, self, check_mask,
         );
-        moves::generate_bishop_moves::<SPECIAL_MOVES_ONLY>(
+        moves_legacy::generate_bishop_moves::<SPECIAL_MOVES_ONLY>(
             &mut moves,
             hv_pinmask,
             diag_pinmask,
@@ -44,7 +47,7 @@ impl Board {
             check_mask,
         );
 
-        moves::generate_rook_moves::<SPECIAL_MOVES_ONLY>(
+        moves_legacy::generate_rook_moves::<SPECIAL_MOVES_ONLY>(
             &mut moves,
             hv_pinmask,
             diag_pinmask,
@@ -53,7 +56,7 @@ impl Board {
             check_mask,
         );
 
-        moves::generate_queen_moves::<SPECIAL_MOVES_ONLY>(
+        moves_legacy::generate_queen_moves::<SPECIAL_MOVES_ONLY>(
             &mut moves,
             hv_pinmask,
             diag_pinmask,
@@ -62,13 +65,78 @@ impl Board {
             check_mask,
         );
 
-        moves::generate_king_move::<SPECIAL_MOVES_ONLY>(&mut moves, friendly, self);
+        moves_legacy::generate_king_move::<SPECIAL_MOVES_ONLY>(&mut moves, friendly, self);
 
         if !SPECIAL_MOVES_ONLY {
+            moves_legacy::generate_castle_moves(&mut moves, check_counter, friendly, self);
+        }
+
+        moves_legacy::generate_ep_moves(self, &mut moves, friendly, hv_pinmask, diag_pinmask);
+
+        moves
+    }
+
+    pub fn generate_moves<const CAPTURES: bool>(&self) -> ArrayVec<EncodedMove, ARRAY_LENGTH> {
+        let friendly = self.current_color();
+        let mut moves = ArrayVec::<EncodedMove, ARRAY_LENGTH>::new();
+
+        let (hv_pinmask, diag_pinmask) = pinmask::generate_pin_masks(self);
+        let pinmask = hv_pinmask | diag_pinmask;
+
+        let (check_mask, check_counter) = masks::calc_check_mask(self);
+
+        moves::generate_king_move::<CAPTURES>(&mut moves, friendly, self);
+
+        // if it's double check we know we have to move the king so we return immediately
+        if check_counter == 2 {
+            return moves;
+        }
+
+        moves::generate_pawn_moves::<CAPTURES>(
+            &mut moves,
+            self,
+            friendly,
+            hv_pinmask,
+            diag_pinmask,
+            check_mask,
+        );
+        moves::generate_knight_moves::<CAPTURES>(&mut moves, pinmask, friendly, self, check_mask);
+        moves::generate_bishop_moves::<CAPTURES>(
+            &mut moves,
+            hv_pinmask,
+            diag_pinmask,
+            friendly,
+            self,
+            check_mask,
+        );
+
+        moves::generate_rook_moves::<CAPTURES>(
+            &mut moves,
+            hv_pinmask,
+            diag_pinmask,
+            friendly,
+            self,
+            check_mask,
+        );
+
+        moves::generate_queen_moves::<CAPTURES>(
+            &mut moves,
+            hv_pinmask,
+            diag_pinmask,
+            friendly,
+            self,
+            check_mask,
+        );
+
+        // castling is a quiet move
+        if !CAPTURES {
             moves::generate_castle_moves(&mut moves, check_counter, friendly, self);
         }
 
-        moves::generate_ep_moves(self, &mut moves, friendly, hv_pinmask, diag_pinmask);
+        // en passant is a capture
+        if CAPTURES {
+            moves::generate_ep_moves(self, &mut moves, friendly, hv_pinmask, diag_pinmask);
+        }
 
         moves
     }

@@ -103,7 +103,7 @@ pub fn handle_uci_communication() {
             Some("fen") => println!("Current Fen: {}", board.generate_fen()),
             Some("draw") => visualize::print_board(&board, None),
             Some("moves") => {
-                let moves = board.generate_moves::<false>();
+                let moves = board.generate_moves_legacy::<false>();
                 visualize::print_board(&board, Some(&moves));
             }
             Some("eval") => println!("Depth 0 Board Evaluation: {}", board.evaluate()),

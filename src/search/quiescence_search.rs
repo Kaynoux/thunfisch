@@ -100,9 +100,9 @@ pub fn quiescence_search(
 
     let mut moves: ArrayVec<EncodedMove, ARRAY_LENGTH> =
         if board.is_in_check() && (ply - ab_ply) < settings::QS_CHECK_EVASION_LIMIT {
-            board.generate_moves::<false>()
+            board.generate_moves_legacy::<false>()
         } else {
-            board.generate_moves::<true>()
+            board.generate_moves_legacy::<true>()
         };
 
     if is_check && moves.is_empty() {

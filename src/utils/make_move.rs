@@ -139,7 +139,7 @@ mod tests {
         board.make_move(&mv);
 
         assert!(board.is_in_check(), "White should be in check");
-        let white_moves = board.generate_moves::<false>();
+        let white_moves = board.generate_moves_legacy::<false>();
         assert!(white_moves.is_empty(), "White should have no legal moves");
     }
 

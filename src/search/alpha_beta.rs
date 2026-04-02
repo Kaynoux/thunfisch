@@ -160,7 +160,7 @@ pub fn alpha_beta(
     let mut best_eval = i32::MIN + 1;
     let mut best_move: Option<EncodedMove> = None;
 
-    let mut moves = board.generate_moves::<false>();
+    let mut moves = board.generate_moves_legacy::<false>();
 
     // returns the mate score (very low) when in check but adds the ply to give a later check a better eval because the depth is lowers the further you go
     if moves.is_empty() {
