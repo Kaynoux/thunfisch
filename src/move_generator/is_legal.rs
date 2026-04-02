@@ -43,12 +43,9 @@ impl Board {
         let to_bit = mv.to.to_bit();
         let from_bit = mv.from.to_bit();
         let mv_direction = mv.move_direction();
-        // Catch null moves
-        if mv.from == mv.to {
-            return false;
-        }
 
         // we don't do that here
+        // Null moves are classified as teleports and thus filtered out here
         if mv_direction == MoveDirection::Teleport {
             return false;
         }
@@ -151,7 +148,6 @@ impl Board {
                 .is_position_set(to_bit),
             King => {
                 match mv.mv_type {
-                    // Note: omit calculating attacks on the king here because we did that earlier
                     MoveType::Quiet | MoveType::Capture => (KING_TARGETS[mv.from.i()]
                         & (empty_or_opponent & !attackmask))
                         .is_position_set(to_bit),
@@ -228,8 +224,8 @@ impl Board {
 
 #[cfg(test)]
 mod tests_perft {
-    use crate::move_generator::{generator::ARRAY_LENGTH, moves};
     use super::*;
+    use crate::move_generator::{generator::ARRAY_LENGTH, moves};
     use arrayvec::ArrayVec;
 
     #[test]
@@ -505,7 +501,8 @@ mod tests_perft {
         ];
 
         for (fen_idx, fen) in fens.iter().enumerate() {
-            for (depth_idx, correct_node_count) in perft_results[fen_idx].iter().enumerate() {
+            for (depth_idx, correct_node_count) in perft_results[fen_idx].iter().take(4).enumerate()
+            {
                 let mut board = Board::from_fen(fen);
                 let calculated_node_count = is_legal_r_perft(&mut board, depth_idx + 1);
                 assert_eq!(

@@ -4,6 +4,7 @@ use crate::search::mvv_lva::MVV_LVA_TABLE;
 use crate::settings::settings;
 use arrayvec::ArrayVec;
 use std::cmp::Reverse;
+use std::collections::VecDeque;
 
 const CAPTURE_BONUS: i32 = 1024;
 // I've experimented a bit with placing killer moves within capture moves
@@ -100,11 +101,87 @@ pub fn order_moves(
             && let Some(killer_mv) = killer_mv
         {
             if let Some(pos) = moves.iter().position(|&m| m == killer_mv) {
-                let target_pos = if settings::ORDER_TT_MV_FIRST {1} else {0};
+                let target_pos = if settings::ORDER_TT_MV_FIRST { 1 } else { 0 };
                 moves[target_pos..=pos].rotate_right(1);
             }
         }
     }
+}
+
+/// RE-implementation of order_moves above, which reverts it back to ONLY doing MVV_LVA.
+/// Returns: true if the TT move is sorted first, false if the TT move wasn't in `moves` (necessary to avoid yielding the TT move twice in the move picker)
+pub fn mvv_lva(
+    moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
+    board: &Board,
+    tt_mv: Option<EncodedMove>,
+) -> bool {
+    let mut tt_move_occurred = false;
+    moves.sort_unstable_by_key(|encoded_mv| {
+        // give highest score if mv is the tt mv
+        if Some(*encoded_mv) == tt_mv {
+            tt_move_occurred = true;
+            return Reverse(i32::MAX);
+        }
+        let mv = encoded_mv.decode();
+        let mv_type = mv.mv_type;
+        let score = match mv_type {
+            MoveType::Quiet => {
+                #[cfg(debug_assertions)]
+                panic!("Quiet moves should not be scored in mvv_lva");
+                #[cfg(not(debug_assertions))]
+                0i32
+            }
+
+            MoveType::Capture => {
+                let attacker_idx = (board.figures(mv.from) as usize) / 2;
+                let victim_idx = (board.figures(mv.to) as usize) / 2;
+                MVV_LVA_TABLE[attacker_idx][victim_idx] + CAPTURE_BONUS
+            }
+            MoveType::DoubleMove => 0i32,
+            MoveType::KingCastle => 0i32,
+            MoveType::QueenCastle => 0i32,
+            MoveType::EpCapture => {
+                let attacker_idx = (board.figures(mv.from) as usize) / 2;
+                MVV_LVA_TABLE[attacker_idx][Pawn as usize] + CAPTURE_BONUS
+            }
+            MoveType::QueenPromoCapture => {
+                let attacker_idx = (board.figures(mv.from) as usize) / 2;
+                let victim_idx = (board.figures(mv.to) as usize) / 2;
+                MVV_LVA_TABLE[attacker_idx][victim_idx]
+                    + CAPTURE_BONUS
+                    + MVV_LVA_TABLE[Pawn as usize][Queen as usize]
+            }
+            MoveType::RookPromoCapture => {
+                let attacker_idx = (board.figures(mv.from) as usize) / 2;
+                let victim_idx = (board.figures(mv.to) as usize) / 2;
+                MVV_LVA_TABLE[attacker_idx][victim_idx]
+                    + CAPTURE_BONUS
+                    + MVV_LVA_TABLE[Pawn as usize][Rook as usize]
+            }
+            MoveType::BishopPromoCapture => {
+                let attacker_idx = (board.figures(mv.from) as usize) / 2;
+                let victim_idx = (board.figures(mv.to) as usize) / 2;
+                MVV_LVA_TABLE[attacker_idx][victim_idx]
+                    + CAPTURE_BONUS
+                    + MVV_LVA_TABLE[Pawn as usize][Bishop as usize]
+            }
+            MoveType::KnightPromoCapture => {
+                let attacker_idx = (board.figures(mv.from) as usize) / 2;
+                let victim_idx = (board.figures(mv.to) as usize) / 2;
+                MVV_LVA_TABLE[attacker_idx][victim_idx]
+                    + CAPTURE_BONUS
+                    + MVV_LVA_TABLE[Pawn as usize][Knight as usize]
+            }
+            MoveType::QueenPromo => MVV_LVA_TABLE[Pawn as usize][Queen as usize],
+            MoveType::RookPromo => MVV_LVA_TABLE[Pawn as usize][Queen as usize],
+            MoveType::BishopPromo => MVV_LVA_TABLE[Pawn as usize][Queen as usize],
+            MoveType::KnightPromo => MVV_LVA_TABLE[Pawn as usize][Queen as usize],
+        };
+
+        // sort descending by highest value first
+        Reverse(score)
+    });
+    return tt_move_occurred;
 }
 
 #[cfg(test)]
