@@ -134,7 +134,11 @@ impl Board {
                             .is_position_set(to_bit)
                 }
                 MoveType::EpCapture => self.ep_target().map_or(false, |target| {
-                    target == to_bit && checkmask.is_position_set(to_bit)
+                    let captured_pawn = pawn_quiet_single_target(target, !self.current_color());
+                    return target == to_bit
+                        && (checkmask.is_position_set(to_bit)
+                            || checkmask.is_position_set(captured_pawn))
+                        && !diag_pinmask.is_position_set(captured_pawn);
                 }),
                 _ => false,
             },
@@ -223,218 +227,10 @@ impl Board {
 }
 
 #[cfg(test)]
-mod tests {
-    use arrayvec::ArrayVec;
-
-    use super::*;
-
-    #[test]
-    fn test_legal_moves_are_legal() {
-        let fen1 = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1"; // position index 4
-        let mut board = Board::from_fen(fen1);
-        let legal_moves = board.generate_moves::<false>();
-        for mv in legal_moves {
-            // println!("{}", mv.decode().to_coords());
-            assert!(board.is_legal(&mv.decode()))
-        }
-        // Move the king out of check and check the rest of the clusterfuck for legality
-        board.make_move(&DecodedMove::from_coords("g1h1".to_owned(), &board));
-        let legal_moves = board.generate_moves::<false>();
-        for mv in legal_moves {
-            // println!("{}", mv.decode().to_coords());
-            assert!(board.is_legal(&mv.decode()))
-        }
-    }
-
-    #[test]
-    fn try_bruteforce_testing_hehe() {
-        let fen = "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1R1K b kq - 0 1";
-        let mut board = Board::from_fen(fen);
-        let legal_moves: ArrayVec<EncodedMove, 256> = board.generate_moves::<false>();
-        let legal_moves_as_coords: Vec<String> = legal_moves
-            .iter()
-            .map(|mv| mv.decode().to_coords())
-            .collect();
-        let mut illegal_moves: Vec<EncodedMove> = vec![];
-        for from_col in (97..=104).map(|n| (n as u8 as char).to_string()) {
-            for from_row in 1..=8 {
-                for to_col in (97..=104).map(|n| (n as u8 as char).to_string()) {
-                    for to_row in 1..=8 {
-                        let mut mv_coords = format!("{}{}{}{}", from_col, from_row, to_col, to_row);
-                        if (to_row == 1 && from_row == 2 || from_row == 7 && to_row == 8)
-                            && board.piece_at_position(
-                                Square::from_coords(&format!("{}{}", from_col, from_row))
-                                    .unwrap_or(Square(0)),
-                            ) == Pawn
-                        {
-                            mv_coords = format!("{}q", mv_coords);
-                        }
-                        if legal_moves_as_coords.contains(&mv_coords) {
-                            continue;
-                        }
-                        let mv = DecodedMove::from_coords(mv_coords, &board).encode();
-                        illegal_moves.push(mv);
-                    }
-                }
-            }
-        }
-        for mv in illegal_moves {
-            // println!("{}", mv.decode().to_coords());
-            // work-around to only print the information we need for debugging
-            assert!(!board.is_legal(&mv.decode()));
-        }
-    }
-}
-
-#[cfg(test)]
-mod test_lukas {
+mod tests_perft {
     use crate::move_generator::{generator::ARRAY_LENGTH, moves};
-    use crate::prelude::*;
-    use arrayvec::ArrayVec;
-
-    fn is_legal_generate(board: &mut Board) -> ArrayVec<EncodedMove, ARRAY_LENGTH> {
-        const SPECIAL_MOVES_ONLY: bool = false;
-        let friendly = board.current_color();
-        let mut moves = ArrayVec::<EncodedMove, ARRAY_LENGTH>::new();
-
-        let (hv_pinmask, diag_pinmask) = (Bitboard::EMPTY, Bitboard::EMPTY);
-        let pinmask = Bitboard::EMPTY;
-
-        let (check_mask, check_counter) = (Bitboard::FULL, 0);
-
-        moves::generate_pawn_moves::<false>(
-            &mut moves,
-            board,
-            friendly,
-            hv_pinmask,
-            diag_pinmask,
-            check_mask,
-        );
-        moves::generate_knight_moves::<SPECIAL_MOVES_ONLY>(
-            &mut moves, pinmask, friendly, board, check_mask,
-        );
-        moves::generate_bishop_moves::<SPECIAL_MOVES_ONLY>(
-            &mut moves,
-            hv_pinmask,
-            diag_pinmask,
-            friendly,
-            board,
-            check_mask,
-        );
-
-        moves::generate_rook_moves::<SPECIAL_MOVES_ONLY>(
-            &mut moves,
-            hv_pinmask,
-            diag_pinmask,
-            friendly,
-            board,
-            check_mask,
-        );
-
-        moves::generate_queen_moves::<SPECIAL_MOVES_ONLY>(
-            &mut moves,
-            hv_pinmask,
-            diag_pinmask,
-            friendly,
-            board,
-            check_mask,
-        );
-
-        moves::generate_king_move::<SPECIAL_MOVES_ONLY>(&mut moves, friendly, board);
-
-        if !SPECIAL_MOVES_ONLY {
-            moves::generate_castle_moves(&mut moves, check_counter, friendly, board);
-        }
-
-        moves::generate_ep_moves(board, &mut moves, friendly, hv_pinmask, diag_pinmask);
-
-        moves
-    }
-
-    #[test]
-    /// Tests the move generation by checking if it finds the correct amount of moves
-    /// Also tests if the hashing works by checking if the incremental hash is the same as a newly calculated one from scratch
-    fn test_is_legal() {
-        // Source: https://www.chessprogramming.org/Perft_Results
-        // Position 2 at depth 4 has all types of moves covered
-        let fens = [
-            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", // Initial Pos
-            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ", // Pos 2
-            "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1 ",               // Pos 3
-            "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1", // Pos 4
-            "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8 ", // Pos 5
-            "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10 ", // Pos 6
-        ];
-        let perft_results: [[usize; 5]; 6] = [
-            [20, 400, 8_902, 197_281, 4_865_609],        // Initial Pos
-            [48, 2_039, 97_862, 4_085_603, 193_690_690], // Pos 2
-            [14, 191, 2_812, 43_238, 674_624],           // Pos 3
-            [6, 264, 9_467, 422_333, 15_833_292],        // Pos 4
-            [44, 1_486, 62_379, 2_103_487, 89_941_194],  // Pos 5
-            [46, 2_079, 89_890, 3_894_594, 164_075_551], // Pos 6
-        ];
-
-        for (fen_idx, fen) in fens.iter().enumerate() {
-            for (depth_idx, correct_node_count) in perft_results[fen_idx].iter().take(6).enumerate()
-            {
-                let mut board = Board::from_fen(fen);
-                let calculated_node_count = is_legal_r_perft(&mut board, depth_idx + 1);
-                assert_eq!(
-                    *correct_node_count,
-                    calculated_node_count,
-                    "Testing node count Fen: {} Depth: {}",
-                    fen_idx + 1,
-                    depth_idx + 1
-                );
-            }
-        }
-    }
-
-    fn is_legal_r_perft(board: &mut Board, depth: usize) -> usize {
-        if depth == 0 {
-            return 1;
-        }
-        let mut nodes = 0;
-        let moves = is_legal_generate(board);
-        let correct_moves = board.generate_moves::<false>();
-        // if correct_moves.len() != moves.len() {
-        //     let diff: Vec<String> = moves
-        //         .iter()
-        //         .filter(|mv| !correct_moves.contains(mv))
-        //         .map(|mv| mv.decode().to_coords())
-        //         .collect();
-        //     let diff2: Vec<String> = correct_moves
-        //         .iter()
-        //         .filter(|mv| !moves.contains(mv))
-        //         .map(|mv| mv.decode().to_coords())
-        //         .collect();
-
-        //     println!("{:?}", diff);
-        //     println!("{:?}", diff2);
-        //     println!("fen: {}", board.generate_fen());
-        //     assert!(false, "wrong moves generated");
-        // }
-        assert!(moves.len() > 0);
-
-        for mv in moves {
-            if board.is_legal(&mv.decode()) {
-                if !correct_moves.contains(&mv) {
-                    println!("fen: {}", board.generate_fen());
-                    println!("{:?}", mv.decode().to_coords());
-                    assert!(false, "incorrect move");
-                }
-                let mut b2 = board.clone();
-                b2.make_move(&mv.decode());
-                nodes += is_legal_r_perft(&mut b2, depth - 1);
-            }
-        }
-        nodes
-    }
-}
-
-#[cfg(test)]
-mod test_move_direction {
     use super::*;
+    use arrayvec::ArrayVec;
 
     #[test]
     fn test_knight_move_direction() {
@@ -621,5 +417,137 @@ mod test_move_direction {
                 (to.0 as isize - from.0 as isize).abs()
             );
         }
+    }
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // perft
+
+    fn pseudo_legal_generate(board: &mut Board) -> ArrayVec<EncodedMove, ARRAY_LENGTH> {
+        const SPECIAL_MOVES_ONLY: bool = false;
+        let friendly = board.current_color();
+        let mut moves = ArrayVec::<EncodedMove, ARRAY_LENGTH>::new();
+
+        let (hv_pinmask, diag_pinmask) = (Bitboard::EMPTY, Bitboard::EMPTY);
+        let pinmask = Bitboard::EMPTY;
+
+        let (check_mask, check_counter) = (Bitboard::FULL, 0);
+
+        moves::generate_pawn_moves::<false>(
+            &mut moves,
+            board,
+            friendly,
+            hv_pinmask,
+            diag_pinmask,
+            check_mask,
+        );
+        moves::generate_knight_moves::<SPECIAL_MOVES_ONLY>(
+            &mut moves, pinmask, friendly, board, check_mask,
+        );
+        moves::generate_bishop_moves::<SPECIAL_MOVES_ONLY>(
+            &mut moves,
+            hv_pinmask,
+            diag_pinmask,
+            friendly,
+            board,
+            check_mask,
+        );
+
+        moves::generate_rook_moves::<SPECIAL_MOVES_ONLY>(
+            &mut moves,
+            hv_pinmask,
+            diag_pinmask,
+            friendly,
+            board,
+            check_mask,
+        );
+
+        moves::generate_queen_moves::<SPECIAL_MOVES_ONLY>(
+            &mut moves,
+            hv_pinmask,
+            diag_pinmask,
+            friendly,
+            board,
+            check_mask,
+        );
+
+        moves::generate_king_move::<SPECIAL_MOVES_ONLY>(&mut moves, friendly, board);
+
+        if !SPECIAL_MOVES_ONLY {
+            moves::generate_castle_moves(&mut moves, check_counter, friendly, board);
+        }
+
+        moves::generate_ep_moves(board, &mut moves, friendly, hv_pinmask, diag_pinmask);
+
+        moves
+    }
+
+    #[test]
+    /// Tests the move generation by checking if it finds the correct amount of moves
+    /// Also tests if the hashing works by checking if the incremental hash is the same as a newly calculated one from scratch
+    fn test_islegal_perft() {
+        // Source: https://www.chessprogramming.org/Perft_Results
+        // Position 2 at depth 4 has all types of moves covered
+        let fens = [
+            "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1", // Initial Pos
+            "r3k2r/p1ppqpb1/bn2pnp1/3PN3/1p2P3/2N2Q1p/PPPBBPPP/R3K2R w KQkq - ", // Pos 2
+            "8/2p5/3p4/KP5r/1R3p1k/8/4P1P1/8 w - - 0 1 ",               // Pos 3
+            "r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1RK1 w kq - 0 1", // Pos 4
+            "rnbq1k1r/pp1Pbppp/2p5/8/2B5/8/PPP1NnPP/RNBQK2R w KQ - 1 8 ", // Pos 5
+            "r4rk1/1pp1qppp/p1np1n2/2b1p1B1/2B1P1b1/P1NP1N2/1PP1QPPP/R4RK1 w - - 0 10 ", // Pos 6
+        ];
+        let perft_results: [[usize; 5]; 6] = [
+            [20, 400, 8_902, 197_281, 4_865_609],        // Initial Pos
+            [48, 2_039, 97_862, 4_085_603, 193_690_690], // Pos 2
+            [14, 191, 2_812, 43_238, 674_624],           // Pos 3
+            [6, 264, 9_467, 422_333, 15_833_292],        // Pos 4
+            [44, 1_486, 62_379, 2_103_487, 89_941_194],  // Pos 5
+            [46, 2_079, 89_890, 3_894_594, 164_075_551], // Pos 6
+        ];
+
+        for (fen_idx, fen) in fens.iter().enumerate() {
+            for (depth_idx, correct_node_count) in perft_results[fen_idx].iter().enumerate() {
+                let mut board = Board::from_fen(fen);
+                let calculated_node_count = is_legal_r_perft(&mut board, depth_idx + 1);
+                assert_eq!(
+                    *correct_node_count,
+                    calculated_node_count,
+                    "Testing node count Fen: {} Depth: {}",
+                    fen_idx + 1,
+                    depth_idx + 1
+                );
+            }
+        }
+    }
+
+    // comments are debug prints
+    // if this ever fails uncomment those and you'll get the fen and move(s) that are incorrect printed out
+    fn is_legal_r_perft(board: &mut Board, depth: usize) -> usize {
+        if depth == 0 {
+            return 1;
+        }
+        let mut nodes = 0;
+        let moves = pseudo_legal_generate(board);
+        // let correct_moves = board.generate_moves::<false>();
+        // for cmv in correct_moves.iter() {
+        //     if !board.is_legal(&cmv.decode()) {
+        //         println!("fen: {}", board.generate_fen());
+        //         println!("{:?}", cmv.decode().to_coords());
+        //         assert!(false, "wrongly classified as illegal");
+        //     }
+        // }
+
+        for mv in moves {
+            if board.is_legal(&mv.decode()) {
+                // if !correct_moves.contains(&mv) {
+                //     println!("fen: {}", board.generate_fen());
+                //     println!("{:?}", mv.decode().to_coords());
+                //     assert!(false, "wrongly classified as legal");
+                // }
+                let mut b2 = board.clone();
+                b2.make_move(&mv.decode());
+                nodes += is_legal_r_perft(&mut b2, depth - 1);
+            }
+        }
+        nodes
     }
 }
