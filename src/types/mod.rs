@@ -10,4 +10,3 @@ pub mod piece;
 pub mod search_info;
 pub mod square;
 pub mod unmake_info;
-pub mod node_type;

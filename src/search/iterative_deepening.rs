@@ -103,7 +103,7 @@ pub fn iterative_deepening(
         let iteration_search_info = SearchInfo::new();
 
         let mut seldepth = 0;
-        let best_eval_local = alpha_beta(
+        let best_eval_local = alpha_beta::<true>(
             board,
             depth,
             -i32::MAX,
@@ -113,7 +113,6 @@ pub fn iterative_deepening(
             0,
             &mut seldepth,
             false,
-            NodeType::OnPV,
             &mut killers,
         );
 
