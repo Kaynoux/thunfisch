@@ -12,7 +12,7 @@ use std::sync::{
 };
 
 /// https://www.chessprogramming.org/Quiescence_Search
-pub fn quiescence_search(
+pub fn quiescence_search<const IS_PV: bool>(
     board: &mut Board,
     mut alpha: i32,
     beta: i32,
@@ -89,7 +89,7 @@ pub fn quiescence_search(
 
     if eval >= beta {
         if settings::TT_QS {
-            TT.store(board.hash(), None, eval, 0, ply as i32, Bound::Lower, false);
+            TT.store(board.hash(), None, eval, 0, ply as i32, Bound::Lower, IS_PV);
         }
         return eval;
     }
@@ -120,7 +120,8 @@ pub fn quiescence_search(
             return 0;
         }
         board.make_move(&mv.decode());
-        let score = -quiescence_search(
+        // Child nodes of pv are never pv so is_pv is always false
+        let score = -quiescence_search::<false>(
             board,
             -beta,
             -alpha,
@@ -163,7 +164,7 @@ pub fn quiescence_search(
         0,
         ply as i32,
         bound,
-        false,
+        IS_PV,
     );
 
     best_score
