@@ -6,16 +6,16 @@ use crate::prelude::*;
 use arrayvec::ArrayVec;
 
 // 218 is the limit: https://www.chessprogramming.org/Chess_Position
-pub const ARRAY_LENGTH: usize = 256;
+pub const MAX_MOVES_COUNT: usize = 218;
 
 impl Board {
     /// Kept for now to ease SPRT testing
     /// TODO remove once no longer needed
     pub fn generate_moves_legacy<const SPECIAL_MOVES_ONLY: bool>(
         &mut self,
-    ) -> ArrayVec<EncodedMove, ARRAY_LENGTH> {
+    ) -> ArrayVec<EncodedMove, MAX_MOVES_COUNT> {
         let friendly = self.current_color();
-        let mut moves = ArrayVec::<EncodedMove, ARRAY_LENGTH>::new();
+        let mut moves = ArrayVec::<EncodedMove, MAX_MOVES_COUNT>::new();
 
         let (hv_pinmask, diag_pinmask) = pinmask::generate_pin_masks(self);
         let pinmask = hv_pinmask | diag_pinmask;
@@ -76,9 +76,9 @@ impl Board {
         moves
     }
 
-    pub fn generate_moves<const CAPTURES: bool>(&self) -> ArrayVec<EncodedMove, ARRAY_LENGTH> {
+    pub fn generate_moves<const CAPTURES: bool>(&self) -> ArrayVec<EncodedMove, MAX_MOVES_COUNT> {
         let friendly = self.current_color();
-        let mut moves = ArrayVec::<EncodedMove, ARRAY_LENGTH>::new();
+        let mut moves = ArrayVec::<EncodedMove, MAX_MOVES_COUNT>::new();
 
         let (hv_pinmask, diag_pinmask) = pinmask::generate_pin_masks(self);
         let pinmask = hv_pinmask | diag_pinmask;

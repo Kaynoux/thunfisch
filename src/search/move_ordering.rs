@@ -1,4 +1,4 @@
-use crate::move_generator::generator::ARRAY_LENGTH;
+use crate::move_generator::generator::MAX_MOVES_COUNT;
 use crate::prelude::*;
 use crate::search::mvv_lva::MVV_LVA_TABLE;
 use crate::settings::settings;
@@ -15,7 +15,7 @@ const KILLER_SCORE: i32 = 0 + CAPTURE_BONUS;
 /// https://www.chessprogramming.org/Move_Ordering
 /// TODO replace sort completly by a move picker instead
 pub fn order_moves(
-    moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
+    moves: &mut ArrayVec<EncodedMove, MAX_MOVES_COUNT>,
     board: &Board,
     tt_mv: Option<EncodedMove>,
     killer_mv: Option<EncodedMove>,
@@ -111,7 +111,7 @@ pub fn order_moves(
 /// RE-implementation of order_moves above, which reverts it back to ONLY doing MVV_LVA.
 /// Returns: true if the TT move is sorted first, false if the TT move wasn't in `moves` (necessary to avoid yielding the TT move twice in the move picker)
 pub fn mvv_lva(
-    moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
+    moves: &mut ArrayVec<EncodedMove, MAX_MOVES_COUNT>,
     board: &Board,
     tt_mv: Option<EncodedMove>,
 ) -> bool {

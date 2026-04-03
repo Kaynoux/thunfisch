@@ -225,7 +225,7 @@ impl Board {
 #[cfg(test)]
 mod tests_perft {
     use super::*;
-    use crate::move_generator::{generator::ARRAY_LENGTH, moves};
+    use crate::move_generator::{generator::MAX_MOVES_COUNT, moves};
     use arrayvec::ArrayVec;
 
     #[test]
@@ -418,10 +418,10 @@ mod tests_perft {
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // perft
 
-    fn pseudo_legal_generate(board: &mut Board) -> ArrayVec<EncodedMove, ARRAY_LENGTH> {
+    fn pseudo_legal_generate(board: &mut Board) -> ArrayVec<EncodedMove, MAX_MOVES_COUNT> {
         const SPECIAL_MOVES_ONLY: bool = false;
         let friendly = board.current_color();
-        let mut moves = ArrayVec::<EncodedMove, ARRAY_LENGTH>::new();
+        let mut moves = ArrayVec::<EncodedMove, MAX_MOVES_COUNT>::new();
 
         let (hv_pinmask, diag_pinmask) = (Bitboard::EMPTY, Bitboard::EMPTY);
         let pinmask = Bitboard::EMPTY;

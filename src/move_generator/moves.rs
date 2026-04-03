@@ -1,4 +1,4 @@
-use super::generator::ARRAY_LENGTH;
+use super::generator::MAX_MOVES_COUNT;
 use super::masks;
 use super::normal_targets;
 use super::sliding_targets;
@@ -8,7 +8,7 @@ use arrayvec::ArrayVec;
 // Approach for legal move generation is inspired by https://www.codeproject.com/Articles/5313417/Worlds-fastest-Bitboard-Chess-Movegenerator
 
 pub fn generate_pawn_moves<const CAPTURES: bool>(
-    moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
+    moves: &mut ArrayVec<EncodedMove, MAX_MOVES_COUNT>,
     board: &Board,
     friendly: Color,
     hv_pinmask: Bitboard,
@@ -193,7 +193,7 @@ pub fn generate_pawn_moves<const CAPTURES: bool>(
 }
 
 pub fn generate_knight_moves<const CAPTURES: bool>(
-    moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
+    moves: &mut ArrayVec<EncodedMove, MAX_MOVES_COUNT>,
 
     pinmask: Bitboard,
     friendly: Color,
@@ -227,7 +227,7 @@ pub fn generate_knight_moves<const CAPTURES: bool>(
 }
 
 pub fn generate_bishop_moves<const CAPTURES: bool>(
-    moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
+    moves: &mut ArrayVec<EncodedMove, MAX_MOVES_COUNT>,
 
     hv_pinmask: Bitboard,
     diag_pinmask: Bitboard,
@@ -286,7 +286,7 @@ pub fn generate_bishop_moves<const CAPTURES: bool>(
 }
 
 pub fn generate_rook_moves<const CAPTURES: bool>(
-    moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
+    moves: &mut ArrayVec<EncodedMove, MAX_MOVES_COUNT>,
 
     hv_pinmask: Bitboard,
     diag_pinmask: Bitboard,
@@ -345,7 +345,7 @@ pub fn generate_rook_moves<const CAPTURES: bool>(
 }
 
 pub fn generate_queen_moves<const CAPTURES: bool>(
-    moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
+    moves: &mut ArrayVec<EncodedMove, MAX_MOVES_COUNT>,
 
     hv_pinmask: Bitboard,
     diag_pinmask: Bitboard,
@@ -426,7 +426,7 @@ pub fn generate_queen_moves<const CAPTURES: bool>(
 }
 
 pub fn generate_king_move<const CAPTURES: bool>(
-    moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
+    moves: &mut ArrayVec<EncodedMove, MAX_MOVES_COUNT>,
 
     friendly: Color,
     board: &Board,
@@ -455,7 +455,7 @@ pub fn generate_king_move<const CAPTURES: bool>(
 }
 
 pub fn generate_castle_moves(
-    moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
+    moves: &mut ArrayVec<EncodedMove, MAX_MOVES_COUNT>,
     check_counter: usize,
     friendly: Color,
     board: &Board,
@@ -527,7 +527,7 @@ pub fn generate_castle_moves(
 
 pub fn generate_ep_moves(
     board: &Board,
-    moves: &mut ArrayVec<EncodedMove, ARRAY_LENGTH>,
+    moves: &mut ArrayVec<EncodedMove, MAX_MOVES_COUNT>,
     friendly: Color,
     hv_pinmask: Bitboard,
     diag_pinmask: Bitboard,

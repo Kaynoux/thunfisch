@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use crate::{
-    move_generator::generator::ARRAY_LENGTH,
+    move_generator::generator::MAX_MOVES_COUNT,
     prelude::*,
     search::{move_ordering::mvv_lva, mvv_lva},
     settings::settings,
@@ -36,7 +36,7 @@ impl MovePicker {
             board,
             tt_move,
             killer_mv,
-            next_moves: VecDeque::with_capacity(ARRAY_LENGTH),
+            next_moves: VecDeque::with_capacity(MAX_MOVES_COUNT),
             state: GenerationState::TTMove,
         }
     }

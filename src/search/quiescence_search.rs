@@ -3,7 +3,7 @@ use crate::search::alpha_beta::MATE_SCORE;
 use crate::search::move_ordering;
 use crate::search::transposition_table::TT;
 use crate::settings::settings;
-use crate::{move_generator::generator::ARRAY_LENGTH, search::transposition_table::Bound};
+use crate::{move_generator::generator::MAX_MOVES_COUNT, search::transposition_table::Bound};
 use arrayvec::ArrayVec;
 
 use std::sync::{
@@ -98,7 +98,7 @@ pub fn quiescence_search(
         alpha = eval;
     }
 
-    let mut moves: ArrayVec<EncodedMove, ARRAY_LENGTH> =
+    let mut moves: ArrayVec<EncodedMove, MAX_MOVES_COUNT> =
         if board.is_in_check() && (ply - ab_ply) < settings::QS_CHECK_EVASION_LIMIT {
             board.generate_moves_legacy::<false>()
         } else {

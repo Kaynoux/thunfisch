@@ -1,17 +1,19 @@
-use crate::move_generator::generator::ARRAY_LENGTH;
+use crate::move_generator::generator::MAX_MOVES_COUNT;
 use crate::prelude::*;
 use arrayvec::ArrayVec;
 use colored;
 use colored::Colorize;
 use std::collections::HashMap;
 
-pub fn print_board(board: &Board, moves: Option<&ArrayVec<EncodedMove, ARRAY_LENGTH>>) {
+pub fn print_board(board: &Board, moves: Option<&ArrayVec<EncodedMove, MAX_MOVES_COUNT>>) {
     println!(
         "Current Color: {:?}\nHalfmove Clock: {}\nTotal Halfmove Counter: {}\nEn Passant target:{},\nPrevious occurrences: {}\nHash: {}, Previous (latest first): {:?}",
         board.current_color(),
         board.halfmove_clock(),
         board.total_halfmove_counter(),
-        board.ep_target().map_or("-".to_owned(),|target| target.to_coords()),
+        board
+            .ep_target()
+            .map_or("-".to_owned(), |target| target.to_coords()),
         board.count_repetitions(),
         board.hash(),
         board
@@ -51,7 +53,7 @@ pub fn print_board(board: &Board, moves: Option<&ArrayVec<EncodedMove, ARRAY_LEN
 
 fn get_char_board(
     board: &Board,
-    moves: Option<&ArrayVec<EncodedMove, ARRAY_LENGTH>>,
+    moves: Option<&ArrayVec<EncodedMove, MAX_MOVES_COUNT>>,
 ) -> [(char, &'static str); 64] {
     let mut char_board = [(' ', "white"); 64];
     for y in 0usize..=7usize {
@@ -87,7 +89,7 @@ pub fn group_moves_by_type(moves: &[EncodedMove]) -> HashMap<MoveType, Vec<Encod
     map
 }
 
-pub fn print_moves(moves: &ArrayVec<EncodedMove, ARRAY_LENGTH>) {
+pub fn print_moves(moves: &ArrayVec<EncodedMove, MAX_MOVES_COUNT>) {
     println!("total moves = {}", moves.len());
     let moves_by_type = group_moves_by_type(moves);
 
