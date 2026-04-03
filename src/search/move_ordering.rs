@@ -4,7 +4,6 @@ use crate::search::mvv_lva::MVV_LVA_TABLE;
 use crate::settings::settings;
 use arrayvec::ArrayVec;
 use std::cmp::Reverse;
-use std::collections::VecDeque;
 
 const CAPTURE_BONUS: i32 = 1024;
 // I've experimented a bit with placing killer moves within capture moves

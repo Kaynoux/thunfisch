@@ -19,7 +19,6 @@ enum GenerationState {
 }
 
 pub struct MovePicker {
-    board: Board,
     tt_move: Option<EncodedMove>,
     killer_mv: Option<EncodedMove>,
     next_moves: VecDeque<EncodedMove>,
@@ -27,13 +26,8 @@ pub struct MovePicker {
 }
 
 impl MovePicker {
-    pub fn new(
-        board: Board,
-        tt_move: Option<EncodedMove>,
-        killer_mv: Option<EncodedMove>,
-    ) -> MovePicker {
+    pub fn new(tt_move: Option<EncodedMove>, killer_mv: Option<EncodedMove>) -> MovePicker {
         MovePicker {
-            board,
             tt_move,
             killer_mv,
             next_moves: VecDeque::with_capacity(MAX_MOVES_COUNT),
@@ -43,23 +37,23 @@ impl MovePicker {
 
     // TODO deal with double checks maybe?
     // I mean they should be handled correctly
-    pub fn next<const SPECIAL_MOVES_ONLY: bool>(&mut self) -> Option<EncodedMove> {
+    pub fn next<const SPECIAL_MOVES_ONLY: bool>(&mut self, board: &Board) -> Option<EncodedMove> {
         match self.state {
             GenerationState::TTMove => {
                 if settings::ORDER_TT_MV_FIRST {
                     if let Some(tt_move) = self.tt_move {
-                        if self.board.is_legal(&tt_move.decode()) {
+                        if board.is_legal(&tt_move.decode()) {
                             self.state = GenerationState::Captures;
                             return self.tt_move;
                         }
                     }
                 }
                 self.state = GenerationState::Captures;
-                return self.next::<SPECIAL_MOVES_ONLY>();
+                return self.next::<SPECIAL_MOVES_ONLY>(board);
             }
             GenerationState::Captures => {
-                let mut capture_moves = self.board.generate_moves::<true>();
-                let tt_move_occurred = mvv_lva(&mut capture_moves, &self.board, self.tt_move);
+                let mut capture_moves = board.generate_moves::<true>();
+                let tt_move_occurred = mvv_lva(&mut capture_moves, &board, self.tt_move);
 
                 // let mut seen = std::collections::HashSet::new();
                 // for mv in &capture_moves {
@@ -77,31 +71,31 @@ impl MovePicker {
                     _ = self.next_moves.pop_front();
                 }
                 self.state = GenerationState::YieldCaptures;
-                return self.next::<SPECIAL_MOVES_ONLY>();
+                return self.next::<SPECIAL_MOVES_ONLY>(board);
             }
             GenerationState::YieldCaptures => self.next_moves.pop_front().or_else(|| {
                 self.state = GenerationState::Killer;
-                self.next::<SPECIAL_MOVES_ONLY>()
+                self.next::<SPECIAL_MOVES_ONLY>(board)
             }),
             GenerationState::Killer => {
                 if settings::KILLERS {
                     if let Some(killer) = self.killer_mv {
-                        if self.board.is_legal(&killer.decode()) {
+                        if board.is_legal(&killer.decode()) {
                             self.state = GenerationState::Quiets;
                             return self.killer_mv;
                         }
                     }
                 }
                 self.state = GenerationState::Quiets;
-                self.next::<SPECIAL_MOVES_ONLY>()
+                self.next::<SPECIAL_MOVES_ONLY>(board)
             }
             GenerationState::Quiets => {
-                let quiet_moves = self.board.generate_moves::<false>();
+                let quiet_moves = board.generate_moves::<false>();
 
                 // // Verify that quiet_moves does not contain any capturing pawn moves
                 // for mv in &quiet_moves {
                 //     let decoded = mv.decode();
-                //     if self.board.piece_at_position(decoded.from) == Piece::Pawn {
+                //     if board.piece_at_position(decoded.from) == Piece::Pawn {
                 //         if let crate::move_generator::is_legal::MoveDirection::Diag = decoded.move_direction() {
                 //             panic!(
                 //                 "Pawn capturing move found in quiet_moves: {:?}",
@@ -113,14 +107,14 @@ impl MovePicker {
 
                 self.next_moves.extend(quiet_moves);
                 self.state = GenerationState::YieldQuiets;
-                return self.next::<SPECIAL_MOVES_ONLY>();
+                return self.next::<SPECIAL_MOVES_ONLY>(board);
             }
             GenerationState::YieldQuiets => self
                 .next_moves
                 .pop_front()
                 .and_then(|mv| {
                     if Some(mv) == self.killer_mv {
-                        self.next::<SPECIAL_MOVES_ONLY>()
+                        self.next::<SPECIAL_MOVES_ONLY>(board)
                     } else {
                         Some(mv)
                     }
@@ -139,7 +133,6 @@ mod perft_test_move_picker {
     use std::collections::HashSet;
 
     use super::*;
-    use arrayvec::ArrayVec;
 
     #[test]
     /// Tests the move generation by checking if it finds the correct amount of moves
@@ -188,15 +181,14 @@ mod perft_test_move_picker {
             return 1;
         }
         let mut nodes = 0;
-        // not ideal that we have to clone the board but oh well
-        let mut mvp = MovePicker::new(board.clone(), None, None);
-        // let correct_moves = board.generate_moves_legacy::<false>();
+        let mut mvp = MovePicker::new(None, None);
+        // let correct_moves = board.generate_moves_legacy::<false>(board);
         // let mut moves: ArrayVec<EncodedMove, 256> = ArrayVec::new();
-        // while let Some(next) = mvp.next::<false>() {
+        // while let Some(next) = mvp.next::<false>(board) {
         //     moves.push(next);
         // }
         let mut visited: HashSet<EncodedMove> = HashSet::new();
-        while let Some(mv) = mvp.next::<false>() {
+        while let Some(mv) = mvp.next::<false>(board) {
             // if !correct_moves.contains(&mv) {
             //     println!("fen: {}", board.generate_fen());
             //     println!("{:?}", mv.decode().to_coords());
