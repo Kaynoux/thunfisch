@@ -225,7 +225,7 @@ impl Board {
 #[cfg(test)]
 mod tests_perft {
     use super::*;
-    use crate::move_generator::{generator::ARRAY_LENGTH, moves_legacy};
+    use crate::move_generator::{generator::ARRAY_LENGTH, moves};
     use arrayvec::ArrayVec;
 
     #[test]
@@ -428,7 +428,7 @@ mod tests_perft {
 
         let (check_mask, check_counter) = (Bitboard::FULL, 0);
 
-        moves_legacy::generate_pawn_moves::<false>(
+        moves::generate_pawn_moves::<false>(
             &mut moves,
             board,
             friendly,
@@ -436,10 +436,10 @@ mod tests_perft {
             diag_pinmask,
             check_mask,
         );
-        moves_legacy::generate_knight_moves::<SPECIAL_MOVES_ONLY>(
+        moves::generate_knight_moves::<SPECIAL_MOVES_ONLY>(
             &mut moves, pinmask, friendly, board, check_mask,
         );
-        moves_legacy::generate_bishop_moves::<SPECIAL_MOVES_ONLY>(
+        moves::generate_bishop_moves::<SPECIAL_MOVES_ONLY>(
             &mut moves,
             hv_pinmask,
             diag_pinmask,
@@ -448,7 +448,7 @@ mod tests_perft {
             check_mask,
         );
 
-        moves_legacy::generate_rook_moves::<SPECIAL_MOVES_ONLY>(
+        moves::generate_rook_moves::<SPECIAL_MOVES_ONLY>(
             &mut moves,
             hv_pinmask,
             diag_pinmask,
@@ -457,7 +457,7 @@ mod tests_perft {
             check_mask,
         );
 
-        moves_legacy::generate_queen_moves::<SPECIAL_MOVES_ONLY>(
+        moves::generate_queen_moves::<SPECIAL_MOVES_ONLY>(
             &mut moves,
             hv_pinmask,
             diag_pinmask,
@@ -466,13 +466,13 @@ mod tests_perft {
             check_mask,
         );
 
-        moves_legacy::generate_king_move::<SPECIAL_MOVES_ONLY>(&mut moves, friendly, board);
+        moves::generate_king_move::<SPECIAL_MOVES_ONLY>(&mut moves, friendly, board);
 
         if !SPECIAL_MOVES_ONLY {
-            moves_legacy::generate_castle_moves(&mut moves, check_counter, friendly, board);
+            moves::generate_castle_moves(&mut moves, check_counter, friendly, board);
         }
 
-        moves_legacy::generate_ep_moves(board, &mut moves, friendly, hv_pinmask, diag_pinmask);
+        moves::generate_ep_moves(board, &mut moves, friendly, hv_pinmask, diag_pinmask);
 
         moves
     }
