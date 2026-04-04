@@ -20,7 +20,8 @@ impl Board {
         let (hv_pinmask, diag_pinmask) = pinmask::generate_pin_masks(self);
         let pinmask = hv_pinmask | diag_pinmask;
 
-        let (check_mask, check_counter) = masks::calc_check_mask(self);
+        let check_counter = self.get_check_counter();
+        let check_mask = self.get_checkmask();
 
         if check_counter == 2 {
             moves_legacy::generate_king_move::<false>(&mut moves, friendly, self);
@@ -85,7 +86,8 @@ impl Board {
         let (hv_pinmask, diag_pinmask) = pinmask::generate_pin_masks(self);
         let pinmask = hv_pinmask | diag_pinmask;
 
-        let (check_mask, check_counter) = masks::calc_check_mask(self);
+        let check_counter = self.get_check_counter();
+        let check_mask = self.get_checkmask();
 
         moves::generate_king_move::<CAPTURES>(&mut moves, friendly, self);
 
@@ -143,9 +145,8 @@ impl Board {
         moves
     }
 
-    pub fn is_in_check(&self) -> bool {
-        let check_count = masks::calc_check_mask(self).1;
-        if check_count == 0 {
+    pub fn is_in_check(&mut self) -> bool {
+        if self.get_check_counter() == 0 {
             return false;
         }
         true

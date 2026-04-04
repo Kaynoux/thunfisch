@@ -5,7 +5,7 @@ use crate::{
     utils::zobrist,
 };
 
-const UNSET_CHECK_COUNTER: usize = 100;
+pub const UNSET_CHECK_COUNTER: usize = 100;
 
 /// Represents the global game state
 #[derive(Clone)]
@@ -255,6 +255,9 @@ impl Board {
     }
 
     pub fn push_unmake_info_stack(&mut self, mv: EncodedMove, to_figure: Figure) {
+        let attackmask = self.get_attackmask();
+        let checkmask = self.get_checkmask();
+        let check_counter = self.get_check_counter();
         let (hv_pinmask, diag_pinmask) = self.get_pinmasks();
         self.unmake_info_stack.push(UnmakeInfo {
             mv: mv,
@@ -266,9 +269,9 @@ impl Board {
             ep_target: self.ep_target(),
             halfmove_clock: self.halfmove_clock(),
             hash: self.hash,
-            attackmask: self.get_attackmask_without_gen(),
-            checkmask: self.get_checkmask_without_gen(),
-            check_counter: self.get_check_counter_without_gen(),
+            attackmask: attackmask,
+            checkmask: checkmask,
+            check_counter: check_counter,
             hv_pinmask: hv_pinmask,
             diag_pinmask: diag_pinmask,
         });
@@ -428,7 +431,7 @@ impl Board {
     }
 
     pub fn get_attackmask(&mut self) -> Bitboard {
-        if self.check_counter == UNSET_CHECK_COUNTER {
+        if self.attackmask == Bitboard::UNSET_ATTACK_MASK {
             let attackmask =
                 masks::calculate_attackmask(self, self.occupied(), !self.current_color(), None);
             self.set_attackmask(attackmask);

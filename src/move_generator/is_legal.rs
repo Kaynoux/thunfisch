@@ -88,7 +88,8 @@ impl Board {
             }
         }
 
-        let (checkmask, check_count) = calc_check_mask(self);
+        let check_count = self.get_check_counter();
+        let checkmask = self.get_checkmask();
 
         // does the king need to move because of double check?
         if check_count >= 2 && from_figure.piece() != Piece::King {

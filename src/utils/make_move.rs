@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{prelude::*, types::board::UNSET_CHECK_COUNTER};
 
 impl Board {
     /// Executes a given move on the board
@@ -21,6 +21,9 @@ impl Board {
         self.toggle_current_color();
         self.increase_halfmove_clock();
         self.set_total_halfmove_counter(self.total_halfmove_counter() + 1);
+        self.set_attackmask(Bitboard::UNSET_ATTACK_MASK);
+        self.set_checkmask(Bitboard::UNSET_CHECK_MASK, UNSET_CHECK_COUNTER);
+        self.set_pinmasks(Bitboard::UNSET_PINMASK, Bitboard::UNSET_PINMASK);
         match mv_type {
             MoveType::Quiet | MoveType::DoubleMove => {
                 self.toggle(friendly, from_figure, from);
@@ -114,7 +117,7 @@ impl Board {
             }
         }
     }
-    pub fn make_null_move(&mut self){
+    pub fn make_null_move(&mut self) {
         let null_move = EncodedMove(0);
 
         self.push_unmake_info_stack(null_move, Figure::Empty);
@@ -184,8 +187,7 @@ mod tests {
 
     #[test]
     fn test_null_move_reversibility() {
-        let mut board =
-            Board::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        let mut board = Board::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
         // Store initial state
         let initial_color = board.current_color();
