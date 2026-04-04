@@ -39,7 +39,7 @@ impl MovePicker {
     // I mean they should be handled correctly
     pub fn next_old<const SPECIAL_MOVES_ONLY: bool>(
         &mut self,
-        board: &Board,
+        board: &mut Board,
     ) -> Option<EncodedMove> {
         let next = match self.state {
             GenerationState::TTMove => {
@@ -138,7 +138,7 @@ impl MovePicker {
         next
     }
 
-    pub fn next(&mut self, board: &Board) -> Option<EncodedMove> {
+    pub fn next(&mut self, board: &mut Board) -> Option<EncodedMove> {
         let next = match self.state {
             GenerationState::TTMove => {
                 self.state = GenerationState::Captures;

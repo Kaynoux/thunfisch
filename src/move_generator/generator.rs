@@ -76,7 +76,9 @@ impl Board {
         moves
     }
 
-    pub fn generate_moves<const CAPTURES: bool>(&self) -> ArrayVec<EncodedMove, MAX_MOVES_COUNT> {
+    pub fn generate_moves<const CAPTURES: bool>(
+        &mut self,
+    ) -> ArrayVec<EncodedMove, MAX_MOVES_COUNT> {
         let friendly = self.current_color();
         let mut moves = ArrayVec::<EncodedMove, MAX_MOVES_COUNT>::new();
 
