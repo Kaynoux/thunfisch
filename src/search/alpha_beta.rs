@@ -261,7 +261,7 @@ pub fn alpha_beta(
             }
         }
     } else {
-        let mut moves = board.generate_moves::<false>();
+        let mut moves = board.generate_moves_legacy::<false>();
 
         // returns the mate score (very low) when in check but adds the ply to give a later check a better eval because the depth is lowers the further you go
         if moves.is_empty() {
