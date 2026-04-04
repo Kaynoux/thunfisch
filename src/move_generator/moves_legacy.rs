@@ -458,12 +458,12 @@ pub fn generate_castle_moves(
     moves: &mut ArrayVec<EncodedMove, MAX_MOVES_COUNT>,
     check_counter: usize,
     friendly: Color,
-    board: &Board,
+    board: &mut Board,
 ) {
     if check_counter != 0 {
         return;
     }
-    let attackmask = masks::calculate_attackmask(board, board.occupied(), !friendly, None);
+    let attackmask = board.get_attackmask();
     let occupied = board.occupied();
     match friendly {
         White => {

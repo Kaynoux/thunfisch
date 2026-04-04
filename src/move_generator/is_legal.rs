@@ -39,7 +39,7 @@ impl DecodedMove {
 
 impl Board {
     /// Checks whether `mv` is legal on `self`.
-    pub fn is_legal(&self, mv: &DecodedMove) -> bool {
+    pub fn is_legal(&mut self, mv: &DecodedMove) -> bool {
         let to_bit = mv.to.to_bit();
         let from_bit = mv.from.to_bit();
         let mv_direction = mv.move_direction();
@@ -97,7 +97,7 @@ impl Board {
 
         // Is the piece even allowed to move there?
         let opponents = self.color_bbs_without_king(!self.current_color());
-        let attackmask = calculate_attackmask(self, self.occupied(), !self.current_color(), None);
+        let attackmask = self.get_attackmask();
         let empty_or_opponent = opponents | self.empty();
 
         if !match from_figure.piece() {
@@ -168,9 +168,9 @@ impl Board {
 
     /// Calculate whether castling to `side` is legal. for the given color.
     /// If MoveType is not a castling move this returns false.
-    fn is_castling_legal(&self, friendly: Color, side: MoveType) -> bool {
+    fn is_castling_legal(&mut self, friendly: Color, side: MoveType) -> bool {
         let occupied = self.occupied();
-        let attackmask = calculate_attackmask(self, occupied, !friendly, None);
+        let attackmask = self.get_attackmask();
         match friendly {
             White => {
                 const NEED_TO_BE_EMPTY_QUEEN: Bitboard = Bitboard::from_idx([1, 2, 3]);
