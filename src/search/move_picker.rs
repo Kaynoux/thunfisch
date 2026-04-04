@@ -194,7 +194,6 @@ impl MovePicker {
 
 #[cfg(test)]
 mod perft_test_move_picker {
-    use std::collections::HashSet;
 
     use super::*;
 
