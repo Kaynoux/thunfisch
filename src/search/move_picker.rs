@@ -37,23 +37,32 @@ impl MovePicker {
 
     // TODO deal with double checks maybe?
     // I mean they should be handled correctly
-    pub fn next<const SPECIAL_MOVES_ONLY: bool>(&mut self, board: &Board) -> Option<EncodedMove> {
-        match self.state {
+    pub fn next_old<const SPECIAL_MOVES_ONLY: bool>(
+        &mut self,
+        board: &Board,
+    ) -> Option<EncodedMove> {
+        let next = match self.state {
             GenerationState::TTMove => {
-                if settings::ORDER_TT_MV_FIRST {
-                    if let Some(tt_move) = self.tt_move {
-                        if board.is_legal(&tt_move.decode()) {
-                            self.state = GenerationState::Captures;
-                            return self.tt_move;
-                        }
-                    }
-                }
                 self.state = GenerationState::Captures;
-                return self.next::<SPECIAL_MOVES_ONLY>(board);
+                if settings::ORDER_TT_MV_FIRST
+                    && let Some(tt_move) = self.tt_move
+                    && board.is_legal(&tt_move.decode())
+                {
+                    self.tt_move
+                } else {
+                    self.next::<SPECIAL_MOVES_ONLY>(board)
+                }
             }
             GenerationState::Captures => {
                 let mut capture_moves = board.generate_moves::<true>();
-                let tt_move_occurred = mvv_lva(&mut capture_moves, &board, self.tt_move);
+
+                if let Some(tt_move) = self.tt_move {
+                    if let Some(pos) = capture_moves.iter().position(|&m| m == tt_move) {
+                        capture_moves.swap_remove(pos);
+                    }
+                }
+
+                mvv_lva(&mut capture_moves, &board);
 
                 // let mut seen = std::collections::HashSet::new();
                 // for mv in &capture_moves {
@@ -66,28 +75,25 @@ impl MovePicker {
                 // }
 
                 self.next_moves.extend(capture_moves);
-                // yeet the tt move if it was part of the captured move, we don't want to try it twice
-                if tt_move_occurred {
-                    _ = self.next_moves.pop_front();
-                }
+
                 self.state = GenerationState::YieldCaptures;
-                return self.next::<SPECIAL_MOVES_ONLY>(board);
+                self.next::<SPECIAL_MOVES_ONLY>(board)
             }
             GenerationState::YieldCaptures => self.next_moves.pop_front().or_else(|| {
                 self.state = GenerationState::Killer;
                 self.next::<SPECIAL_MOVES_ONLY>(board)
             }),
             GenerationState::Killer => {
-                if settings::KILLERS {
-                    if let Some(killer) = self.killer_mv {
-                        if board.is_legal(&killer.decode()) {
-                            self.state = GenerationState::Quiets;
-                            return self.killer_mv;
-                        }
-                    }
+                if settings::KILLERS
+                    && let Some(killer) = self.killer_mv
+                    && board.is_legal(&killer.decode())
+                {
+                    self.state = GenerationState::Quiets;
+                    self.killer_mv
+                } else {
+                    self.state = GenerationState::Quiets;
+                    self.next::<SPECIAL_MOVES_ONLY>(board)
                 }
-                self.state = GenerationState::Quiets;
-                self.next::<SPECIAL_MOVES_ONLY>(board)
             }
             GenerationState::Quiets => {
                 let quiet_moves = board.generate_moves::<false>();
@@ -107,13 +113,13 @@ impl MovePicker {
 
                 self.next_moves.extend(quiet_moves);
                 self.state = GenerationState::YieldQuiets;
-                return self.next::<SPECIAL_MOVES_ONLY>(board);
+                self.next::<SPECIAL_MOVES_ONLY>(board)
             }
             GenerationState::YieldQuiets => self
                 .next_moves
                 .pop_front()
                 .and_then(|mv| {
-                    if Some(mv) == self.killer_mv {
+                    if Some(mv) == self.killer_mv || Some(mv) == self.tt_move {
                         self.next::<SPECIAL_MOVES_ONLY>(board)
                     } else {
                         Some(mv)
@@ -124,7 +130,65 @@ impl MovePicker {
                     None
                 }),
             GenerationState::Done => None,
+        };
+
+        if let Some(mv) = next {
+            debug_assert_ne!(board.figures(mv.decode().from), Figure::Empty);
         }
+        next
+    }
+
+    pub fn next<const CAPTURES: bool>(&mut self, board: &Board) -> Option<EncodedMove> {
+        let next = match self.state {
+            GenerationState::TTMove => {
+                self.state = GenerationState::Captures;
+                if settings::ORDER_TT_MV_FIRST
+                    && let Some(tt_move) = self.tt_move
+                    && board.is_legal(&tt_move.decode())
+                {
+                    self.tt_move
+                } else {
+                    self.next::<CAPTURES>(board)
+                }
+            }
+            GenerationState::Captures => {
+                let mut captures = board.generate_moves::<true>();
+                if let Some(tt_move) = self.tt_move
+                    && let Some(pos) = captures.iter().position(|&m| m == tt_move)
+                {
+                    captures.remove(pos);
+                }
+                mvv_lva(&mut captures, &board);
+                self.next_moves.extend(captures);
+                self.state = GenerationState::YieldCaptures;
+                self.next::<CAPTURES>(board)
+            }
+            GenerationState::YieldCaptures => self.next_moves.pop_front().or_else(|| {
+                self.state = GenerationState::Quiets;
+                self.next::<CAPTURES>(board)
+            }),
+
+            GenerationState::Quiets => {
+                self.next_moves.extend(board.generate_moves::<false>());
+                if let Some(tt_move) = self.tt_move
+                    && let Some(pos) = self.next_moves.iter().position(|&m| m == tt_move)
+                {
+                    self.next_moves.remove(pos);
+                }
+                self.state = GenerationState::YieldQuiets;
+                self.next::<CAPTURES>(board)
+            }
+
+            GenerationState::YieldQuiets => self.next_moves.pop_front().or_else(|| {
+                self.state = GenerationState::Done;
+                self.next::<CAPTURES>(board)
+            }),
+
+            GenerationState::Done => None,
+            _ => None,
+        };
+
+        next
     }
 }
 
@@ -187,22 +251,22 @@ mod perft_test_move_picker {
         // while let Some(next) = mvp.next::<false>(board) {
         //     moves.push(next);
         // }
-        let mut visited: HashSet<EncodedMove> = HashSet::new();
+        // let mut visited: HashSet<EncodedMove> = HashSet::new();
         while let Some(mv) = mvp.next::<false>(board) {
             // if !correct_moves.contains(&mv) {
             //     println!("fen: {}", board.generate_fen());
             //     println!("{:?}", mv.decode().to_coords());
             //     assert!(false, "move wrongly generated");
             // }
-            if visited.contains(&mv) {
-                println!("fen: {}", board.generate_fen());
-                println!("{:?}", mv.decode().to_coords());
-                assert!(false, "move visited twice FUCK");
-            }
+            // if visited.contains(&mv) {
+            //     println!("fen: {}", board.generate_fen());
+            //     println!("{:?}", mv.decode().to_coords());
+            //     assert!(false, "move visited twice FUCK");
+            // }
             board.make_move(&mv.decode());
             nodes += move_picker_r_perft(board, depth - 1);
             board.unmake_move();
-            visited.insert(mv);
+            // visited.insert(mv);
         }
         nodes
     }

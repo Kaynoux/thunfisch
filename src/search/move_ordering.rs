@@ -42,6 +42,12 @@ pub fn order_moves(
                 MoveType::Capture => {
                     let attacker_idx = (board.figures(mv.from) as usize) / 2;
                     let victim_idx = (board.figures(mv.to) as usize) / 2;
+                    // println!(
+                    //     "{:?} {:?} {:?}",
+                    //     encoded_mv,
+                    //     board.figures(mv.from),
+                    //     board.figures(mv.to)
+                    // );
                     MVV_LVA_TABLE[attacker_idx][victim_idx] + CAPTURE_BONUS
                 }
                 MoveType::DoubleMove => 0i32,
@@ -109,21 +115,11 @@ pub fn order_moves(
 
 /// RE-implementation of order_moves above, which reverts it back to ONLY doing MVV_LVA.
 /// Returns: true if the TT move is sorted first, false if the TT move wasn't in `moves` (necessary to avoid yielding the TT move twice in the move picker)
-pub fn mvv_lva(
-    moves: &mut ArrayVec<EncodedMove, MAX_MOVES_COUNT>,
-    board: &Board,
-    tt_mv: Option<EncodedMove>,
-) -> bool {
+pub fn mvv_lva(moves: &mut ArrayVec<EncodedMove, MAX_MOVES_COUNT>, board: &Board) {
     if !settings::MVV_LVA {
-        return false;
+        return;
     }
-    let mut tt_move_occurred = false;
     moves.sort_unstable_by_key(|encoded_mv| {
-        // give highest score if mv is the tt mv
-        if Some(*encoded_mv) == tt_mv {
-            tt_move_occurred = true;
-            return Reverse(i32::MAX);
-        }
         let mv = encoded_mv.decode();
         let mv_type = mv.mv_type;
         let score = match mv_type {
@@ -137,6 +133,14 @@ pub fn mvv_lva(
             MoveType::Capture => {
                 let attacker_idx = (board.figures(mv.from) as usize) / 2;
                 let victim_idx = (board.figures(mv.to) as usize) / 2;
+
+                if board.figures(mv.from) == Figure::Empty {
+                    panic!("Found a Capture move on an Empty square! Move: {:?} Board:\n{}", mv.encode(), board.generate_fen());
+                }
+                if board.figures(mv.to) == Figure::Empty {
+                    panic!("Found a Capture move with an Empty piece as attacker! Move: {:?} Board:\n{}", mv.encode(), board.generate_fen());
+                }
+
                 MVV_LVA_TABLE[attacker_idx][victim_idx] + CAPTURE_BONUS
             }
             MoveType::DoubleMove => 0i32,
@@ -183,7 +187,6 @@ pub fn mvv_lva(
         // sort descending by highest value first
         Reverse(score)
     });
-    return tt_move_occurred;
 }
 
 #[cfg(test)]

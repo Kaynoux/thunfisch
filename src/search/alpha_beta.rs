@@ -168,6 +168,7 @@ pub fn alpha_beta(
     let mut movepicker = MovePicker::new(tt_move, killer_mv);
     let mut first_move = true;
 
+    let initial_hash = board.hash();
     while let Some(mv) = movepicker.next::<false>(board) {
         // cancels search if time is over
         if stop.load(Ordering::Relaxed) {
@@ -249,6 +250,12 @@ pub fn alpha_beta(
         }
 
         first_move = false;
+        debug_assert_eq!(
+            initial_hash,
+            board.hash(),
+            "Hash mismatch after unmake of {:?}",
+            mv
+        );
     }
 
     // When first_move still true than no move found
@@ -262,7 +269,7 @@ pub fn alpha_beta(
     }
     //END NEW
 
-    // // BEGIN LEGACY
+    // BEGIN LEGACY
     // let mut moves = board.generate_moves::<false>();
 
     // // returns the mate score (very low) when in check but adds the ply to give a later check a better eval because the depth is lowers the further you go
@@ -361,7 +368,7 @@ pub fn alpha_beta(
     //     }
     // }
 
-    // // END LEGACY
+    // END LEGACY
 
     let bound = if best_eval >= beta {
         Bound::Lower
