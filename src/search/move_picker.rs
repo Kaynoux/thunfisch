@@ -50,7 +50,7 @@ impl MovePicker {
                 {
                     self.tt_move
                 } else {
-                    self.next::<SPECIAL_MOVES_ONLY>(board)
+                    self.next(board)
                 }
             }
             GenerationState::Captures => {
@@ -77,11 +77,11 @@ impl MovePicker {
                 self.next_moves.extend(capture_moves);
 
                 self.state = GenerationState::YieldCaptures;
-                self.next::<SPECIAL_MOVES_ONLY>(board)
+                self.next(board)
             }
             GenerationState::YieldCaptures => self.next_moves.pop_front().or_else(|| {
                 self.state = GenerationState::Killer;
-                self.next::<SPECIAL_MOVES_ONLY>(board)
+                self.next(board)
             }),
             GenerationState::Killer => {
                 if settings::KILLERS
@@ -92,7 +92,7 @@ impl MovePicker {
                     self.killer_mv
                 } else {
                     self.state = GenerationState::Quiets;
-                    self.next::<SPECIAL_MOVES_ONLY>(board)
+                    self.next(board)
                 }
             }
             GenerationState::Quiets => {
@@ -113,14 +113,14 @@ impl MovePicker {
 
                 self.next_moves.extend(quiet_moves);
                 self.state = GenerationState::YieldQuiets;
-                self.next::<SPECIAL_MOVES_ONLY>(board)
+                self.next(board)
             }
             GenerationState::YieldQuiets => self
                 .next_moves
                 .pop_front()
                 .and_then(|mv| {
                     if Some(mv) == self.killer_mv || Some(mv) == self.tt_move {
-                        self.next::<SPECIAL_MOVES_ONLY>(board)
+                        self.next(board)
                     } else {
                         Some(mv)
                     }
@@ -138,7 +138,7 @@ impl MovePicker {
         next
     }
 
-    pub fn next<const CAPTURES: bool>(&mut self, board: &Board) -> Option<EncodedMove> {
+    pub fn next(&mut self, board: &Board) -> Option<EncodedMove> {
         let next = match self.state {
             GenerationState::TTMove => {
                 self.state = GenerationState::Captures;
@@ -148,7 +148,7 @@ impl MovePicker {
                 {
                     self.tt_move
                 } else {
-                    self.next::<CAPTURES>(board)
+                    self.next(board)
                 }
             }
             GenerationState::Captures => {
@@ -161,13 +161,25 @@ impl MovePicker {
                 mvv_lva(&mut captures, &board);
                 self.next_moves.extend(captures);
                 self.state = GenerationState::YieldCaptures;
-                self.next::<CAPTURES>(board)
+                self.next(board)
             }
             GenerationState::YieldCaptures => self.next_moves.pop_front().or_else(|| {
-                self.state = GenerationState::Quiets;
-                self.next::<CAPTURES>(board)
+                self.state = GenerationState::Killer;
+                self.next(board)
             }),
-
+            GenerationState::Killer => {
+                if settings::KILLERS
+                    && let Some(killer) = self.killer_mv
+                    && self.killer_mv == self.tt_move
+                    && board.is_legal(&killer.decode())
+                {
+                    self.state = GenerationState::Quiets;
+                    self.killer_mv
+                } else {
+                    self.state = GenerationState::Quiets;
+                    self.next(board)
+                }
+            }
             GenerationState::Quiets => {
                 self.next_moves.extend(board.generate_moves::<false>());
                 if let Some(tt_move) = self.tt_move
@@ -176,16 +188,15 @@ impl MovePicker {
                     self.next_moves.remove(pos);
                 }
                 self.state = GenerationState::YieldQuiets;
-                self.next::<CAPTURES>(board)
+                self.next(board)
             }
 
             GenerationState::YieldQuiets => self.next_moves.pop_front().or_else(|| {
                 self.state = GenerationState::Done;
-                self.next::<CAPTURES>(board)
+                self.next(board)
             }),
 
             GenerationState::Done => None,
-            _ => None,
         };
 
         next
@@ -251,7 +262,7 @@ mod perft_test_move_picker {
         //     moves.push(next);
         // }
         // let mut visited: HashSet<EncodedMove> = HashSet::new();
-        while let Some(mv) = mvp.next::<false>(board) {
+        while let Some(mv) = mvp.next(board) {
             // if !correct_moves.contains(&mv) {
             //     println!("fen: {}", board.generate_fen());
             //     println!("{:?}", mv.decode().to_coords());
