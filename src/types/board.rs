@@ -1,4 +1,11 @@
-use crate::{prelude::*, types::unmake_info::UnmakeInfo, utils::zobrist};
+use crate::{
+    move_generator::{masks, pinmask},
+    prelude::*,
+    types::unmake_info::UnmakeInfo,
+    utils::zobrist,
+};
+
+const UNSET_CHECK_COUNTER: usize = 100;
 
 /// Represents the global game state
 #[derive(Clone)]
@@ -30,6 +37,11 @@ pub struct Board {
     unmake_info_stack: Vec<UnmakeInfo>,
     repetition_stack: Vec<u64>,
     hash: u64,
+    attackmask: Bitboard,
+    checkmask: Bitboard,
+    check_counter: usize,
+    hv_pinmask: Bitboard,
+    diag_pinmask: Bitboard,
 }
 
 impl Board {
@@ -64,6 +76,11 @@ impl Board {
         unmake_info_stack: Vec::new(),
         repetition_stack: Vec::new(),
         hash: 0,
+        attackmask: Bitboard::UNSET_ATTACK_MASK, // can never be full so unset value
+        checkmask: Bitboard::UNSET_CHECK_MASK,   // can never be empty so unset value
+        check_counter: UNSET_CHECK_COUNTER,      // unset value
+        hv_pinmask: Bitboard::UNSET_PINMASK,     // can never be full so unset value
+        diag_pinmask: Bitboard::UNSET_PINMASK,   // can never be full so unset value
     };
 
     #[inline(always)]
@@ -238,6 +255,7 @@ impl Board {
     }
 
     pub fn push_unmake_info_stack(&mut self, mv: EncodedMove, to_figure: Figure) {
+        let (hv_pinmask, diag_pinmask) = self.get_pinmasks();
         self.unmake_info_stack.push(UnmakeInfo {
             mv: mv,
             white_queen_castle: self.white_queen_castle(),
@@ -248,6 +266,11 @@ impl Board {
             ep_target: self.ep_target(),
             halfmove_clock: self.halfmove_clock(),
             hash: self.hash,
+            attackmask: self.get_attackmask_without_gen(),
+            checkmask: self.get_checkmask_without_gen(),
+            check_counter: self.get_check_counter_without_gen(),
+            hv_pinmask: hv_pinmask,
+            diag_pinmask: diag_pinmask,
         });
 
         // capture seems wrong at first because if ep than the target piece is a pawn
@@ -389,6 +412,69 @@ impl Board {
         }
         hash
     }
+
+    pub fn set_attackmask(&mut self, attackmask: Bitboard) {
+        self.attackmask = attackmask;
+    }
+
+    pub fn set_checkmask(&mut self, checkmask: Bitboard, check_counter: usize) {
+        self.checkmask = checkmask;
+        self.check_counter = check_counter;
+    }
+
+    pub fn set_pinmasks(&mut self, hv_pinmask: Bitboard, diag_pinmask: Bitboard) {
+        self.hv_pinmask = hv_pinmask;
+        self.diag_pinmask = diag_pinmask;
+    }
+
+    pub fn get_attackmask(&mut self) -> Bitboard {
+        if self.check_counter == UNSET_CHECK_COUNTER {
+            let attackmask =
+                masks::calculate_attackmask(self, self.occupied(), !self.current_color(), None);
+            self.set_attackmask(attackmask);
+        }
+        self.attackmask
+    }
+
+    pub fn get_checkmask(&mut self) -> Bitboard {
+        if self.check_counter == UNSET_CHECK_COUNTER {
+            let (checkmask, check_counter) = masks::calc_check_mask(self);
+            self.set_checkmask(checkmask, check_counter);
+        }
+        self.checkmask
+    }
+
+    pub fn get_check_counter(&mut self) -> usize {
+        if self.check_counter == UNSET_CHECK_COUNTER {
+            let (checkmask, check_counter) = masks::calc_check_mask(self);
+            self.set_checkmask(checkmask, check_counter);
+        }
+        self.check_counter
+    }
+
+    pub fn get_pinmasks(&mut self) -> (Bitboard, Bitboard) {
+        if self.hv_pinmask == Bitboard::UNSET_PINMASK {
+            let (hv_pinmask, diag_pinmask) = pinmask::generate_pin_masks(self);
+            self.set_pinmasks(hv_pinmask, diag_pinmask);
+        }
+        (self.hv_pinmask, self.diag_pinmask)
+    }
+
+    pub fn get_attackmask_without_gen(&self) -> Bitboard {
+        self.attackmask
+    }
+
+    pub fn get_checkmask_without_gen(&self) -> Bitboard {
+        self.checkmask
+    }
+
+    pub fn get_check_counter_without_gen(&self) -> usize {
+        self.check_counter
+    }
+
+    pub fn get_pinmasks_without_gen(&self) -> (Bitboard, Bitboard) {
+        (self.hv_pinmask, self.diag_pinmask)
+    }
 }
 
 #[cfg(test)]
@@ -406,7 +492,8 @@ mod tests {
 
     #[test]
     fn test_is_king_pawn_endgame_false_complex_position() {
-        let board = Board::from_fen("r1b1k2r/1pqp1ppp/p2bpnn1/6Q1/2BNP3/2N1B3/PPP2PPP/2KR3R w kq - 8 12");
+        let board =
+            Board::from_fen("r1b1k2r/1pqp1ppp/p2bpnn1/6Q1/2BNP3/2N1B3/PPP2PPP/2KR3R w kq - 8 12");
         assert!(
             !board.is_king_pawn_endgame(),
             "Position with multiple pieces should return false"

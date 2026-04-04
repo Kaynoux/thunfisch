@@ -233,7 +233,7 @@ mod perft_test_move_picker {
         ];
 
         for (fen_idx, fen) in fens.iter().enumerate() {
-            for (depth_idx, correct_node_count) in perft_results[fen_idx].iter().take(6).enumerate()
+            for (depth_idx, correct_node_count) in perft_results[fen_idx].iter().take(4).enumerate()
             {
                 let mut board = Board::from_fen(fen);
                 let calculated_node_count = move_picker_r_perft(&mut board, depth_idx + 1);

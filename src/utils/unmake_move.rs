@@ -124,6 +124,9 @@ impl Board {
         }
 
         self.set_hash(prev.hash);
+        self.set_attackmask(prev.attackmask);
+        self.set_checkmask(prev.checkmask, prev.check_counter);
+        self.set_pinmasks(prev.hv_pinmask, prev.diag_pinmask);
     }
 
     pub fn unmake_null_move(&mut self) {
