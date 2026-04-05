@@ -64,6 +64,10 @@ impl MoveType {
         (*self as u16) & 0b1000_0000_0000_0000 != 0
     }
 
+    pub const fn is_capture(&self) -> bool {
+        (*self as u16) & 0b0100_0000_0000_0000 != 0
+    }
+
     pub const fn from_u16(value: u16) -> Self {
         match value {
             0b0000000000000000 => MoveType::Quiet,

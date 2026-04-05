@@ -1,3 +1,5 @@
+use rayon::current_thread_index;
+
 use crate::{
     move_generator::{
         masks::{calc_check_mask, calculate_attackmask},
@@ -38,11 +40,12 @@ impl DecodedMove {
 }
 
 impl Board {
-    /// Checks whether `mv` is legal on `self`.
-    pub fn is_legal(&mut self, mv: &DecodedMove) -> bool {
-        let to_bit = mv.to.to_bit();
-        let from_bit = mv.from.to_bit();
+    /// Assumption: Our move generation generates only legal moves but these moves can be now illegal
+    /// Does not handle castles at all atm, they are completly handled in is_legal
+    pub fn is_pseudo_legal(&self, mv: &DecodedMove) -> bool {
         let mv_direction = mv.move_direction();
+        let current_color = self.current_color();
+        let mv_type = mv.mv_type;
 
         // we don't do that here
         // Null moves are classified as teleports and thus filtered out here
@@ -52,21 +55,61 @@ impl Board {
 
         // is there even a piece? If so, is it ours?
         let from_figure = self.figures(mv.from);
-        if from_figure == Figure::Empty || from_figure.piece_and_color().1 != self.current_color() {
+        let from_piece = from_figure.piece();
+        if from_figure == Figure::Empty || from_figure.piece_and_color().1 != current_color {
             return false;
         }
 
-        // Do we capture the king?
-        if self.figures(mv.to).piece() == Piece::King {
+        // Do we capture our own piece
+        let (to_piece, to_color) = self.figures(mv.to).piece_and_color();
+        let to_is_empty = to_piece == Piece::Empty;
+
+        if to_piece != Piece::Empty && to_color == current_color {
             return false;
         }
+
+        // See if the move type is now wrong
+        // Capture move but not an capture
+        let is_capture = MoveType::is_capture(&mv_type);
+        if is_capture && to_is_empty {
+            return false;
+        }
+
+        // Not capture move but somehow capturing
+        if !is_capture && !to_is_empty {
+            return false;
+        }
+
+        // Ep or promotion but not by a pawn
+        if (mv_type == MoveType::EpCapture || MoveType::is_promotion(&mv_type))
+            && from_piece != Piece::Pawn
+        {
+            return false;
+        }
+
+        // Do we capture a king?
+        if to_piece == Piece::King {
+            return false;
+        }
+
+        return true;
+    }
+    /// Checks whether `mv` is legal on `self`.
+    pub fn is_legal(&mut self, mv: &DecodedMove) -> bool {
+        if !self.is_pseudo_legal(mv) {
+            return false;
+        }
+
+        let to_bit = mv.to.to_bit();
+        let from_bit = mv.from.to_bit();
+        let from_figure = self.figures(mv.from);
 
         //calculating here to avoid recalculation costs
         let rook_targets = get_rook_targets(mv.from, self.occupied());
         let bishop_targets = get_bishop_targets(mv.from, self.occupied());
 
         // are we pinned? if so, do we move off the pin?
-        let (hv_pinmask, diag_pinmask) = generate_pin_masks(self);
+        let (hv_pinmask, diag_pinmask) = self.get_pinmasks();
         let move_direction = mv.move_direction();
 
         if diag_pinmask.is_position_set(from_bit) {
