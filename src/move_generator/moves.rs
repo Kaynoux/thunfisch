@@ -141,10 +141,10 @@ pub fn generate_pawn_moves<const CAPTURES: bool>(
         }
     }
 
-    if !CAPTURES {
-        for from_bit in pawns_promotion_not_pinned.iter_mut() {
-            let from = from_bit.to_square();
+    for from_bit in pawns_promotion_not_pinned.iter_mut() {
+        let from = from_bit.to_square();
 
+        if !CAPTURES {
             let potential_quiet_target_1 =
                 normal_targets::pawn_quiet_single_target(from_bit, friendly);
             let quiet_target_1 = potential_quiet_target_1 & empty & check_mask;
@@ -156,7 +156,9 @@ pub fn generate_pawn_moves<const CAPTURES: bool>(
                 moves.push(EncodedMove::encode(from, to_1, MoveType::BishopPromo));
                 moves.push(EncodedMove::encode(from, to_1, MoveType::KnightPromo));
             }
+        }
 
+        if CAPTURES {
             let mut capture_targets =
                 normal_targets::PAWN_ATTACK_TARGETS[friendly as usize][from] & enemy & check_mask;
             for to_bit in capture_targets.iter_mut() {
@@ -167,6 +169,9 @@ pub fn generate_pawn_moves<const CAPTURES: bool>(
                 moves.push(EncodedMove::encode(from, to, MoveType::KnightPromoCapture));
             }
         }
+    }
+
+    if !CAPTURES {
         for from_bit in pawns_promotion_hv_pinned.iter_mut() {
             let from = from_bit.to_square();
 
@@ -181,7 +186,9 @@ pub fn generate_pawn_moves<const CAPTURES: bool>(
                 moves.push(EncodedMove::encode(from, to_1, MoveType::KnightPromo));
             }
         }
+    }
 
+    if CAPTURES {
         for from_bit in pawns_promotion_diag_pinned.iter_mut() {
             let from = from_bit.to_square();
             let mut capture_targets = normal_targets::PAWN_ATTACK_TARGETS[friendly as usize][from]

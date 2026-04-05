@@ -165,10 +165,11 @@ pub fn alpha_beta(
             .and_then(|&mv| if mv == EncodedMove(0) { None } else { Some(mv) });
 
         let mut movepicker = MovePicker::new(tt_move, killer_mv);
-        let mut first_move = true;
+        let mut i = 0;
 
         // let initial_hash = board.hash();
         while let Some(mv) = movepicker.next(board) {
+            i += 1;
             // cancels search if time is over
             if stop.load(Ordering::Relaxed) {
                 search_info.timeout_occurred.store(true, Ordering::Relaxed);
@@ -176,7 +177,7 @@ pub fn alpha_beta(
             }
             board.make_move(&mv.decode());
             let mut eval;
-            if first_move || !settings::PVS {
+            if i == 1 || !settings::PVS {
                 // Principal Variation Search
                 // We assume that the first move from the move ordering is the PV move;
                 // Since the TT move, if existant, is in first place anyway this automatically includes information from shallower search depths
@@ -247,13 +248,11 @@ pub fn alpha_beta(
                     }
                 }
             }
-
-            first_move = false;
         }
 
-        // When first_move still true than no move found
+        // When i still 0 than no move found
         // returns the mate score (very low) when in check but adds the ply to give a later check a better eval because the depth is lowers the further you go
-        if first_move {
+        if i == 0 {
             if board.is_in_check() {
                 return -MATE_SCORE + (ply as i32);
             } else {

@@ -86,6 +86,7 @@ impl MovePicker {
             GenerationState::Killer => {
                 if settings::KILLERS
                     && let Some(killer) = self.killer_mv
+                    && self.killer_mv != self.tt_move
                     && board.is_legal(&killer.decode())
                 {
                     self.state = GenerationState::Quiets;
@@ -168,33 +169,38 @@ impl MovePicker {
                 self.next(board)
             }),
             GenerationState::Killer => {
+                self.state = GenerationState::Quiets;
                 if settings::KILLERS
                     && let Some(killer) = self.killer_mv
-                    && self.killer_mv == self.tt_move
+                    && self.killer_mv != self.tt_move
                     && board.is_legal(&killer.decode())
                 {
-                    self.state = GenerationState::Quiets;
                     self.killer_mv
                 } else {
-                    self.state = GenerationState::Quiets;
                     self.next(board)
                 }
             }
             GenerationState::Quiets => {
                 self.next_moves.extend(board.generate_moves::<false>());
-                if let Some(tt_move) = self.tt_move
-                    && let Some(pos) = self.next_moves.iter().position(|&m| m == tt_move)
-                {
-                    self.next_moves.remove(pos);
-                }
                 self.state = GenerationState::YieldQuiets;
                 self.next(board)
             }
 
-            GenerationState::YieldQuiets => self.next_moves.pop_front().or_else(|| {
-                self.state = GenerationState::Done;
-                self.next(board)
-            }),
+            GenerationState::YieldQuiets => {
+                if let Some(mv) = self.next_moves.pop_front() {
+                    if Some(mv) == self.killer_mv || Some(mv) == self.tt_move {
+                        // Recursive call to find the next valid move
+                        self.next(board)
+                    } else {
+                        // Found a valid quiet move
+                        Some(mv)
+                    }
+                } else {
+                    // No more quiet moves, transition to Done and exit
+                    self.state = GenerationState::Done;
+                    self.next(board)
+                }
+            }
 
             GenerationState::Done => None,
         };
