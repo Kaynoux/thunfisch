@@ -137,7 +137,17 @@ impl Board {
 
         // Is the piece even allowed to move there?
         let opponents = self.color_bbs_without_king(!self.current_color());
-        let attackmask = self.get_attackmask();
+        let attackmask = if from_figure.piece() == Piece::King {
+            let occupied_without_king = self.occupied() & !from_bit;
+            crate::move_generator::masks::calculate_attackmask(
+                self,
+                occupied_without_king,
+                !self.current_color(),
+                None,
+            )
+        } else {
+            self.get_attackmask()
+        };
         let empty_or_opponent = opponents | self.empty();
 
         if !match from_figure.piece() {
