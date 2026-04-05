@@ -103,8 +103,14 @@ pub fn quiescence_search(
     let mut best_move: Option<EncodedMove> = None;
 
     if settings::MOVE_PICKER {
-        let mut movepicker = MovePicker::new(tt_move, None, true);
         let mut i = 0;
+
+        let mut movepicker =
+            if board.is_in_check() && (ply - ab_ply) < settings::QS_CHECK_EVASION_LIMIT {
+                MovePicker::new(tt_move, None, false)
+            } else {
+                MovePicker::new(tt_move, None, true)
+            };
 
         // let initial_hash = board.hash();
         while let Some(mv) = movepicker.next(board) {
