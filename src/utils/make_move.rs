@@ -126,6 +126,9 @@ impl Board {
         self.toggle_current_color();
         self.increase_halfmove_clock();
         self.set_total_halfmove_counter(self.total_halfmove_counter() + 1);
+        self.set_attackmask(Bitboard::UNSET_ATTACK_MASK);
+        self.set_checkmask(Bitboard::UNSET_CHECK_MASK, UNSET_CHECK_COUNTER);
+        self.set_pinmasks(Bitboard::UNSET_PINMASK, Bitboard::UNSET_PINMASK);
     }
 }
 

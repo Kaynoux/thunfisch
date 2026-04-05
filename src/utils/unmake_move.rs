@@ -143,6 +143,9 @@ impl Board {
         self.set_total_halfmove_counter(self.total_halfmove_counter() - 1);
         self.set_halfmove_clock(prev.halfmove_clock);
         self.set_ep_target(prev.ep_target);
+        self.set_attackmask(prev.attackmask);
+        self.set_checkmask(prev.checkmask, prev.check_counter);
+        self.set_pinmasks(prev.hv_pinmask, prev.diag_pinmask);
     }
 }
 
