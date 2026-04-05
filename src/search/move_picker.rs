@@ -161,7 +161,9 @@ impl MovePicker {
             // Should we skip this move?
             let best_move = remaining[0].mv;
             self.move_index += 1;
-            if Some(best_move) == self.tt_move || Some(best_move) == self.killer_mv {
+            if (settings::ORDER_TT_MV_FIRST && Some(best_move) == self.tt_move)
+                || (settings::KILLERS && Some(best_move) == self.killer_mv)
+            {
                 continue;
             }
 
