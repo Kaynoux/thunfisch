@@ -7,7 +7,7 @@ use crate::search::move_picker::MoveList;
 
 // Approach for legal move generation is inspired by https://www.codeproject.com/Articles/5313417/Worlds-fastest-Bitboard-Chess-Movegenerator
 
-pub fn generate_pawn_moves<const CAPTURES: bool>(
+pub fn generate_pawn_moves<const QUIETS: bool>(
     moves: &mut MoveList,
     board: &Board,
     friendly: Color,
@@ -46,7 +46,7 @@ pub fn generate_pawn_moves<const CAPTURES: bool>(
     for from_bit in pawns_not_pinned.iter_mut() {
         let from = from_bit.to_square();
 
-        if !CAPTURES {
+        if QUIETS {
             let potential_quiet_target_1 =
                 normal_targets::pawn_quiet_single_target(from_bit, friendly);
             let quiet_target_1 = potential_quiet_target_1 & empty & check_mask;
@@ -60,7 +60,7 @@ pub fn generate_pawn_moves<const CAPTURES: bool>(
             }
         }
 
-        if CAPTURES {
+        if !QUIETS {
             let mut capture_targets =
                 normal_targets::PAWN_ATTACK_TARGETS[friendly as usize][from] & enemy & check_mask;
             for to_bit in capture_targets.iter_mut() {
@@ -70,7 +70,7 @@ pub fn generate_pawn_moves<const CAPTURES: bool>(
         }
     }
 
-    if !CAPTURES {
+    if QUIETS {
         for from_bit in pawns_hv_pinned.iter_mut() {
             let from = from_bit.to_square();
 
@@ -87,7 +87,7 @@ pub fn generate_pawn_moves<const CAPTURES: bool>(
         }
     }
 
-    if CAPTURES {
+    if !QUIETS {
         for from_bit in pawns_diag_pinned.iter_mut() {
             let from = from_bit.to_square();
             let mut capture_targets = normal_targets::PAWN_ATTACK_TARGETS[friendly as usize][from]
@@ -101,7 +101,7 @@ pub fn generate_pawn_moves<const CAPTURES: bool>(
         }
     }
 
-    if !CAPTURES {
+    if QUIETS {
         for from_bit in pawns_double_not_pinned.iter_mut() {
             let from = from_bit.to_square();
 
@@ -120,7 +120,7 @@ pub fn generate_pawn_moves<const CAPTURES: bool>(
         }
     }
 
-    if !CAPTURES {
+    if QUIETS {
         for from_bit in pawns_double_hv_pinned.iter_mut() {
             let from = from_bit.to_square();
 
@@ -144,7 +144,7 @@ pub fn generate_pawn_moves<const CAPTURES: bool>(
     for from_bit in pawns_promotion_not_pinned.iter_mut() {
         let from = from_bit.to_square();
 
-        if !CAPTURES {
+        if !QUIETS {
             let potential_quiet_target_1 =
                 normal_targets::pawn_quiet_single_target(from_bit, friendly);
             let quiet_target_1 = potential_quiet_target_1 & empty & check_mask;
@@ -158,7 +158,7 @@ pub fn generate_pawn_moves<const CAPTURES: bool>(
             }
         }
 
-        if CAPTURES {
+        if !QUIETS {
             let mut capture_targets =
                 normal_targets::PAWN_ATTACK_TARGETS[friendly as usize][from] & enemy & check_mask;
             for to_bit in capture_targets.iter_mut() {
@@ -171,7 +171,7 @@ pub fn generate_pawn_moves<const CAPTURES: bool>(
         }
     }
 
-    if !CAPTURES {
+    if !QUIETS {
         for from_bit in pawns_promotion_hv_pinned.iter_mut() {
             let from = from_bit.to_square();
 
@@ -188,7 +188,7 @@ pub fn generate_pawn_moves<const CAPTURES: bool>(
         }
     }
 
-    if CAPTURES {
+    if !QUIETS {
         for from_bit in pawns_promotion_diag_pinned.iter_mut() {
             let from = from_bit.to_square();
             let mut capture_targets = normal_targets::PAWN_ATTACK_TARGETS[friendly as usize][from]
@@ -206,7 +206,7 @@ pub fn generate_pawn_moves<const CAPTURES: bool>(
     }
 }
 
-pub fn generate_knight_moves<const CAPTURES: bool>(
+pub fn generate_knight_moves<const QUIETS: bool>(
     moves: &mut MoveList,
     pinmask: Bitboard,
     friendly: Color,
@@ -223,7 +223,7 @@ pub fn generate_knight_moves<const CAPTURES: bool>(
         let potential_targets = normal_targets::KNIGHT_TARGETS[from.i()];
         let targets = potential_targets & check_mask;
 
-        if !CAPTURES {
+        if QUIETS {
             let mut quiet_targets = targets & board.empty();
             for to_bit in quiet_targets.iter_mut() {
                 let to = to_bit.to_square();
@@ -231,7 +231,7 @@ pub fn generate_knight_moves<const CAPTURES: bool>(
             }
         }
 
-        if CAPTURES {
+        if !QUIETS {
             let mut capture_targets = targets & board.color_bbs_without_king(!friendly);
             for to_bit in capture_targets.iter_mut() {
                 let to = to_bit.to_square();
@@ -241,7 +241,7 @@ pub fn generate_knight_moves<const CAPTURES: bool>(
     }
 }
 
-pub fn generate_bishop_moves<const CAPTURES: bool>(
+pub fn generate_bishop_moves<const QUIETS: bool>(
     moves: &mut MoveList,
     hv_pinmask: Bitboard,
     diag_pinmask: Bitboard,
@@ -263,7 +263,7 @@ pub fn generate_bishop_moves<const CAPTURES: bool>(
         let potential_targets = sliding_targets::get_bishop_targets(from, occupied);
         let targets = potential_targets & check_mask;
 
-        if !CAPTURES {
+        if QUIETS {
             let mut quiet_targets = targets & empty;
             for to_bit in quiet_targets.iter_mut() {
                 let to = to_bit.to_square();
@@ -271,7 +271,7 @@ pub fn generate_bishop_moves<const CAPTURES: bool>(
             }
         }
 
-        if CAPTURES {
+        if !QUIETS {
             let mut capture_targets = targets & enemy;
             for to_bit in capture_targets.iter_mut() {
                 let to = to_bit.to_square();
@@ -285,7 +285,7 @@ pub fn generate_bishop_moves<const CAPTURES: bool>(
         let potential_targets = sliding_targets::get_bishop_targets(from, occupied);
         let targets = potential_targets & check_mask & diag_pinmask;
 
-        if !CAPTURES {
+        if QUIETS {
             let mut quiet_targets = targets & empty;
             for to_bit in quiet_targets.iter_mut() {
                 let to = to_bit.to_square();
@@ -293,7 +293,7 @@ pub fn generate_bishop_moves<const CAPTURES: bool>(
             }
         }
 
-        if CAPTURES {
+        if !QUIETS {
             let mut capture_targets = targets & enemy;
             for to_bit in capture_targets.iter_mut() {
                 let to = to_bit.to_square();
@@ -303,7 +303,7 @@ pub fn generate_bishop_moves<const CAPTURES: bool>(
     }
 }
 
-pub fn generate_rook_moves<const CAPTURES: bool>(
+pub fn generate_rook_moves<const QUIETS: bool>(
     moves: &mut MoveList,
     hv_pinmask: Bitboard,
     diag_pinmask: Bitboard,
@@ -325,7 +325,7 @@ pub fn generate_rook_moves<const CAPTURES: bool>(
         let potential_targets = sliding_targets::get_rook_targets(from, occupied);
         let targets = potential_targets & check_mask;
 
-        if !CAPTURES {
+        if QUIETS {
             let mut quiet_targets = targets & empty;
             for to_bit in quiet_targets.iter_mut() {
                 let to = to_bit.to_square();
@@ -333,7 +333,7 @@ pub fn generate_rook_moves<const CAPTURES: bool>(
             }
         }
 
-        if CAPTURES {
+        if !QUIETS {
             let mut capture_targets = targets & enemy;
             for to_bit in capture_targets.iter_mut() {
                 let to = to_bit.to_square();
@@ -347,7 +347,7 @@ pub fn generate_rook_moves<const CAPTURES: bool>(
         let potential_targets = sliding_targets::get_rook_targets(from, occupied);
         let targets = potential_targets & check_mask & hv_pinmask;
 
-        if !CAPTURES {
+        if QUIETS {
             let mut quiet_targets = targets & empty;
             for to_bit in quiet_targets.iter_mut() {
                 let to = to_bit.to_square();
@@ -355,7 +355,7 @@ pub fn generate_rook_moves<const CAPTURES: bool>(
             }
         }
 
-        if CAPTURES {
+        if !QUIETS {
             let mut capture_targets = targets & enemy;
             for to_bit in capture_targets.iter_mut() {
                 let to = to_bit.to_square();
@@ -365,7 +365,7 @@ pub fn generate_rook_moves<const CAPTURES: bool>(
     }
 }
 
-pub fn generate_queen_moves<const CAPTURES: bool>(
+pub fn generate_queen_moves<const QUIETS: bool>(
     moves: &mut MoveList,
     hv_pinmask: Bitboard,
     diag_pinmask: Bitboard,
@@ -389,7 +389,7 @@ pub fn generate_queen_moves<const CAPTURES: bool>(
             | sliding_targets::get_bishop_targets(from, occupied);
         let targets = potential_targets & check_mask;
 
-        if !CAPTURES {
+        if QUIETS {
             let mut quiet_targets = targets & empty;
             for to_bit in quiet_targets.iter_mut() {
                 let to = to_bit.to_square();
@@ -397,7 +397,7 @@ pub fn generate_queen_moves<const CAPTURES: bool>(
             }
         }
 
-        if CAPTURES {
+        if !QUIETS {
             let mut capture_targets = targets & enemy;
             for to_bit in capture_targets.iter_mut() {
                 let to = to_bit.to_square();
@@ -411,7 +411,7 @@ pub fn generate_queen_moves<const CAPTURES: bool>(
         let potential_targets = sliding_targets::get_rook_targets(from, occupied);
         let targets = potential_targets & check_mask & hv_pinmask;
 
-        if !CAPTURES {
+        if QUIETS {
             let mut quiet_targets = targets & empty;
             for to_bit in quiet_targets.iter_mut() {
                 let to = to_bit.to_square();
@@ -419,7 +419,7 @@ pub fn generate_queen_moves<const CAPTURES: bool>(
             }
         }
 
-        if CAPTURES {
+        if !QUIETS {
             let mut capture_targets = targets & enemy;
             for to_bit in capture_targets.iter_mut() {
                 let to = to_bit.to_square();
@@ -433,7 +433,7 @@ pub fn generate_queen_moves<const CAPTURES: bool>(
         let potential_targets = sliding_targets::get_bishop_targets(from, occupied);
         let targets = potential_targets & check_mask & diag_pinmask;
 
-        if !CAPTURES {
+        if QUIETS {
             let mut quiet_targets = targets & empty;
             for to_bit in quiet_targets.iter_mut() {
                 let to = to_bit.to_square();
@@ -441,7 +441,7 @@ pub fn generate_queen_moves<const CAPTURES: bool>(
             }
         }
 
-        if CAPTURES {
+        if !QUIETS {
             let mut capture_targets = targets & enemy;
             for to_bit in capture_targets.iter_mut() {
                 let to = to_bit.to_square();
@@ -451,7 +451,7 @@ pub fn generate_queen_moves<const CAPTURES: bool>(
     }
 }
 
-pub fn generate_king_move<const CAPTURES: bool>(
+pub fn generate_king_move<const QUIETS: bool>(
     moves: &mut MoveList,
     friendly: Color,
     board: &Board,
@@ -464,7 +464,7 @@ pub fn generate_king_move<const CAPTURES: bool>(
     let potential_targets = normal_targets::KING_TARGETS[from.i()];
     let targets = potential_targets & !attackmask;
 
-    if !CAPTURES {
+    if QUIETS {
         let mut quiet_targets = targets & board.empty();
         for to_bit in quiet_targets.iter_mut() {
             let to = to_bit.to_square();
@@ -472,7 +472,7 @@ pub fn generate_king_move<const CAPTURES: bool>(
         }
     }
 
-    if CAPTURES {
+    if !QUIETS {
         let mut capture_targets = targets & board.color_bbs_without_king(!friendly);
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();

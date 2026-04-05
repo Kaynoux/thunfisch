@@ -52,16 +52,22 @@ pub struct MovePicker {
     move_list: MoveList,
     state: GenerationState,
     move_index: usize,
+    skip_quiets: bool,
 }
 
 impl MovePicker {
-    pub fn new(tt_move: Option<EncodedMove>, killer_mv: Option<EncodedMove>) -> MovePicker {
+    pub fn new(
+        tt_move: Option<EncodedMove>,
+        killer_mv: Option<EncodedMove>,
+        skip_quiets: bool,
+    ) -> MovePicker {
         MovePicker {
             tt_move,
             killer_mv,
             move_list: MoveList::new(),
             state: GenerationState::TTMove,
             move_index: 0,
+            skip_quiets: skip_quiets,
         }
     }
 
@@ -79,7 +85,7 @@ impl MovePicker {
                 }
             }
             GenerationState::Captures => {
-                board.generate_moves::<true>(&mut self.move_list);
+                board.generate_moves::<false>(&mut self.move_list);
 
                 mvv_lva(&mut self.move_list, &board);
                 self.state = GenerationState::YieldCaptures;
@@ -89,8 +95,13 @@ impl MovePicker {
                 if let Some(mv) = self.yield_next_best_move() {
                     Some(mv)
                 } else {
-                    self.state = GenerationState::Killer;
-                    self.next(board)
+                    if self.skip_quiets {
+                        self.state = GenerationState::Done;
+                        None
+                    } else {
+                        self.state = GenerationState::Killer;
+                        self.next(board)
+                    }
                 }
             }
             GenerationState::Killer => {
@@ -106,7 +117,7 @@ impl MovePicker {
                 }
             }
             GenerationState::Quiets => {
-                board.generate_moves::<false>(&mut self.move_list);
+                board.generate_moves::<true>(&mut self.move_list);
                 self.state = GenerationState::YieldQuiets;
                 self.next(board)
             }
@@ -212,7 +223,7 @@ mod perft_test_move_picker {
             return 1;
         }
         let mut nodes = 0;
-        let mut mvp = MovePicker::new(None, None);
+        let mut mvp = MovePicker::new(None, None, false);
         // let correct_moves = board.generate_moves_legacy::<false>(board);
         // let mut moves: ArrayVec<EncodedMove, 256> = ArrayVec::new();
         // while let Some(next) = mvp.next::<false>(board) {

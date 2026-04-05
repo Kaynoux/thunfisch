@@ -169,11 +169,21 @@ pub fn mvv_lva(move_list: &mut MoveList, board: &Board) {
                     + MVV_LVA_TABLE[Pawn as usize][Knight as usize]
             }
 
-            MoveType::QueenPromo => panic!("Queen promo should not be scored in mvv_lva"),
-            MoveType::RookPromo => panic!("Rook promo should not be scored in mvv_lva"),
-            MoveType::BishopPromo => panic!("Bishop promo should not be scored in mvv_lva"),
-            MoveType::KnightPromo => panic!("Knight promo should not be scored in mvv_lva"),
-            MoveType::Quiet => panic!("Quiet moves should not be scored in mvv_lva"),
+            // Adding the capture bonus to normal promotions is a bit hacky but why not it works
+            MoveType::QueenPromo => MVV_LVA_TABLE[Pawn as usize][Queen as usize] + CAPTURE_BONUS,
+            MoveType::RookPromo => MVV_LVA_TABLE[Pawn as usize][Rook as usize] + CAPTURE_BONUS,
+            MoveType::BishopPromo => MVV_LVA_TABLE[Pawn as usize][Bishop as usize] + CAPTURE_BONUS,
+            MoveType::KnightPromo => MVV_LVA_TABLE[Pawn as usize][Knight as usize] + CAPTURE_BONUS,
+            MoveType::Quiet => {
+                println!(
+                    "{:?} {:?} {:?}",
+                    mv.encode(),
+                    board.figures(mv.from),
+                    board.figures(mv.to)
+                );
+
+                panic!("Quiet moves should not be scored in mvv_lva")
+            }
             MoveType::KingCastle => panic!("King castle should not be in mvv_lva"),
             MoveType::QueenCastle => panic!("Queen castle should not be in mvv_lva"),
             MoveType::DoubleMove => panic!("Double move should not be in mvv_lva"),

@@ -164,7 +164,7 @@ pub fn alpha_beta(
             .get(ply)
             .and_then(|&mv| if mv == EncodedMove(0) { None } else { Some(mv) });
 
-        let mut movepicker = MovePicker::new(tt_move, killer_mv);
+        let mut movepicker = MovePicker::new(tt_move, killer_mv, false);
         let mut i = 0;
 
         // let initial_hash = board.hash();

@@ -77,7 +77,7 @@ impl Board {
         moves
     }
 
-    pub fn generate_moves<const CAPTURES: bool>(&mut self, moves: &mut MoveList) {
+    pub fn generate_moves<const QUIETS: bool>(&mut self, moves: &mut MoveList) {
         let friendly = self.current_color();
 
         let (hv_pinmask, diag_pinmask) = pinmask::generate_pin_masks(self);
@@ -86,14 +86,14 @@ impl Board {
         let check_counter = self.get_check_counter();
         let check_mask = self.get_checkmask();
 
-        moves::generate_king_move::<CAPTURES>(moves, friendly, self);
+        moves::generate_king_move::<QUIETS>(moves, friendly, self);
 
         // if it's double check we know we have to move the king so we return immediately
         if check_counter == 2 {
             return;
         }
 
-        moves::generate_pawn_moves::<CAPTURES>(
+        moves::generate_pawn_moves::<QUIETS>(
             moves,
             self,
             friendly,
@@ -101,17 +101,8 @@ impl Board {
             diag_pinmask,
             check_mask,
         );
-        moves::generate_knight_moves::<CAPTURES>(moves, pinmask, friendly, self, check_mask);
-        moves::generate_bishop_moves::<CAPTURES>(
-            moves,
-            hv_pinmask,
-            diag_pinmask,
-            friendly,
-            self,
-            check_mask,
-        );
-
-        moves::generate_rook_moves::<CAPTURES>(
+        moves::generate_knight_moves::<QUIETS>(moves, pinmask, friendly, self, check_mask);
+        moves::generate_bishop_moves::<QUIETS>(
             moves,
             hv_pinmask,
             diag_pinmask,
@@ -120,7 +111,16 @@ impl Board {
             check_mask,
         );
 
-        moves::generate_queen_moves::<CAPTURES>(
+        moves::generate_rook_moves::<QUIETS>(
+            moves,
+            hv_pinmask,
+            diag_pinmask,
+            friendly,
+            self,
+            check_mask,
+        );
+
+        moves::generate_queen_moves::<QUIETS>(
             moves,
             hv_pinmask,
             diag_pinmask,
@@ -130,12 +130,12 @@ impl Board {
         );
 
         // castling is a quiet move
-        if !CAPTURES {
+        if QUIETS {
             moves::generate_castle_moves(moves, check_counter, friendly, self);
         }
 
         // en passant is a capture
-        if CAPTURES {
+        if !QUIETS {
             moves::generate_ep_moves(self, moves, friendly, hv_pinmask, diag_pinmask);
         }
     }
