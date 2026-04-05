@@ -71,12 +71,12 @@ impl Board {
         // See if the move type is now wrong
         // Capture move but not an capture
         let is_capture = MoveType::is_capture(&mv_type);
-        if is_capture && to_is_empty {
+        if is_capture && to_is_empty && mv_type != MoveType::EpCapture {
             return false;
         }
 
         // Not capture move but somehow capturing
-        if !is_capture && !to_is_empty {
+        if !is_capture && !to_is_empty && mv_type != MoveType::EpCapture {
             return false;
         }
 
@@ -569,6 +569,8 @@ mod tests_perft {
         let moves = pseudo_legal_generate(board);
         let correct_moves = board.generate_moves_legacy::<false>();
 
+        assert!(moves.len() >= correct_moves.len());
+
         for mv in moves {
             if board.is_legal(&mv.decode()) {
                 if !correct_moves.contains(&mv) {
@@ -579,6 +581,12 @@ mod tests_perft {
                 let mut b2 = board.clone();
                 b2.make_move(&mv.decode());
                 nodes += is_legal_r_perft(&mut b2, depth - 1);
+            } else {
+                if correct_moves.contains(&mv) {
+                    println!("{}", board.generate_fen());
+                    println!("{:?}", mv.decode().to_coords());
+                    assert!(false, "wrongly classified as illegal");
+                }
             }
         }
         nodes
