@@ -80,7 +80,7 @@ impl Board {
     pub fn generate_moves<const QUIETS: bool>(&mut self, moves: &mut MoveList) {
         let friendly = self.current_color();
 
-        let (hv_pinmask, diag_pinmask) = pinmask::generate_pin_masks(self);
+        let (hv_pinmask, diag_pinmask) = self.get_pinmasks();
         let pinmask = hv_pinmask | diag_pinmask;
 
         let check_counter = self.get_check_counter();

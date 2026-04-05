@@ -1,13 +1,9 @@
-use rayon::current_thread_index;
-
 use crate::{
     move_generator::{
-        masks::{calc_check_mask, calculate_attackmask},
         normal_targets::{
             KING_TARGETS, KNIGHT_TARGETS, PAWN_ATTACK_TARGETS, pawn_quiet_double_target,
             pawn_quiet_single_target,
         },
-        pinmask::generate_pin_masks,
         sliding_targets::{get_bishop_targets, get_rook_targets},
     },
     prelude::*,
