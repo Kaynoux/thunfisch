@@ -86,10 +86,9 @@ impl Board {
         let check_counter = self.get_check_counter();
         let check_mask = self.get_checkmask();
 
-        moves::generate_king_move::<QUIETS>(moves, friendly, self);
-
         // if it's double check we know we have to move the king so we return immediately
         if check_counter == 2 {
+            moves::generate_king_move::<QUIETS>(moves, friendly, self);
             return;
         }
 
@@ -128,6 +127,9 @@ impl Board {
             self,
             check_mask,
         );
+
+        // King moves after other pieces (matches legacy ordering for better move ordering)
+        moves::generate_king_move::<QUIETS>(moves, friendly, self);
 
         // castling is a quiet move
         if QUIETS {
