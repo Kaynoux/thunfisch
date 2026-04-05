@@ -147,46 +147,10 @@ pub fn mvv_lva(move_list: &mut MoveList, board: &Board) {
                     + CAPTURE_BONUS
                     + MVV_LVA_TABLE[Pawn as usize][Queen as usize]
             }
-            MoveType::RookPromoCapture => {
-                let attacker_idx = (board.figures(mv.from) as usize) / 2;
-                let victim_idx = (board.figures(mv.to) as usize) / 2;
-                MVV_LVA_TABLE[attacker_idx][victim_idx]
-                    + CAPTURE_BONUS
-                    + MVV_LVA_TABLE[Pawn as usize][Rook as usize]
-            }
-            MoveType::BishopPromoCapture => {
-                let attacker_idx = (board.figures(mv.from) as usize) / 2;
-                let victim_idx = (board.figures(mv.to) as usize) / 2;
-                MVV_LVA_TABLE[attacker_idx][victim_idx]
-                    + CAPTURE_BONUS
-                    + MVV_LVA_TABLE[Pawn as usize][Bishop as usize]
-            }
-            MoveType::KnightPromoCapture => {
-                let attacker_idx = (board.figures(mv.from) as usize) / 2;
-                let victim_idx = (board.figures(mv.to) as usize) / 2;
-                MVV_LVA_TABLE[attacker_idx][victim_idx]
-                    + CAPTURE_BONUS
-                    + MVV_LVA_TABLE[Pawn as usize][Knight as usize]
-            }
-
             // Adding the capture bonus to normal promotions is a bit hacky but why not it works
             MoveType::QueenPromo => MVV_LVA_TABLE[Pawn as usize][Queen as usize] + CAPTURE_BONUS,
-            MoveType::RookPromo => MVV_LVA_TABLE[Pawn as usize][Rook as usize] + CAPTURE_BONUS,
-            MoveType::BishopPromo => MVV_LVA_TABLE[Pawn as usize][Bishop as usize] + CAPTURE_BONUS,
-            MoveType::KnightPromo => MVV_LVA_TABLE[Pawn as usize][Knight as usize] + CAPTURE_BONUS,
-            MoveType::Quiet => {
-                println!(
-                    "{:?} {:?} {:?}",
-                    mv.encode(),
-                    board.figures(mv.from),
-                    board.figures(mv.to)
-                );
 
-                panic!("Quiet moves should not be scored in mvv_lva")
-            }
-            MoveType::KingCastle => panic!("King castle should not be in mvv_lva"),
-            MoveType::QueenCastle => panic!("Queen castle should not be in mvv_lva"),
-            MoveType::DoubleMove => panic!("Double move should not be in mvv_lva"),
+            _ => panic!("{:?} should not be in mvv_lva", mv_type),
         };
     }
 }

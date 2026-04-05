@@ -1,6 +1,7 @@
 use crate::prelude::*;
 use crate::search::alpha_beta::MATE_SCORE;
 use crate::search::move_ordering;
+use crate::search::move_picker::MovePicker;
 use crate::search::transposition_table::TT;
 use crate::settings::settings;
 use crate::{move_generator::generator::MAX_MOVES_COUNT, search::transposition_table::Bound};
@@ -98,51 +99,97 @@ pub fn quiescence_search(
         alpha = eval;
     }
 
-    let mut moves: ArrayVec<EncodedMove, MAX_MOVES_COUNT> =
-        if board.is_in_check() && (ply - ab_ply) < settings::QS_CHECK_EVASION_LIMIT {
-            board.generate_moves_legacy::<false>()
-        } else {
-            board.generate_moves_legacy::<true>()
-        };
-
-    if is_check && moves.is_empty() {
-        return -MATE_SCORE + ply as i32;
-    }
-
-    move_ordering::order_moves(&mut moves, board, tt_move, None);
-
     let mut best_score = eval;
     let mut best_move: Option<EncodedMove> = None;
 
-    for mv in moves {
-        if stop.load(Ordering::Relaxed) {
-            search_info.timeout_occurred.store(true, Ordering::Relaxed);
-            return 0;
-        }
-        board.make_move(&mv.decode());
-        let score = -quiescence_search(
-            board,
-            -beta,
-            -alpha,
-            depth - 1,
-            stop,
-            search_info,
-            ply + 1,
-            local_seldepth,
-            ab_ply,
-        );
-        board.unmake_move();
+    if settings::MOVE_PICKER {
+        let mut movepicker = MovePicker::new(tt_move, None, true);
+        let mut i = 0;
 
-        if score > best_score {
-            best_score = score;
-            if score > alpha {
-                best_move = Some(mv);
-                alpha = score
+        // let initial_hash = board.hash();
+        while let Some(mv) = movepicker.next(board) {
+            i += 1;
+
+            if stop.load(Ordering::Relaxed) {
+                search_info.timeout_occurred.store(true, Ordering::Relaxed);
+                return 0;
             }
+            board.make_move(&mv.decode());
+            let score = -quiescence_search(
+                board,
+                -beta,
+                -alpha,
+                depth - 1,
+                stop,
+                search_info,
+                ply + 1,
+                local_seldepth,
+                ab_ply,
+            );
+            board.unmake_move();
 
-            if settings::AB {
-                if alpha >= beta {
-                    break;
+            if score > best_score {
+                best_score = score;
+                if score > alpha {
+                    best_move = Some(mv);
+                    alpha = score
+                }
+
+                if settings::AB {
+                    if alpha >= beta {
+                        break;
+                    }
+                }
+            }
+        }
+
+        if is_check && i == 0 {
+            return -MATE_SCORE + ply as i32;
+        }
+    } else {
+        let mut moves: ArrayVec<EncodedMove, MAX_MOVES_COUNT> =
+            if board.is_in_check() && (ply - ab_ply) < settings::QS_CHECK_EVASION_LIMIT {
+                board.generate_moves_legacy::<false>()
+            } else {
+                board.generate_moves_legacy::<true>()
+            };
+
+        if is_check && moves.is_empty() {
+            return -MATE_SCORE + ply as i32;
+        }
+
+        move_ordering::order_moves(&mut moves, board, tt_move, None);
+
+        for mv in moves {
+            if stop.load(Ordering::Relaxed) {
+                search_info.timeout_occurred.store(true, Ordering::Relaxed);
+                return 0;
+            }
+            board.make_move(&mv.decode());
+            let score = -quiescence_search(
+                board,
+                -beta,
+                -alpha,
+                depth - 1,
+                stop,
+                search_info,
+                ply + 1,
+                local_seldepth,
+                ab_ply,
+            );
+            board.unmake_move();
+
+            if score > best_score {
+                best_score = score;
+                if score > alpha {
+                    best_move = Some(mv);
+                    alpha = score
+                }
+
+                if settings::AB {
+                    if alpha >= beta {
+                        break;
+                    }
                 }
             }
         }
