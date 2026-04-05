@@ -1,5 +1,6 @@
 use crate::move_generator::generator::MAX_MOVES_COUNT;
 use crate::prelude::*;
+use crate::search::move_picker::MoveList;
 use crate::search::mvv_lva::MVV_LVA_TABLE;
 use crate::settings::settings;
 use arrayvec::ArrayVec;
@@ -115,14 +116,14 @@ pub fn order_moves(
 
 /// RE-implementation of order_moves above, which reverts it back to ONLY doing MVV_LVA.
 /// Returns: true if the TT move is sorted first, false if the TT move wasn't in `moves` (necessary to avoid yielding the TT move twice in the move picker)
-pub fn mvv_lva(moves: &mut ArrayVec<EncodedMove, MAX_MOVES_COUNT>, board: &Board) {
+pub fn mvv_lva(move_list: &mut MoveList, board: &Board) {
     if !settings::MVV_LVA {
         return;
     }
-    moves.sort_unstable_by_key(|encoded_mv| {
-        let mv = encoded_mv.decode();
+    for entry in move_list.iter_mut() {
+        let mv = entry.mv.decode();
         let mv_type = mv.mv_type;
-        let score = match mv_type {
+        entry.score = match mv_type {
             MoveType::Capture => {
                 let attacker_idx = (board.figures(mv.from) as usize) / 2;
                 let victim_idx = (board.figures(mv.to) as usize) / 2;
@@ -177,10 +178,7 @@ pub fn mvv_lva(moves: &mut ArrayVec<EncodedMove, MAX_MOVES_COUNT>, board: &Board
             MoveType::QueenCastle => panic!("Queen castle should not be in mvv_lva"),
             MoveType::DoubleMove => panic!("Double move should not be in mvv_lva"),
         };
-
-        // sort descending by highest value first
-        Reverse(score)
-    });
+    }
 }
 
 #[cfg(test)]

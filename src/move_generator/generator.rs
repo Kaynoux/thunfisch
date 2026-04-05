@@ -1,8 +1,8 @@
-use super::masks;
 use super::moves;
 use super::moves_legacy;
 use super::pinmask;
 use crate::prelude::*;
+use crate::search::move_picker::MoveList;
 use arrayvec::ArrayVec;
 
 // 218 is the limit: https://www.chessprogramming.org/Chess_Position
@@ -77,11 +77,8 @@ impl Board {
         moves
     }
 
-    pub fn generate_moves<const CAPTURES: bool>(
-        &mut self,
-    ) -> ArrayVec<EncodedMove, MAX_MOVES_COUNT> {
+    pub fn generate_moves<const CAPTURES: bool>(&mut self, moves: &mut MoveList) {
         let friendly = self.current_color();
-        let mut moves = ArrayVec::<EncodedMove, MAX_MOVES_COUNT>::new();
 
         let (hv_pinmask, diag_pinmask) = pinmask::generate_pin_masks(self);
         let pinmask = hv_pinmask | diag_pinmask;
@@ -89,24 +86,24 @@ impl Board {
         let check_counter = self.get_check_counter();
         let check_mask = self.get_checkmask();
 
-        moves::generate_king_move::<CAPTURES>(&mut moves, friendly, self);
+        moves::generate_king_move::<CAPTURES>(moves, friendly, self);
 
         // if it's double check we know we have to move the king so we return immediately
         if check_counter == 2 {
-            return moves;
+            return;
         }
 
         moves::generate_pawn_moves::<CAPTURES>(
-            &mut moves,
+            moves,
             self,
             friendly,
             hv_pinmask,
             diag_pinmask,
             check_mask,
         );
-        moves::generate_knight_moves::<CAPTURES>(&mut moves, pinmask, friendly, self, check_mask);
+        moves::generate_knight_moves::<CAPTURES>(moves, pinmask, friendly, self, check_mask);
         moves::generate_bishop_moves::<CAPTURES>(
-            &mut moves,
+            moves,
             hv_pinmask,
             diag_pinmask,
             friendly,
@@ -115,7 +112,7 @@ impl Board {
         );
 
         moves::generate_rook_moves::<CAPTURES>(
-            &mut moves,
+            moves,
             hv_pinmask,
             diag_pinmask,
             friendly,
@@ -124,7 +121,7 @@ impl Board {
         );
 
         moves::generate_queen_moves::<CAPTURES>(
-            &mut moves,
+            moves,
             hv_pinmask,
             diag_pinmask,
             friendly,
@@ -134,15 +131,13 @@ impl Board {
 
         // castling is a quiet move
         if !CAPTURES {
-            moves::generate_castle_moves(&mut moves, check_counter, friendly, self);
+            moves::generate_castle_moves(moves, check_counter, friendly, self);
         }
 
         // en passant is a capture
         if CAPTURES {
-            moves::generate_ep_moves(self, &mut moves, friendly, hv_pinmask, diag_pinmask);
+            moves::generate_ep_moves(self, moves, friendly, hv_pinmask, diag_pinmask);
         }
-
-        moves
     }
 
     pub fn is_in_check(&mut self) -> bool {

@@ -1,5 +1,7 @@
 use std::collections::VecDeque;
 
+use arrayvec::ArrayVec;
+
 use crate::{
     move_generator::generator::MAX_MOVES_COUNT,
     prelude::*,
@@ -18,11 +20,38 @@ enum GenerationState {
     Done,
 }
 
+#[repr(C)]
+pub struct MoveListMove {
+    pub score: i32,
+    pub mv: EncodedMove,
+}
+
+pub struct MoveList {
+    pub list: ArrayVec<MoveListMove, MAX_MOVES_COUNT>,
+}
+
+impl MoveList {
+    pub fn new() -> MoveList {
+        MoveList {
+            list: ArrayVec::<MoveListMove, MAX_MOVES_COUNT>::new(),
+        }
+    }
+
+    pub fn push(&mut self, mv: EncodedMove) {
+        self.list.push(MoveListMove { score: 0, mv: mv });
+    }
+
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut MoveListMove> {
+        self.list.iter_mut()
+    }
+}
+
 pub struct MovePicker {
     tt_move: Option<EncodedMove>,
     killer_mv: Option<EncodedMove>,
-    next_moves: VecDeque<EncodedMove>,
+    move_list: MoveList,
     state: GenerationState,
+    move_index: usize,
 }
 
 impl MovePicker {
@@ -30,113 +59,10 @@ impl MovePicker {
         MovePicker {
             tt_move,
             killer_mv,
-            next_moves: VecDeque::with_capacity(MAX_MOVES_COUNT),
+            move_list: MoveList::new(),
             state: GenerationState::TTMove,
+            move_index: 0,
         }
-    }
-
-    // TODO deal with double checks maybe?
-    // I mean they should be handled correctly
-    pub fn next_old<const SPECIAL_MOVES_ONLY: bool>(
-        &mut self,
-        board: &mut Board,
-    ) -> Option<EncodedMove> {
-        let next = match self.state {
-            GenerationState::TTMove => {
-                self.state = GenerationState::Captures;
-                if settings::ORDER_TT_MV_FIRST
-                    && let Some(tt_move) = self.tt_move
-                    && board.is_legal(&tt_move.decode())
-                {
-                    self.tt_move
-                } else {
-                    self.next(board)
-                }
-            }
-            GenerationState::Captures => {
-                let mut capture_moves = board.generate_moves::<true>();
-
-                if let Some(tt_move) = self.tt_move {
-                    if let Some(pos) = capture_moves.iter().position(|&m| m == tt_move) {
-                        capture_moves.swap_remove(pos);
-                    }
-                }
-
-                mvv_lva(&mut capture_moves, &board);
-
-                // let mut seen = std::collections::HashSet::new();
-                // for mv in &capture_moves {
-                //     if !seen.insert(mv) {
-                //         panic!(
-                //             "Duplicate move in capture_moves: {:?}",
-                //             mv.decode().to_coords()
-                //         );
-                //     }
-                // }
-
-                self.next_moves.extend(capture_moves);
-
-                self.state = GenerationState::YieldCaptures;
-                self.next(board)
-            }
-            GenerationState::YieldCaptures => self.next_moves.pop_front().or_else(|| {
-                self.state = GenerationState::Killer;
-                self.next(board)
-            }),
-            GenerationState::Killer => {
-                if settings::KILLERS
-                    && let Some(killer) = self.killer_mv
-                    && self.killer_mv != self.tt_move
-                    && board.is_legal(&killer.decode())
-                {
-                    self.state = GenerationState::Quiets;
-                    self.killer_mv
-                } else {
-                    self.state = GenerationState::Quiets;
-                    self.next(board)
-                }
-            }
-            GenerationState::Quiets => {
-                let quiet_moves = board.generate_moves::<false>();
-
-                // // Verify that quiet_moves does not contain any capturing pawn moves
-                // for mv in &quiet_moves {
-                //     let decoded = mv.decode();
-                //     if board.piece_at_position(decoded.from) == Piece::Pawn {
-                //         if let crate::move_generator::is_legal::MoveDirection::Diag = decoded.move_direction() {
-                //             panic!(
-                //                 "Pawn capturing move found in quiet_moves: {:?}",
-                //                 decoded.to_coords()
-                //             );
-                //         }
-                //     }
-                // }
-
-                self.next_moves.extend(quiet_moves);
-                self.state = GenerationState::YieldQuiets;
-                self.next(board)
-            }
-            GenerationState::YieldQuiets => self
-                .next_moves
-                .pop_front()
-                .and_then(|mv| {
-                    if Some(mv) == self.killer_mv || Some(mv) == self.tt_move {
-                        self.next(board)
-                    } else {
-                        Some(mv)
-                    }
-                })
-                .or_else(|| {
-                    self.state = GenerationState::Done;
-                    None
-                }),
-            GenerationState::Done => None,
-        };
-
-        if let Some(mv) = next {
-            debug_assert_ne!(board.figures(mv.decode().from), Figure::Empty);
-        }
-        next
     }
 
     pub fn next(&mut self, board: &mut Board) -> Option<EncodedMove> {
@@ -153,21 +79,20 @@ impl MovePicker {
                 }
             }
             GenerationState::Captures => {
-                let mut captures = board.generate_moves::<true>();
-                if let Some(tt_move) = self.tt_move
-                    && let Some(pos) = captures.iter().position(|&m| m == tt_move)
-                {
-                    captures.remove(pos);
-                }
-                mvv_lva(&mut captures, &board);
-                self.next_moves.extend(captures);
+                board.generate_moves::<true>(&mut self.move_list);
+
+                mvv_lva(&mut self.move_list, &board);
                 self.state = GenerationState::YieldCaptures;
                 self.next(board)
             }
-            GenerationState::YieldCaptures => self.next_moves.pop_front().or_else(|| {
-                self.state = GenerationState::Killer;
-                self.next(board)
-            }),
+            GenerationState::YieldCaptures => {
+                if let Some(mv) = self.yield_next_best_move() {
+                    Some(mv)
+                } else {
+                    self.state = GenerationState::Killer;
+                    self.next(board)
+                }
+            }
             GenerationState::Killer => {
                 self.state = GenerationState::Quiets;
                 if settings::KILLERS
@@ -181,24 +106,17 @@ impl MovePicker {
                 }
             }
             GenerationState::Quiets => {
-                self.next_moves.extend(board.generate_moves::<false>());
+                board.generate_moves::<false>(&mut self.move_list);
                 self.state = GenerationState::YieldQuiets;
                 self.next(board)
             }
 
             GenerationState::YieldQuiets => {
-                if let Some(mv) = self.next_moves.pop_front() {
-                    if Some(mv) == self.killer_mv || Some(mv) == self.tt_move {
-                        // Recursive call to find the next valid move
-                        self.next(board)
-                    } else {
-                        // Found a valid quiet move
-                        Some(mv)
-                    }
+                if let Some(mv) = self.yield_next_best_move() {
+                    Some(mv)
                 } else {
-                    // No more quiet moves, transition to Done and exit
                     self.state = GenerationState::Done;
-                    self.next(board)
+                    None
                 }
             }
 
@@ -206,6 +124,39 @@ impl MovePicker {
         };
 
         next
+    }
+
+    pub fn yield_next_best_move(&mut self) -> Option<EncodedMove> {
+        loop {
+            let remaining = &mut self.move_list.list[self.move_index..];
+
+            if remaining.is_empty() {
+                return None;
+            }
+
+            // Find highest score in remaining
+            let mut best_idx = 0;
+            let mut max_score = remaining[0].score;
+            for i in 1..remaining.len() {
+                if remaining[i].score > max_score {
+                    max_score = remaining[i].score;
+                    best_idx = i;
+                }
+            }
+
+            // Swap best move to front
+            remaining.swap(0, best_idx);
+
+            // Should we skip this move?
+            let best_move = remaining[0].mv;
+            self.move_index += 1;
+            if Some(best_move) == self.tt_move || Some(best_move) == self.killer_mv {
+                continue;
+            }
+
+            // Return valid move
+            return Some(best_move);
+        }
     }
 }
 
