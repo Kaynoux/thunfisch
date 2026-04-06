@@ -1,11 +1,7 @@
-use std::collections::VecDeque;
-
 use arrayvec::ArrayVec;
 
 use crate::{
-    move_generator::generator::MAX_MOVES_COUNT,
-    prelude::*,
-    search::{move_ordering::mvv_lva, mvv_lva},
+    move_generator::generator::MAX_MOVES_COUNT, prelude::*, search::move_ordering::mvv_lva,
     settings::settings,
 };
 
@@ -39,10 +35,6 @@ impl MoveList {
 
     pub fn push(&mut self, mv: EncodedMove) {
         self.list.push(MoveListMove { score: 0, mv: mv });
-    }
-
-    pub fn iter_mut(&mut self) -> impl Iterator<Item = &mut MoveListMove> {
-        self.list.iter_mut()
     }
 }
 

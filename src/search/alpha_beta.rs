@@ -2,8 +2,8 @@ use super::transposition_table::TT;
 use crate::communication::bestmove::MAX_DEPTH;
 use crate::prelude::*;
 use crate::search::move_picker::MovePicker;
+use crate::search::quiescence_search;
 use crate::search::transposition_table::Bound;
-use crate::search::{move_ordering, quiescence_search};
 use crate::settings::settings;
 
 use std::cmp::min;
@@ -159,29 +159,60 @@ pub fn alpha_beta(
     let mut best_eval = i32::MIN + 1;
     let mut best_move: Option<EncodedMove> = None;
 
-    if settings::MOVE_PICKER {
-        let killer_mv: Option<EncodedMove> = killers
-            .get(ply)
-            .and_then(|&mv| if mv == EncodedMove(0) { None } else { Some(mv) });
+    let killer_mv: Option<EncodedMove> = killers
+        .get(ply)
+        .and_then(|&mv| if mv == EncodedMove(0) { None } else { Some(mv) });
 
-        let mut movepicker = MovePicker::new(tt_move, killer_mv, false);
-        let mut i = 0;
+    let mut movepicker = MovePicker::new(tt_move, killer_mv, false);
+    let mut i = 0;
 
-        // let initial_hash = board.hash();
-        while let Some(mv) = movepicker.next(board) {
-            i += 1;
-            // cancels search if time is over
-            if stop.load(Ordering::Relaxed) {
-                search_info.timeout_occurred.store(true, Ordering::Relaxed);
-                return 0;
-            }
-            board.make_move(&mv.decode());
-            let mut eval;
-            if i == 1 || !settings::PVS {
-                // Principal Variation Search
-                // We assume that the first move from the move ordering is the PV move;
-                // Since the TT move, if existant, is in first place anyway this automatically includes information from shallower search depths
+    // let initial_hash = board.hash();
+    while let Some(mv) = movepicker.next(board) {
+        i += 1;
+        // cancels search if time is over
+        if stop.load(Ordering::Relaxed) {
+            search_info.timeout_occurred.store(true, Ordering::Relaxed);
+            return 0;
+        }
+        board.make_move(&mv.decode());
+        let mut eval;
+        if i == 1 || !settings::PVS {
+            // Principal Variation Search
+            // We assume that the first move from the move ordering is the PV move;
+            // Since the TT move, if existant, is in first place anyway this automatically includes information from shallower search depths
 
+            eval = -alpha_beta(
+                board,
+                depth - 1,
+                -beta,
+                -alpha,
+                stop,
+                search_info,
+                ply + 1,
+                local_seldepth,
+                true,
+                NodeType::OnPV,
+                killers,
+            );
+        } else {
+            // Search non-PV moves with null window
+            eval = -alpha_beta(
+                board,
+                depth - 1,
+                -alpha - 1,
+                -alpha,
+                stop,
+                search_info,
+                ply + 1,
+                local_seldepth,
+                true,
+                NodeType::OffPV,
+                killers,
+            );
+            // Re-search if non-PV move raised Alpha
+            // ONLY do re-searching if the current Node is on PV - we don't care for re-searching OffPV nodes
+            // (if they actually improve over the PV that variation will be searched again at the last PV node anyway)
+            if eval > alpha && node_type == NodeType::OnPV {
                 eval = -alpha_beta(
                     board,
                     depth - 1,
@@ -195,167 +226,36 @@ pub fn alpha_beta(
                     NodeType::OnPV,
                     killers,
                 );
-            } else {
-                // Search non-PV moves with null window
-                eval = -alpha_beta(
-                    board,
-                    depth - 1,
-                    -alpha - 1,
-                    -alpha,
-                    stop,
-                    search_info,
-                    ply + 1,
-                    local_seldepth,
-                    true,
-                    NodeType::OffPV,
-                    killers,
-                );
-                // Re-search if non-PV move raised Alpha
-                // ONLY do re-searching if the current Node is on PV - we don't care for re-searching OffPV nodes
-                // (if they actually improve over the PV that variation will be searched again at the last PV node anyway)
-                if eval > alpha && node_type == NodeType::OnPV {
-                    eval = -alpha_beta(
-                        board,
-                        depth - 1,
-                        -beta,
-                        -alpha,
-                        stop,
-                        search_info,
-                        ply + 1,
-                        local_seldepth,
-                        true,
-                        NodeType::OnPV,
-                        killers,
-                    );
-                }
+            }
+        }
+
+        board.unmake_move();
+
+        if eval > best_eval {
+            best_eval = eval;
+            if eval > alpha {
+                best_move = Some(mv);
+                alpha = eval;
             }
 
-            board.unmake_move();
-
-            if eval > best_eval {
-                best_eval = eval;
-                if eval > alpha {
-                    best_move = Some(mv);
-                    alpha = eval;
-                }
-
-                if settings::AB {
-                    if alpha >= beta {
-                        if mv.decode().is_quiet() {
-                            killers[ply] = mv;
-                        }
-                        break;
+            if settings::AB {
+                if alpha >= beta {
+                    if mv.decode().is_quiet() {
+                        killers[ply] = mv;
                     }
+                    break;
                 }
             }
         }
+    }
 
-        // When i still 0 than no move found
-        // returns the mate score (very low) when in check but adds the ply to give a later check a better eval because the depth is lowers the further you go
-        if i == 0 {
-            if board.is_in_check() {
-                return -MATE_SCORE + (ply as i32);
-            } else {
-                return 0;
-            }
-        }
-    } else {
-        let mut moves = board.generate_moves_legacy::<false>();
-
-        // returns the mate score (very low) when in check but adds the ply to give a later check a better eval because the depth is lowers the further you go
-        if moves.is_empty() {
-            if board.is_in_check() {
-                return -MATE_SCORE + (ply as i32);
-            } else {
-                return 0;
-            }
-        }
-
-        let killer_mv: Option<EncodedMove> = killers
-            .get(ply)
-            .and_then(|&mv| if mv == EncodedMove(0) { None } else { Some(mv) });
-
-        move_ordering::order_moves(&mut moves, board, tt_move, killer_mv);
-
-        for (i, mv) in moves.iter().enumerate() {
-            // cancels search if time is over
-            if stop.load(Ordering::Relaxed) {
-                search_info.timeout_occurred.store(true, Ordering::Relaxed);
-                return 0;
-            }
-            board.make_move(&mv.decode());
-            let mut eval;
-            if i == 0 || !settings::PVS {
-                // Principal Variation Search
-                // We assume that the first move from the move ordering is the PV move;
-                // Since the TT move, if existant, is in first place anyway this automatically includes information from shallower search depths
-
-                eval = -alpha_beta(
-                    board,
-                    depth - 1,
-                    -beta,
-                    -alpha,
-                    stop,
-                    search_info,
-                    ply + 1,
-                    local_seldepth,
-                    true,
-                    NodeType::OnPV,
-                    killers,
-                );
-            } else {
-                // Search non-PV moves with null window
-                eval = -alpha_beta(
-                    board,
-                    depth - 1,
-                    -alpha - 1,
-                    -alpha,
-                    stop,
-                    search_info,
-                    ply + 1,
-                    local_seldepth,
-                    true,
-                    NodeType::OffPV,
-                    killers,
-                );
-                // Re-search if non-PV move raised Alpha
-                // ONLY do re-searching if the current Node is on PV - we don't care for re-searching OffPV nodes
-                // (if they actually improve over the PV that variation will be searched again at the last PV node anyway)
-                if eval > alpha && node_type == NodeType::OnPV {
-                    eval = -alpha_beta(
-                        board,
-                        depth - 1,
-                        -beta,
-                        -alpha,
-                        stop,
-                        search_info,
-                        ply + 1,
-                        local_seldepth,
-                        true,
-                        NodeType::OnPV,
-                        killers,
-                    );
-                }
-            }
-
-            board.unmake_move();
-
-            if eval > best_eval {
-                best_eval = eval;
-                if eval > alpha {
-                    best_move = Some(*mv);
-                    alpha = eval;
-                }
-
-                if settings::AB {
-                    if alpha >= beta {
-                        if mv.decode().is_quiet() {
-                            killers[ply] = *mv;
-                        }
-                        break;
-                    }
-                }
-            }
+    // When i still 0 than no move found
+    // returns the mate score (very low) when in check but adds the ply to give a later check a better eval because the depth is lowers the further you go
+    if i == 0 {
+        if board.is_in_check() {
+            return -MATE_SCORE + (ply as i32);
+        } else {
+            return 0;
         }
     }
 

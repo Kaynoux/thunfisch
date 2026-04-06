@@ -1,5 +1,4 @@
 use crate::search::transposition_table::TT;
-use std::env;
 mod communication;
 mod debug;
 mod move_generator;

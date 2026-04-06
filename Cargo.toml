@@ -5,8 +5,8 @@ edition = "2024"
 
 [features]
 default = ["all"]
-all = ["ab", "qs", "tt-ab", "tt-qs", "mvv-lva", "order-tt-mv-first", "tt-cuttoffs", "nmp", "rfp", "pvs", "killers", "move-picker"]
-all-no-killers = ["ab", "qs", "tt-ab", "tt-qs", "mvv-lva", "order-tt-mv-first", "tt-cuttoffs", "nmp", "rfp", "pvs", "move-picker"]
+all = ["ab", "qs", "tt-ab", "tt-qs", "mvv-lva", "order-tt-mv-first", "tt-cuttoffs", "nmp", "rfp", "pvs", "killers"]
+all-no-killers = ["ab", "qs", "tt-ab", "tt-qs", "mvv-lva", "order-tt-mv-first", "tt-cuttoffs", "nmp", "rfp", "pvs"]
 ab = []
 qs = []
 tt-ab = []
@@ -18,7 +18,6 @@ nmp = []
 rfp = []
 pvs = []
 killers = []
-move-picker = []
 
 [dependencies]
 colored = "2"

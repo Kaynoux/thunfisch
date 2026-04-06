@@ -1,82 +1,11 @@
 use super::moves;
-use super::moves_legacy;
-use super::pinmask;
 use crate::prelude::*;
 use crate::search::move_picker::MoveList;
-use arrayvec::ArrayVec;
 
 // 218 is the limit: https://www.chessprogramming.org/Chess_Position
 pub const MAX_MOVES_COUNT: usize = 218;
 
 impl Board {
-    /// Kept for now to ease SPRT testing
-    /// TODO remove once no longer needed
-    pub fn generate_moves_legacy<const SPECIAL_MOVES_ONLY: bool>(
-        &mut self,
-    ) -> ArrayVec<EncodedMove, MAX_MOVES_COUNT> {
-        let friendly = self.current_color();
-        let mut moves = ArrayVec::<EncodedMove, MAX_MOVES_COUNT>::new();
-
-        let (hv_pinmask, diag_pinmask) = pinmask::generate_pin_masks(self);
-        let pinmask = hv_pinmask | diag_pinmask;
-
-        let check_counter = self.get_check_counter();
-        let check_mask = self.get_checkmask();
-
-        if check_counter == 2 {
-            moves_legacy::generate_king_move::<false>(&mut moves, friendly, self);
-            return moves;
-        }
-
-        moves_legacy::generate_pawn_moves::<SPECIAL_MOVES_ONLY>(
-            &mut moves,
-            self,
-            friendly,
-            hv_pinmask,
-            diag_pinmask,
-            check_mask,
-        );
-        moves_legacy::generate_knight_moves::<SPECIAL_MOVES_ONLY>(
-            &mut moves, pinmask, friendly, self, check_mask,
-        );
-        moves_legacy::generate_bishop_moves::<SPECIAL_MOVES_ONLY>(
-            &mut moves,
-            hv_pinmask,
-            diag_pinmask,
-            friendly,
-            self,
-            check_mask,
-        );
-
-        moves_legacy::generate_rook_moves::<SPECIAL_MOVES_ONLY>(
-            &mut moves,
-            hv_pinmask,
-            diag_pinmask,
-            friendly,
-            self,
-            check_mask,
-        );
-
-        moves_legacy::generate_queen_moves::<SPECIAL_MOVES_ONLY>(
-            &mut moves,
-            hv_pinmask,
-            diag_pinmask,
-            friendly,
-            self,
-            check_mask,
-        );
-
-        moves_legacy::generate_king_move::<SPECIAL_MOVES_ONLY>(&mut moves, friendly, self);
-
-        if !SPECIAL_MOVES_ONLY {
-            moves_legacy::generate_castle_moves(&mut moves, check_counter, friendly, self);
-        }
-
-        moves_legacy::generate_ep_moves(self, &mut moves, friendly, hv_pinmask, diag_pinmask);
-
-        moves
-    }
-
     pub fn generate_moves<const QUIETS: bool>(&mut self, moves: &mut MoveList) {
         let friendly = self.current_color();
 
@@ -140,6 +69,105 @@ impl Board {
         if !QUIETS {
             moves::generate_ep_moves(self, moves, friendly, hv_pinmask, diag_pinmask);
         }
+    }
+
+    /// Generates all possible moves, should only be used for tests and perft and not in the actual search, because it does not seperate between quiets and not
+    pub fn generate_all_moves(&mut self) -> MoveList {
+        let mut moves = MoveList::new();
+        let friendly = self.current_color();
+
+        let (hv_pinmask, diag_pinmask) = self.get_pinmasks();
+        let pinmask = hv_pinmask | diag_pinmask;
+
+        let check_counter = self.get_check_counter();
+        let check_mask = self.get_checkmask();
+
+        // if it's double check we know we have to move the king so we return immediately
+        if check_counter == 2 {
+            moves::generate_king_move::<false>(&mut moves, friendly, self);
+            moves::generate_king_move::<true>(&mut moves, friendly, self);
+            return moves;
+        }
+
+        moves::generate_pawn_moves::<false>(
+            &mut moves,
+            self,
+            friendly,
+            hv_pinmask,
+            diag_pinmask,
+            check_mask,
+        );
+        moves::generate_pawn_moves::<true>(
+            &mut moves,
+            self,
+            friendly,
+            hv_pinmask,
+            diag_pinmask,
+            check_mask,
+        );
+
+        moves::generate_knight_moves::<false>(&mut moves, pinmask, friendly, self, check_mask);
+        moves::generate_knight_moves::<true>(&mut moves, pinmask, friendly, self, check_mask);
+
+        moves::generate_bishop_moves::<false>(
+            &mut moves,
+            hv_pinmask,
+            diag_pinmask,
+            friendly,
+            self,
+            check_mask,
+        );
+        moves::generate_bishop_moves::<true>(
+            &mut moves,
+            hv_pinmask,
+            diag_pinmask,
+            friendly,
+            self,
+            check_mask,
+        );
+
+        moves::generate_rook_moves::<false>(
+            &mut moves,
+            hv_pinmask,
+            diag_pinmask,
+            friendly,
+            self,
+            check_mask,
+        );
+
+        moves::generate_rook_moves::<true>(
+            &mut moves,
+            hv_pinmask,
+            diag_pinmask,
+            friendly,
+            self,
+            check_mask,
+        );
+
+        moves::generate_queen_moves::<false>(
+            &mut moves,
+            hv_pinmask,
+            diag_pinmask,
+            friendly,
+            self,
+            check_mask,
+        );
+        moves::generate_queen_moves::<true>(
+            &mut moves,
+            hv_pinmask,
+            diag_pinmask,
+            friendly,
+            self,
+            check_mask,
+        );
+
+        moves::generate_king_move::<false>(&mut moves, friendly, self);
+        moves::generate_king_move::<true>(&mut moves, friendly, self);
+
+        moves::generate_castle_moves(&mut moves, check_counter, friendly, self);
+        moves::generate_ep_moves(self, &mut moves, friendly, hv_pinmask, diag_pinmask);
+
+        return moves;
     }
 
     pub fn is_in_check(&mut self) -> bool {

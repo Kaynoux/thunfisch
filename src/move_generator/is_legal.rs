@@ -274,19 +274,19 @@ impl Board {
 
 #[cfg(test)]
 mod tests_perft {
+    use crate::search::move_picker::MoveList;
+
     use super::*;
-    use crate::move_generator::{generator::MAX_MOVES_COUNT, moves, moves_legacy};
-    use arrayvec::ArrayVec;
 
     #[test]
     fn test_knight_move_direction() {
         // FEN: White king on a1, white knight on e4, black king on h8
         let fen = "7k/8/8/8/4N3/8/8/K7 w - - 0 1";
         let mut board = Board::from_fen(fen);
-        let moves = board.generate_moves_legacy::<false>();
+        let moves = board.generate_all_moves();
 
-        for mv in moves {
-            let decoded = mv.decode();
+        for mv in moves.list {
+            let decoded = mv.mv.decode();
             let direction = decoded.move_direction();
             if board.piece_at_position(decoded.from) != Knight {
                 continue;
@@ -312,10 +312,10 @@ mod tests_perft {
 
         for (fen, position) in fens.iter() {
             let mut board = Board::from_fen(fen);
-            let moves = board.generate_moves_legacy::<false>();
+            let moves = board.generate_all_moves();
 
-            for mv in moves {
-                let decoded = mv.decode();
+            for mv in moves.list {
+                let decoded = mv.mv.decode();
                 let direction = decoded.move_direction();
                 if board.piece_at_position(decoded.from) != Bishop {
                     continue;
@@ -341,10 +341,10 @@ mod tests_perft {
 
         for (fen, position) in fens.iter() {
             let mut board = Board::from_fen(fen);
-            let moves = board.generate_moves_legacy::<false>();
+            let moves = board.generate_all_moves();
 
-            for mv in moves {
-                let decoded = mv.decode();
+            for mv in moves.list {
+                let decoded = mv.mv.decode();
                 let direction = decoded.move_direction();
                 if board.piece_at_position(decoded.from) != Rook {
                     continue;
@@ -365,10 +365,10 @@ mod tests_perft {
         // FEN: White king on a1, white pawn on e4 (position allows quiet moves), black king on h8
         let fen = "7k/8/8/8/4P3/8/8/K7 w - - 0 1";
         let mut board = Board::from_fen(fen);
-        let moves = board.generate_moves_legacy::<false>();
+        let moves = board.generate_all_moves();
 
-        for mv in moves {
-            let decoded = mv.decode();
+        for mv in moves.list {
+            let decoded = mv.mv.decode();
             // Filter for quiet moves only
             if board.piece_at_position(decoded.from) != Pawn {
                 continue;
@@ -390,10 +390,10 @@ mod tests_perft {
         // FEN: White king on a1, white pawn on e4, black pawns on d5 and f5 to test captures
         let fen = "7k/8/8/3p1p2/4P3/8/8/K7 w - - 0 1";
         let mut board = Board::from_fen(fen);
-        let moves = board.generate_moves_legacy::<false>();
+        let moves = board.generate_all_moves();
 
-        for mv in moves {
-            let decoded = mv.decode();
+        for mv in moves.list {
+            let decoded = mv.mv.decode();
             if board.piece_at_position(decoded.from) != Pawn {
                 continue;
             }
@@ -415,10 +415,10 @@ mod tests_perft {
         // FEN: Black king on a8 (far away), white king on e4 (empty board otherwise)
         let fen = "k7/8/8/8/4K3/8/8/8 w - - 0 1";
         let mut board = Board::from_fen(fen);
-        let moves = board.generate_moves_legacy::<false>();
+        let moves = board.generate_all_moves();
 
-        for mv in moves {
-            let decoded = mv.decode();
+        for mv in moves.list {
+            let decoded = mv.mv.decode();
             let direction = decoded.move_direction();
             // King can move diagonally or horizontally/vertically
             assert!(
@@ -465,65 +465,13 @@ mod tests_perft {
         }
     }
 
-    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // perft
+    /// Only used for testing
+    /// Important to pass board as value (so copying it) because we change the masks
+    fn pseudo_legal_generate(mut board: Board) -> MoveList {
+        board.set_pinmasks(Bitboard::EMPTY, Bitboard::EMPTY);
+        board.set_checkmask(Bitboard::FULL, 0);
 
-    fn pseudo_legal_generate(board: &mut Board) -> ArrayVec<EncodedMove, MAX_MOVES_COUNT> {
-        const SPECIAL_MOVES_ONLY: bool = false;
-        let friendly = board.current_color();
-        let mut moves = ArrayVec::<EncodedMove, MAX_MOVES_COUNT>::new();
-
-        let (hv_pinmask, diag_pinmask) = (Bitboard::EMPTY, Bitboard::EMPTY);
-        let pinmask = Bitboard::EMPTY;
-
-        let (check_mask, check_counter) = (Bitboard::FULL, 0);
-
-        moves_legacy::generate_pawn_moves::<SPECIAL_MOVES_ONLY>(
-            &mut moves,
-            board,
-            friendly,
-            hv_pinmask,
-            diag_pinmask,
-            check_mask,
-        );
-        moves_legacy::generate_knight_moves::<SPECIAL_MOVES_ONLY>(
-            &mut moves, pinmask, friendly, board, check_mask,
-        );
-        moves_legacy::generate_bishop_moves::<SPECIAL_MOVES_ONLY>(
-            &mut moves,
-            hv_pinmask,
-            diag_pinmask,
-            friendly,
-            board,
-            check_mask,
-        );
-
-        moves_legacy::generate_rook_moves::<SPECIAL_MOVES_ONLY>(
-            &mut moves,
-            hv_pinmask,
-            diag_pinmask,
-            friendly,
-            board,
-            check_mask,
-        );
-
-        moves_legacy::generate_queen_moves::<SPECIAL_MOVES_ONLY>(
-            &mut moves,
-            hv_pinmask,
-            diag_pinmask,
-            friendly,
-            board,
-            check_mask,
-        );
-
-        moves_legacy::generate_king_move::<SPECIAL_MOVES_ONLY>(&mut moves, friendly, board);
-
-        if !SPECIAL_MOVES_ONLY {
-            moves_legacy::generate_castle_moves(&mut moves, check_counter, friendly, board);
-        }
-
-        moves_legacy::generate_ep_moves(board, &mut moves, friendly, hv_pinmask, diag_pinmask);
-        moves
+        board.generate_all_moves()
     }
 
     #[test]
@@ -573,20 +521,20 @@ mod tests_perft {
             return 1;
         }
         let mut nodes = 0;
-        let moves = pseudo_legal_generate(board);
-        let correct_moves = board.generate_moves_legacy::<false>();
+        let moves = pseudo_legal_generate(board.clone());
+        let correct_moves = board.generate_all_moves();
 
-        assert!(moves.len() >= correct_moves.len());
+        assert!(moves.list.len() >= correct_moves.list.len());
 
-        for mv in moves {
-            if board.is_legal(&mv.decode()) {
+        for mv in moves.list {
+            if board.is_legal(&mv.mv.decode()) {
                 // if !correct_moves.contains(&mv) {
                 //     println!("{}", board.generate_fen());
                 //     println!("{:?}", mv.decode().to_coords());
                 //     assert!(false, "wrongly classified as legal");
                 // }
                 let mut b2 = board.clone();
-                b2.make_move(&mv.decode());
+                b2.make_move(&mv.mv.decode());
                 nodes += is_legal_r_perft(&mut b2, depth - 1);
             } else {
                 // if correct_moves.contains(&mv) {

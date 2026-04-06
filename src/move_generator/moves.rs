@@ -1,4 +1,3 @@
-use super::generator::MAX_MOVES_COUNT;
 use super::masks;
 use super::normal_targets;
 use super::sliding_targets;

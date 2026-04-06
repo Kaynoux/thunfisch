@@ -1,7 +1,6 @@
 use super::bestmove;
 use crate::communication::generate_board;
 use crate::debug::visualize;
-use crate::move_generator::is_legal;
 use crate::move_generator::masks;
 use crate::move_generator::pinmask;
 use crate::prelude::*;
@@ -123,7 +122,7 @@ pub fn handle_uci_communication() {
             Some("fen") => println!("Current Fen: {}", board.generate_fen()),
             Some("draw") => visualize::print_board(&board, None),
             Some("moves") => {
-                let moves = board.generate_moves_legacy::<false>();
+                let moves = board.generate_all_moves();
                 visualize::print_board(&board, Some(&moves));
             }
             Some("eval") => println!("Depth 0 Board Evaluation: {}", board.evaluate()),
