@@ -90,17 +90,18 @@ pub fn alpha_beta(
             // TODO: When using pvs add !pv_node as additionell condition
             let depth_req = depth as i32 + i32::from(tt_score >= beta);
 
-            if settings::TT_CUTTOFFS && (node_type != NodeType::OnPV || !settings::PVS)
+            if settings::TT_CUTTOFFS
+                && (node_type != NodeType::OnPV || !settings::PVS)
                 && tt_hit.depth() >= depth_req
-                    && match bound {
-                        Bound::Lower => tt_score >= beta,
-                        Bound::Upper => tt_score <= alpha,
-                        Bound::Exact => true,
-                        _ => false,
-                    }
-                {
-                    return tt_score;
+                && match bound {
+                    Bound::Lower => tt_score >= beta,
+                    Bound::Upper => tt_score <= alpha,
+                    Bound::Exact => true,
+                    _ => false,
                 }
+            {
+                return tt_score;
+            }
         }
     }
 
@@ -118,39 +119,42 @@ pub fn alpha_beta(
             //
             // NOTE ON THIS: Higher values for depth limiting crash Thunfisch into oblivion.
             // If we get the branching factor under control and consistently hit depth 13-15 we can probably bump this up to ~4
-            if depth < 4 && !board.is_in_check() && eval >= beta
-                && eval >= beta + rfp_margin(depth) as i32 {
-                    return eval;
-                }
+            if depth < 4
+                && !board.is_in_check()
+                && eval >= beta
+                && eval >= beta + rfp_margin(depth) as i32
+            {
+                return eval;
+            }
         }
 
         // Do this before move generation to avoid generation costs
         if settings::NMP
             && null_move_allowed
-                && !board.is_in_check()
-                && !board.is_king_pawn_endgame()
-                && eval >= beta
-            {
-                board.make_null_move();
-                let reduction = min(depth, 4);
-                let eval = -alpha_beta(
-                    board,
-                    depth - reduction,
-                    -alpha - 1,
-                    -alpha,
-                    stop,
-                    search_info,
-                    ply + 1,
-                    local_seldepth,
-                    false,
-                    NodeType::OffPV,
-                    killers,
-                );
-                board.unmake_null_move();
-                if eval >= beta {
-                    return beta;
-                }
+            && !board.is_in_check()
+            && !board.is_king_pawn_endgame()
+            && eval >= beta
+        {
+            board.make_null_move();
+            let reduction = min(depth, 4);
+            let eval = -alpha_beta(
+                board,
+                depth - reduction,
+                -alpha - 1,
+                -alpha,
+                stop,
+                search_info,
+                ply + 1,
+                local_seldepth,
+                false,
+                NodeType::OffPV,
+                killers,
+            );
+            board.unmake_null_move();
+            if eval >= beta {
+                return beta;
             }
+        }
     }
     // set the best evaluation very low to begin with
     let mut best_eval = i32::MIN + 1;
@@ -235,13 +239,12 @@ pub fn alpha_beta(
                 alpha = eval;
             }
 
-            if settings::AB
-                && alpha >= beta {
-                    if mv.decode().is_quiet() {
-                        killers[ply] = mv;
-                    }
-                    break;
+            if settings::AB && alpha >= beta {
+                if mv.decode().is_quiet() {
+                    killers[ply] = mv;
                 }
+                break;
+            }
         }
     }
 

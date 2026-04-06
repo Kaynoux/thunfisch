@@ -4,7 +4,9 @@ impl Board {
     /// Unmakes the last move by using unmake info from the stack
     /// <https://www.chessprogramming.org/Unmake_Move>
     pub fn unmake_move(&mut self) {
-        let prev = if let Some(info) = self.pop_unmake_info_stack() { info } else {
+        let prev = if let Some(info) = self.pop_unmake_info_stack() {
+            info
+        } else {
             println!("info: Could not undo move because there was no previous move");
             return;
         };
@@ -127,7 +129,9 @@ impl Board {
     }
 
     pub fn unmake_null_move(&mut self) {
-        let prev = if let Some(info) = self.pop_unmake_info_stack() { info } else {
+        let prev = if let Some(info) = self.pop_unmake_info_stack() {
+            info
+        } else {
             println!("info: Could not undo move because there was no previous move");
             return;
         };

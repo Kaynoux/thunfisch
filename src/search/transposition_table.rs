@@ -131,7 +131,8 @@ pub struct TranspositionTable {
 }
 
 /// Transposition Table shared between all search threads
-pub static TT: std::sync::LazyLock<TranspositionTable> = std::sync::LazyLock::new(|| TranspositionTable::new(512));
+pub static TT: std::sync::LazyLock<TranspositionTable> =
+    std::sync::LazyLock::new(|| TranspositionTable::new(512));
 
 impl TranspositionTable {
     pub fn new(mb: usize) -> Self {

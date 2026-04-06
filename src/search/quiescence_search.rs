@@ -138,10 +138,9 @@ pub fn quiescence_search(
                 alpha = score;
             }
 
-            if settings::AB
-                && alpha >= beta {
-                    break;
-                }
+            if settings::AB && alpha >= beta {
+                break;
+            }
         }
     }
 

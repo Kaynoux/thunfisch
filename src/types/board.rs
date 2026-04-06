@@ -224,7 +224,7 @@ impl Board {
             .into_iter()
             .map(|piece| self.figure_bb(Color::White, piece) ^ self.figure_bb(Color::Black, piece))
             .reduce(|a, b| a | b)
-            .is_none_or(|bitboard| bitboard.is_empty())// REsult of reduce should never be None because map should always yield a non-empty iterator
+            .is_none_or(|bitboard| bitboard.is_empty()) // REsult of reduce should never be None because map should always yield a non-empty iterator
     }
 
     #[inline]

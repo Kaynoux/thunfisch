@@ -64,8 +64,6 @@ impl MovePicker {
     }
 
     pub fn next(&mut self, board: &mut Board) -> Option<EncodedMove> {
-        
-
         match self.state {
             GenerationState::TTMove => {
                 self.state = GenerationState::Captures;

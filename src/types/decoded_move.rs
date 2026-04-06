@@ -34,9 +34,10 @@ impl DecodedMove {
         let from_str = &move_str[0..2];
         let to_str = &move_str[2..4];
 
-        let from_pos =
-            Bit::from_coords(from_str).unwrap_or_else(|| panic!("Invalid from-coords '{from_str}'"));
-        let to_pos = Bit::from_coords(to_str).unwrap_or_else(|| panic!("Invalid to-coords '{to_str}'"));
+        let from_pos = Bit::from_coords(from_str)
+            .unwrap_or_else(|| panic!("Invalid from-coords '{from_str}'"));
+        let to_pos =
+            Bit::from_coords(to_str).unwrap_or_else(|| panic!("Invalid to-coords '{to_str}'"));
 
         let from_idx = from_pos.to_square();
         let to_idx = to_pos.to_square();

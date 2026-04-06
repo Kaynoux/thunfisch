@@ -63,17 +63,17 @@ fn get_char_board(board: &Board, moves: Option<&MoveList>) -> [(char, &'static s
                 && m.list
                     .iter()
                     .any(|chess_move| chess_move.mv.decode().from == pos)
-                {
-                    text_color = "green";
-                }
+            {
+                text_color = "green";
+            }
 
             if let Some(m) = moves
                 && m.list
                     .iter()
                     .any(|chess_move| chess_move.mv.decode().to == pos)
-                {
-                    text_color = "red";
-                }
+            {
+                text_color = "red";
+            }
             char_board[idx] = (Piece::to_unicode_char(piece, color), text_color);
         }
     }

@@ -40,20 +40,12 @@ impl MoveType {
 
     pub const fn to_promotion_color_piece(&self, color: Color) -> Option<Figure> {
         match (self, color) {
-            (Self::KnightPromo | Self::KnightPromoCapture, White) => {
-                Some(Figure::WhiteKnight)
-            }
-            (Self::BishopPromo | Self::BishopPromoCapture, White) => {
-                Some(Figure::WhiteBishop)
-            }
+            (Self::KnightPromo | Self::KnightPromoCapture, White) => Some(Figure::WhiteKnight),
+            (Self::BishopPromo | Self::BishopPromoCapture, White) => Some(Figure::WhiteBishop),
             (Self::RookPromo | Self::RookPromoCapture, White) => Some(Figure::WhiteRook),
             (Self::QueenPromo | Self::QueenPromoCapture, White) => Some(Figure::WhiteQueen),
-            (Self::KnightPromo | Self::KnightPromoCapture, Black) => {
-                Some(Figure::BlackKnight)
-            }
-            (Self::BishopPromo | Self::BishopPromoCapture, Black) => {
-                Some(Figure::BlackBishop)
-            }
+            (Self::KnightPromo | Self::KnightPromoCapture, Black) => Some(Figure::BlackKnight),
+            (Self::BishopPromo | Self::BishopPromoCapture, Black) => Some(Figure::BlackBishop),
             (Self::RookPromo | Self::RookPromoCapture, Black) => Some(Figure::BlackRook),
             (Self::QueenPromo | Self::QueenPromoCapture, Black) => Some(Figure::BlackQueen),
             _ => None,
