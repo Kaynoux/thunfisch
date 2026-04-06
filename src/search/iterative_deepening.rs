@@ -114,7 +114,7 @@ pub fn iterative_deepening(
             &mut seldepth,
             false,
             NodeType::OnPV,
-            &mut killers
+            &mut killers,
         );
 
         if iteration_search_info
@@ -137,7 +137,7 @@ pub fn iterative_deepening(
             && !b.is_threefold_repetition()
         {
             pv_local.push(tt_mv);
-            b.make_move(&tt_mv.decode());
+            b.make_move(tt_mv);
             ply += 1;
         }
 

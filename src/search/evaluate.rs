@@ -13,19 +13,24 @@ const MG_TABLE: [[i32; 64]; 12] = init_table(MG_PIECE_VALUES, MG_BASE_POSITION_T
 const EG_TABLE: [[i32; 64]; 12] = init_table(EG_PIECE_VALUES, EG_BASE_POSITION_TABLE);
 // how impactful to the game phase a figure is if it's still on the board
 // for example: A game is 'more' endgame if there are no more queens on the board
-const GAMEPHASE_INC: [i32; 12] = [0, 0, KNIGHT, KNIGHT, BISHOP, BISHOP, ROOK, ROOK, QUEEN, QUEEN, 0, 0];
+const GAMEPHASE_INC: [i32; 12] = [
+    0, 0, KNIGHT, KNIGHT, BISHOP, BISHOP, ROOK, ROOK, QUEEN, QUEEN, 0, 0,
+];
 
 // Flips square index to flip rows but keep columns the same
 // e.g. a1 becomes a8; e4 -> e5
 const fn flip(sq: usize) -> usize {
-    sq^56
+    sq ^ 56
 }
 
 /// Construct one evaluation table individual for each piece.
 /// The evaluation table assigns a value to each square on the board.
 /// Each piece has a raw material value `base_piece_value`, which is constant across the entire board.
 /// The position table is variable across the board and will additively alter the value of a piece depending on where it is located.
-const fn init_table(base_piece_value: [i32; 6], base_position_table: [[i32; 64]; 6]) -> [[i32; 64]; 12] {
+const fn init_table(
+    base_piece_value: [i32; 6],
+    base_position_table: [[i32; 64]; 6],
+) -> [[i32; 64]; 12] {
     let mut table = [[0i32; 64]; 12];
     let mut piece = 0;
     while piece < 6 {
@@ -92,14 +97,9 @@ pub const MG_BASE_POSITION_TABLE: [[i32; 64]; 6] = [
 pub const EG_BASE_POSITION_TABLE: [[i32; 64]; 6] = [
     // 0: Pawn
     [
-        0, 0, 0, 0, 0, 0, 0, 0,
-        178, 173, 158, 134, 147, 132, 165, 187,
-        94, 100, 85, 67, 56, 53, 82, 84,
-        32, 24, 13, 5, -2, 4, 17, 17,
-        13, 9, -3, -7, -7, -8, 3, -1,
-        4, 7, -6, 1, 0, -5, -1, -8,
-        13, 8, 8, 10, 13, 0, 2, -7,
-        0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 178, 173, 158, 134, 147, 132, 165, 187, 94, 100, 85, 67, 56, 53,
+        82, 84, 32, 24, 13, 5, -2, 4, 17, 17, 13, 9, -3, -7, -7, -8, 3, -1, 4, 7, -6, 1, 0, -5, -1,
+        -8, 13, 8, 8, 10, 13, 0, 2, -7, 0, 0, 0, 0, 0, 0, 0, 0,
     ],
     // 1: Knight
     [

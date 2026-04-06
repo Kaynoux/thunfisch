@@ -235,7 +235,7 @@ mod perft_test_move_picker {
             //     println!("{:?}", mv.decode().to_coords());
             //     assert!(false, "move visited twice FUCK");
             // }
-            board.make_move(&mv.decode());
+            board.make_move(mv);
             nodes += move_picker_r_perft(board, depth - 1);
             board.unmake_move();
             // visited.insert(mv);

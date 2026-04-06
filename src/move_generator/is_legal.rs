@@ -38,6 +38,7 @@ impl DecodedMove {
 impl Board {
     /// Assumption: Our move generation generates only legal moves but these moves can be now illegal
     /// Does not handle castles at all atm, they are completly handled in is_legal
+    #[inline(always)]
     pub fn is_pseudo_legal(&self, mv: &DecodedMove) -> bool {
         let mv_direction = mv.move_direction();
         let current_color = self.current_color();
@@ -534,7 +535,7 @@ mod tests_perft {
                 //     assert!(false, "wrongly classified as legal");
                 // }
                 let mut b2 = board.clone();
-                b2.make_move(&mv.mv.decode());
+                b2.make_move(mv.mv);
                 nodes += is_legal_r_perft(&mut b2, depth - 1);
             } else {
                 // if correct_moves.contains(&mv) {

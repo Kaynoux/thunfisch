@@ -117,7 +117,7 @@ pub fn quiescence_search(
             search_info.timeout_occurred.store(true, Ordering::Relaxed);
             return 0;
         }
-        board.make_move(&mv.decode());
+        board.make_move(mv);
         let score = -quiescence_search(
             board,
             -beta,

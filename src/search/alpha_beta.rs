@@ -174,7 +174,7 @@ pub fn alpha_beta(
             search_info.timeout_occurred.store(true, Ordering::Relaxed);
             return 0;
         }
-        board.make_move(&mv.decode());
+        board.make_move(mv);
         let mut eval;
         if i == 1 || !settings::PVS {
             // Principal Variation Search

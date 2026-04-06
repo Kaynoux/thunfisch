@@ -1,0 +1,8 @@
+{
+    "editor.defaultFormatter": "rust-lang.rust-analyzer",
+    "editor.formatOnSave": true,
+    "rust-analyzer.check.command": "clippy",
+    "[toml]": {
+        "editor.defaultFormatter": "tamasfe.even-better-toml",
+    },
+}

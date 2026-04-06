@@ -130,7 +130,7 @@ pub fn handle_uci_communication() {
                 let args: Vec<&str> = parts.collect();
                 let mv_str: &str = args[0];
                 let mv = DecodedMove::from_coords(mv_str.to_string(), &board);
-                board.make_move(&mv);
+                board.make_move(mv.encode());
             }
             Some("islegal") => {
                 let args: Vec<&str> = parts.collect();
