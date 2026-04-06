@@ -1,7 +1,7 @@
-use super::move_ordering;
 use super::transposition_table::TT;
 use crate::communication::bestmove::MAX_DEPTH;
 use crate::prelude::*;
+use crate::search::move_picker::MovePicker;
 use crate::search::quiescence_search;
 use crate::search::transposition_table::Bound;
 use crate::settings::settings;
@@ -159,24 +159,16 @@ pub fn alpha_beta(
     let mut best_eval = i32::MIN + 1;
     let mut best_move: Option<EncodedMove> = None;
 
-    let mut moves = board.generate_moves::<false>();
-
-    // returns the mate score (very low) when in check but adds the ply to give a later check a better eval because the depth is lowers the further you go
-    if moves.is_empty() {
-        if board.is_in_check() {
-            return -MATE_SCORE + (ply as i32);
-        } else {
-            return 0;
-        }
-    }
-
     let killer_mv: Option<EncodedMove> = killers
         .get(ply)
         .and_then(|&mv| if mv == EncodedMove(0) { None } else { Some(mv) });
 
-    move_ordering::order_moves(&mut moves, board, tt_move, killer_mv);
+    let mut movepicker = MovePicker::new(tt_move, killer_mv, false);
+    let mut i = 0;
 
-    for (i, mv) in moves.iter().enumerate() {
+    // let initial_hash = board.hash();
+    while let Some(mv) = movepicker.next(board) {
+        i += 1;
         // cancels search if time is over
         if stop.load(Ordering::Relaxed) {
             search_info.timeout_occurred.store(true, Ordering::Relaxed);
@@ -184,7 +176,7 @@ pub fn alpha_beta(
         }
         board.make_move(&mv.decode());
         let mut eval;
-        if i == 0 || !settings::PVS {
+        if i == 1 || !settings::PVS {
             // Principal Variation Search
             // We assume that the first move from the move ordering is the PV move;
             // Since the TT move, if existant, is in first place anyway this automatically includes information from shallower search depths
@@ -242,18 +234,28 @@ pub fn alpha_beta(
         if eval > best_eval {
             best_eval = eval;
             if eval > alpha {
-                best_move = Some(*mv);
+                best_move = Some(mv);
                 alpha = eval;
             }
 
             if settings::AB {
                 if alpha >= beta {
                     if mv.decode().is_quiet() {
-                        killers[ply] = *mv;
+                        killers[ply] = mv;
                     }
                     break;
                 }
             }
+        }
+    }
+
+    // When i still 0 than no move found
+    // returns the mate score (very low) when in check but adds the ply to give a later check a better eval because the depth is lowers the further you go
+    if i == 0 {
+        if board.is_in_check() {
+            return -MATE_SCORE + (ply as i32);
+        } else {
+            return 0;
         }
     }
 

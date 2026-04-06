@@ -1,10 +1,9 @@
 use crate::prelude::*;
 use crate::search::alpha_beta::MATE_SCORE;
-use crate::search::move_ordering;
+use crate::search::move_picker::MovePicker;
+use crate::search::transposition_table::Bound;
 use crate::search::transposition_table::TT;
 use crate::settings::settings;
-use crate::{move_generator::generator::ARRAY_LENGTH, search::transposition_table::Bound};
-use arrayvec::ArrayVec;
 
 use std::sync::{
     Arc,
@@ -98,23 +97,22 @@ pub fn quiescence_search(
         alpha = eval;
     }
 
-    let mut moves: ArrayVec<EncodedMove, ARRAY_LENGTH> =
-        if board.is_in_check() && (ply - ab_ply) < settings::QS_CHECK_EVASION_LIMIT {
-            board.generate_moves::<false>()
-        } else {
-            board.generate_moves::<true>()
-        };
-
-    if is_check && moves.is_empty() {
-        return -MATE_SCORE + ply as i32;
-    }
-
-    move_ordering::order_moves(&mut moves, board, tt_move, None);
-
     let mut best_score = eval;
     let mut best_move: Option<EncodedMove> = None;
 
-    for mv in moves {
+    let mut i = 0;
+
+    let mut movepicker = if board.is_in_check() && (ply - ab_ply) < settings::QS_CHECK_EVASION_LIMIT
+    {
+        MovePicker::new(tt_move, None, false)
+    } else {
+        MovePicker::new(tt_move, None, true)
+    };
+
+    // let initial_hash = board.hash();
+    while let Some(mv) = movepicker.next(board) {
+        i += 1;
+
         if stop.load(Ordering::Relaxed) {
             search_info.timeout_occurred.store(true, Ordering::Relaxed);
             return 0;
@@ -146,6 +144,10 @@ pub fn quiescence_search(
                 }
             }
         }
+    }
+
+    if is_check && i == 0 {
+        return -MATE_SCORE + ply as i32;
     }
 
     let bound = if best_score >= beta {

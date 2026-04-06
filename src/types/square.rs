@@ -1,8 +1,16 @@
 use crate::prelude::{Bit, Bitboard};
-use std::ops::Index;
+use std::ops::{Index, Sub};
 
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub struct Square(pub usize);
+
+impl Sub for Square {
+    type Output = i64;
+
+    fn sub(self, rhs: Self) -> i64  {
+        return self.0 as i64 - rhs.0 as i64
+    }
+}
 
 impl Square {
     #[inline(always)]
