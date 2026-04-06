@@ -1,6 +1,6 @@
 use crate::prelude::*;
 
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct DecodedMove {
     pub from: Square,
     pub to: Square,
@@ -14,20 +14,19 @@ impl DecodedMove {
 
         match self.mv_type.to_promotion_piece() {
             Some(prom) => format!("{}{}{}", from, to, prom.to_lowercase_char()),
-            None => format!("{}{}", from, to),
+            None => format!("{from}{to}"),
         }
     }
 
     pub fn is_quiet(&self) -> bool {
-        return self.mv_type == MoveType::Quiet;
+        self.mv_type == MoveType::Quiet
     }
 
-    pub fn from_coords(move_str: String, board: &Board) -> DecodedMove {
+    pub fn from_coords(move_str: String, board: &Board) -> Self {
         // 4 or 5 character string are valid (5 because of promotion)
         assert!(
             move_str.len() == 4 || move_str.len() == 5,
-            "Invalid move string '{}', expected 4 or 5 chars",
-            move_str
+            "Invalid move string '{move_str}', expected 4 or 5 chars"
         );
 
         let mut mv_type = MoveType::Quiet;
@@ -36,8 +35,8 @@ impl DecodedMove {
         let to_str = &move_str[2..4];
 
         let from_pos =
-            Bit::from_coords(from_str).expect(&format!("Invalid from-coords '{}'", from_str));
-        let to_pos = Bit::from_coords(to_str).expect(&format!("Invalid to-coords '{}'", to_str));
+            Bit::from_coords(from_str).unwrap_or_else(|| panic!("Invalid from-coords '{from_str}'"));
+        let to_pos = Bit::from_coords(to_str).unwrap_or_else(|| panic!("Invalid to-coords '{to_str}'"));
 
         let from_idx = from_pos.to_square();
         let to_idx = to_pos.to_square();
@@ -68,7 +67,7 @@ impl DecodedMove {
             let prom_char = move_str.chars().nth(4).unwrap();
             Some(
                 Piece::from_char(prom_char)
-                    .expect(&format!("Invalid promotion piece '{}'", prom_char)),
+                    .unwrap_or_else(|| panic!("Invalid promotion piece '{prom_char}'")),
             )
         } else {
             None
@@ -95,10 +94,10 @@ impl DecodedMove {
         }
 
         if from_piece == Pawn && from_pos.to_y().abs_diff(to_pos.to_y()) == 2 {
-            mv_type = MoveType::DoubleMove
+            mv_type = MoveType::DoubleMove;
         }
 
-        DecodedMove {
+        Self {
             from: from_idx,
             to: to_idx,
             mv_type,
@@ -108,7 +107,7 @@ impl DecodedMove {
     pub const fn encode(self) -> EncodedMove {
         let from_idx = self.from.0 as u16;
         let to_idx = self.to.0 as u16;
-        EncodedMove(from_idx as u16 | (to_idx) << 6 | (self.mv_type as u16))
+        EncodedMove(from_idx | (to_idx) << 6 | (self.mv_type as u16))
     }
 }
 

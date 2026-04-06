@@ -3,7 +3,7 @@ use crate::move_generator::magics::ROOK_MAGICS;
 use crate::prelude::*;
 
 /// Precalculates Black Magic Bitboards which are indexed with a hash key and return the possible sliding target positions
-/// https://www.chessprogramming.org/Magic_Bitboards
+/// <https://www.chessprogramming.org/Magic_Bitboards>
 static SLIDING_TARGETS: [Bitboard; 88772] = {
     let mut targets = [Bitboard::EMPTY; 88772];
     let mut square = 0;
@@ -72,7 +72,7 @@ const fn get_sliding_targets(square: i32, occupied: u64, is_hv: bool) -> u64 {
 }
 
 /// Returns all possible bishop target posiotns given its current position and all occupied Squares as a Bitboard
-/// https://www.chessprogramming.org/Magic_Bitboards
+/// <https://www.chessprogramming.org/Magic_Bitboards>
 pub const fn get_bishop_targets(square: Square, occupied: Bitboard) -> Bitboard {
     let magic = BISHOP_MAGICS[square.0];
 
@@ -84,7 +84,7 @@ pub const fn get_bishop_targets(square: Square, occupied: Bitboard) -> Bitboard 
 }
 
 /// Returns all possible bishop target posiotns given its current position and all occupied Squares as a Bitboard
-/// https://www.chessprogramming.org/Magic_Bitboards
+/// <https://www.chessprogramming.org/Magic_Bitboards>
 pub const fn get_rook_targets(square: Square, occupied: Bitboard) -> Bitboard {
     let magic = ROOK_MAGICS[square.0];
 

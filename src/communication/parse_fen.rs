@@ -5,7 +5,7 @@ impl Board {
     /// FEN describes the position of all pieces on the board
     /// lowercase = black and uppercase = white
     pub fn from_fen(fen: &str) -> Self {
-        let mut board = Board::EMPTY;
+        let mut board = Self::EMPTY;
         let mut parts = fen.split_whitespace();
         let placement = parts.next().expect("Placement invalid");
         let active_color = parts.next().unwrap_or("w");

@@ -1,5 +1,4 @@
 use crate::{prelude::*, search::alpha_beta::MATE_SCORE};
-use once_cell::sync::Lazy;
 use std::sync::atomic::{AtomicU8, AtomicU64, Ordering};
 
 const MAX_AGE: i32 = 1 << 5; // needs to match TTInfo layout
@@ -83,7 +82,7 @@ impl DecodedTTEntry {
         i32::from(self.depth)
     }
 
-    pub fn bound(&self) -> Bound {
+    pub const fn bound(&self) -> Bound {
         self.info.bound()
     }
 
@@ -91,7 +90,7 @@ impl DecodedTTEntry {
         i32::from(self.score)
     }
 
-    pub fn best_move(&self) -> Option<EncodedMove> {
+    pub const fn best_move(&self) -> Option<EncodedMove> {
         if self.best_move.0 == 0 {
             return None;
         }
@@ -125,14 +124,14 @@ impl DecodedTTEntry {
 //     }
 // }
 
-/// https://www.chessprogramming.org/Transposition_Table
+/// <https://www.chessprogramming.org/Transposition_Table>
 pub struct TranspositionTable {
     entries: Vec<EncodedHashEntry>,
     age: AtomicU8,
 }
 
 /// Transposition Table shared between all search threads
-pub static TT: Lazy<TranspositionTable> = Lazy::new(|| TranspositionTable::new(512));
+pub static TT: std::sync::LazyLock<TranspositionTable> = std::sync::LazyLock::new(|| TranspositionTable::new(512));
 
 impl TranspositionTable {
     pub fn new(mb: usize) -> Self {
@@ -153,7 +152,7 @@ impl TranspositionTable {
             })
             .collect();
 
-        TranspositionTable {
+        Self {
             entries,
             age: AtomicU8::new(0),
         }
@@ -223,7 +222,7 @@ impl TranspositionTable {
             };
 
             debug_assert!(
-                normalised_score >= i16::MIN as i32 && normalised_score <= i16::MAX as i32,
+                i16::try_from(normalised_score).is_ok(),
                 "Score must fit into i16"
             );
 
@@ -269,7 +268,7 @@ impl TranspositionTable {
         }
 
         let fill_rate = if sample_size > 0 {
-            filled_sample as f64 / sample_size as f64
+            f64::from(filled_sample) / sample_size as f64
         } else {
             0.0
         };
@@ -295,7 +294,7 @@ impl TranspositionTable {
     }
 
     pub fn handle_debug(&self, args: &[&str], hash: u64) -> Result<String, String> {
-        match args.get(0) {
+        match args.first() {
             Some(&"help") => Ok("usage: tt [fill | clear | probe]".to_owned()),
             Some(&"clear") => {
                 self.clear();
@@ -326,7 +325,7 @@ impl TranspositionTable {
                     Ok("No Entry".to_owned())
                 }
             }
-            Some(cmd) => Err(format!("Unknown command: tt {}", cmd)),
+            Some(cmd) => Err(format!("Unknown command: tt {cmd}")),
             None => Err("Argument Required".to_owned()),
         }
     }

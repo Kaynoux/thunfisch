@@ -1,7 +1,7 @@
 use crate::prelude::*;
 
 /// Return all Pos between from and to both exclusive
-pub const IN_BETWEEN: [[Bitboard; 64]; 64] = {
+pub static IN_BETWEEN: [[Bitboard; 64]; 64] = {
     let mut arr = [[Bitboard::EMPTY; 64]; 64];
     let mut from = 0;
     while from < 64 {
@@ -17,7 +17,7 @@ pub const IN_BETWEEN: [[Bitboard; 64]; 64] = {
 
 /// Returns all pos on a line between from (incluseive) and to (inclusive)
 #[allow(unused)]
-pub const LINE_THROUGH: [[Bitboard; 64]; 64] = {
+pub static LINE_THROUGH: [[Bitboard; 64]; 64] = {
     let mut arr = [[Bitboard::EMPTY; 64]; 64];
     let mut from = 0;
     while from < 64 {

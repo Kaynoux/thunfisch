@@ -21,85 +21,85 @@ pub enum Figure {
 impl Figure {
     pub const fn to_polyglot(self) -> usize {
         match self {
-            Figure::BlackPawn => 0,
-            Figure::WhitePawn => 1,
-            Figure::BlackKnight => 2,
-            Figure::WhiteKnight => 3,
-            Figure::BlackBishop => 4,
-            Figure::WhiteBishop => 5,
-            Figure::BlackRook => 6,
-            Figure::WhiteRook => 7,
-            Figure::BlackQueen => 8,
-            Figure::WhiteQueen => 9,
-            Figure::BlackKing => 10,
-            Figure::WhiteKing => 11,
-            Figure::Empty => usize::MAX,
+            Self::BlackPawn => 0,
+            Self::WhitePawn => 1,
+            Self::BlackKnight => 2,
+            Self::WhiteKnight => 3,
+            Self::BlackBishop => 4,
+            Self::WhiteBishop => 5,
+            Self::BlackRook => 6,
+            Self::WhiteRook => 7,
+            Self::BlackQueen => 8,
+            Self::WhiteQueen => 9,
+            Self::BlackKing => 10,
+            Self::WhiteKing => 11,
+            Self::Empty => usize::MAX,
         }
     }
 
-    pub const fn from_idx(idx: usize) -> Figure {
+    pub const fn from_idx(idx: usize) -> Self {
         match idx {
-            0 => Figure::WhitePawn,
-            1 => Figure::BlackPawn,
-            2 => Figure::WhiteKnight,
-            3 => Figure::BlackKnight,
-            4 => Figure::WhiteBishop,
-            5 => Figure::BlackBishop,
-            6 => Figure::WhiteRook,
-            7 => Figure::BlackRook,
-            8 => Figure::WhiteQueen,
-            9 => Figure::BlackQueen,
-            10 => Figure::WhiteKing,
-            11 => Figure::BlackKing,
-            _ => Figure::Empty,
+            0 => Self::WhitePawn,
+            1 => Self::BlackPawn,
+            2 => Self::WhiteKnight,
+            3 => Self::BlackKnight,
+            4 => Self::WhiteBishop,
+            5 => Self::BlackBishop,
+            6 => Self::WhiteRook,
+            7 => Self::BlackRook,
+            8 => Self::WhiteQueen,
+            9 => Self::BlackQueen,
+            10 => Self::WhiteKing,
+            11 => Self::BlackKing,
+            _ => Self::Empty,
         }
     }
 
-    pub fn piece_and_color(self) -> (Piece, Color) {
+    pub const fn piece_and_color(self) -> (Piece, Color) {
         match self {
-            Figure::WhitePawn => (Pawn, White),
-            Figure::BlackPawn => (Pawn, Black),
-            Figure::WhiteKnight => (Knight, White),
-            Figure::BlackKnight => (Knight, Black),
-            Figure::WhiteBishop => (Bishop, White),
-            Figure::BlackBishop => (Bishop, Black),
-            Figure::WhiteRook => (Rook, White),
-            Figure::BlackRook => (Rook, Black),
-            Figure::WhiteQueen => (Queen, White),
-            Figure::BlackQueen => (Queen, Black),
-            Figure::WhiteKing => (King, White),
-            Figure::BlackKing => (King, Black),
-            Figure::Empty => (Empty, White), // Color does not matter
+            Self::WhitePawn => (Pawn, White),
+            Self::BlackPawn => (Pawn, Black),
+            Self::WhiteKnight => (Knight, White),
+            Self::BlackKnight => (Knight, Black),
+            Self::WhiteBishop => (Bishop, White),
+            Self::BlackBishop => (Bishop, Black),
+            Self::WhiteRook => (Rook, White),
+            Self::BlackRook => (Rook, Black),
+            Self::WhiteQueen => (Queen, White),
+            Self::BlackQueen => (Queen, Black),
+            Self::WhiteKing => (King, White),
+            Self::BlackKing => (King, Black),
+            Self::Empty => (Empty, White), // Color does not matter
         }
     }
 
-    pub fn piece(self) -> Piece {
+    pub const fn piece(self) -> Piece {
         match self {
-            Figure::WhitePawn | Figure::BlackPawn => Pawn,
-            Figure::WhiteKnight | Figure::BlackKnight => Knight,
-            Figure::WhiteBishop | Figure::BlackBishop => Bishop,
-            Figure::WhiteRook | Figure::BlackRook => Rook,
-            Figure::WhiteQueen | Figure::BlackQueen => Queen,
-            Figure::WhiteKing | Figure::BlackKing => King,
-            Figure::Empty => Empty,
+            Self::WhitePawn | Self::BlackPawn => Pawn,
+            Self::WhiteKnight | Self::BlackKnight => Knight,
+            Self::WhiteBishop | Self::BlackBishop => Bishop,
+            Self::WhiteRook | Self::BlackRook => Rook,
+            Self::WhiteQueen | Self::BlackQueen => Queen,
+            Self::WhiteKing | Self::BlackKing => King,
+            Self::Empty => Empty,
         }
     }
 
-    pub const fn from_piece_and_color(piece: Piece, color: Color) -> Figure {
+    pub const fn from_piece_and_color(piece: Piece, color: Color) -> Self {
         match (piece, color) {
-            (Pawn, White) => Figure::WhitePawn,
-            (Pawn, Black) => Figure::BlackPawn,
-            (Knight, White) => Figure::WhiteKnight,
-            (Knight, Black) => Figure::BlackKnight,
-            (Bishop, White) => Figure::WhiteBishop,
-            (Bishop, Black) => Figure::BlackBishop,
-            (Rook, White) => Figure::WhiteRook,
-            (Rook, Black) => Figure::BlackRook,
-            (Queen, White) => Figure::WhiteQueen,
-            (Queen, Black) => Figure::BlackQueen,
-            (King, White) => Figure::WhiteKing,
-            (King, Black) => Figure::BlackKing,
-            (Empty, _) => Figure::Empty,
+            (Pawn, White) => Self::WhitePawn,
+            (Pawn, Black) => Self::BlackPawn,
+            (Knight, White) => Self::WhiteKnight,
+            (Knight, Black) => Self::BlackKnight,
+            (Bishop, White) => Self::WhiteBishop,
+            (Bishop, Black) => Self::BlackBishop,
+            (Rook, White) => Self::WhiteRook,
+            (Rook, Black) => Self::BlackRook,
+            (Queen, White) => Self::WhiteQueen,
+            (Queen, Black) => Self::BlackQueen,
+            (King, White) => Self::WhiteKing,
+            (King, Black) => Self::BlackKing,
+            (Empty, _) => Self::Empty,
         }
     }
 }

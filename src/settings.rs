@@ -15,19 +15,7 @@ pub mod settings {
     #[inline]
     pub fn repr() -> String {
         format!(
-            "Activated Features: AB={:?} QS={:?} TT-AB={:?} TT-QS={:?} MVV-LVA={:?} QS_CHECK_EVASION_LIMIT={:?} ORDER_TT_MV_FIRST={:?} TT_CUTTOFFS={:?} NMP={:?} RFP={:?} PVS={:?}, KILLERS={:?}",
-            AB,
-            QS,
-            TT_AB,
-            TT_QS,
-            MVV_LVA,
-            QS_CHECK_EVASION_LIMIT,
-            ORDER_TT_MV_FIRST,
-            TT_CUTTOFFS,
-            NMP,
-            RFP,
-            PVS,
-            KILLERS
+            "Activated Features: AB={AB:?} QS={QS:?} TT-AB={TT_AB:?} TT-QS={TT_QS:?} MVV-LVA={MVV_LVA:?} QS_CHECK_EVASION_LIMIT={QS_CHECK_EVASION_LIMIT:?} ORDER_TT_MV_FIRST={ORDER_TT_MV_FIRST:?} TT_CUTTOFFS={TT_CUTTOFFS:?} NMP={NMP:?} RFP={RFP:?} PVS={PVS:?}, KILLERS={KILLERS:?}"
         )
     }
 }

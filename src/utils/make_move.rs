@@ -2,7 +2,7 @@ use crate::{prelude::*, types::board::UNSET_CHECK_COUNTER};
 
 impl Board {
     /// Executes a given move on the board
-    /// https://www.chessprogramming.org/Make_Move
+    /// <https://www.chessprogramming.org/Make_Move>
     pub fn make_move(&mut self, encoded_move: EncodedMove) {
         let mv = encoded_move.decode();
         let mv_type = mv.mv_type;

@@ -52,7 +52,7 @@ pub fn handle_input(board: &mut Board, args: &[&str]) {
                                 *board = Board::from_fen(fens[index_val]);
                             }
                         }
-                        Err(err) => eprintln!("Could not parse index `{}`: {}", idx_str, err),
+                        Err(err) => eprintln!("Could not parse index `{idx_str}`: {err}"),
                     }
                 }
             }
@@ -61,12 +61,12 @@ pub fn handle_input(board: &mut Board, args: &[&str]) {
     }
 
     // if keyword moves appear then we will execute the following moves on the board
-    if let Some(&"moves") = iter.next() {
-        let moves: Vec<&str> = iter.cloned().collect();
+    if iter.next() == Some(&"moves") {
+        let moves: Vec<&str> = iter.copied().collect();
 
         // makes every move in order the perfectly recreate the input
-        for &mv_str in moves.iter() {
-            let mv = DecodedMove::from_coords(mv_str.to_string(), &board);
+        for &mv_str in &moves {
+            let mv = DecodedMove::from_coords(mv_str.to_string(), board);
             board.make_move(mv.encode());
         }
     }

@@ -9,8 +9,8 @@ pub struct SearchInfo {
 }
 
 impl SearchInfo {
-    pub fn new() -> Self {
-        SearchInfo {
+    pub const fn new() -> Self {
+        Self {
             total_alpha_beta_nodes: AtomicUsize::new(0),
             total_qs_nodes: AtomicUsize::new(0),
             total_eval_nodes: AtomicUsize::new(0),

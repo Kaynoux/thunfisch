@@ -14,10 +14,10 @@ impl EncodedMove {
         DecodedMove { from, to, mv_type }
     }
 
-    pub const fn encode(from: Square, to: Square, mv_type: MoveType) -> EncodedMove {
+    pub const fn encode(from: Square, to: Square, mv_type: MoveType) -> Self {
         let from_idx = from.0 as u16;
         let to_idx = to.0 as u16;
-        EncodedMove(from_idx as u16 | (to_idx) << 6 | (mv_type as u16))
+        Self(from_idx | (to_idx) << 6 | (mv_type as u16))
     }
 }
 

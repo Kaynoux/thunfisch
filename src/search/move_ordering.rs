@@ -7,12 +7,12 @@ const CAPTURE_BONUS: i32 = 1024;
 
 /// Score capture moves based on the value of the capturing piece to the captured piece
 /// For example a pawn capturing a queen gets a higher score than a queen capturing a rook
-/// https://www.chessprogramming.org/Move_Ordering
+/// <https://www.chessprogramming.org/Move_Ordering>
 pub fn mvv_lva(move_list: &mut MoveList, board: &Board) {
     if !settings::MVV_LVA {
         return;
     }
-    for entry in move_list.list.iter_mut() {
+    for entry in &mut move_list.list {
         let mv = entry.mv.decode();
         let mv_type = mv.mv_type;
         entry.score = match mv_type {

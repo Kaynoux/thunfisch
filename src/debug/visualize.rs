@@ -12,7 +12,7 @@ pub fn print_board(board: &Board, moves: Option<&MoveList>) {
         board.total_halfmove_counter(),
         board
             .ep_target()
-            .map_or("-".to_owned(), |target| target.to_coords()),
+            .map_or("-".to_owned(), super::super::types::bit::Bit::to_coords),
         board.count_repetitions(),
         board.hash(),
         board
@@ -38,7 +38,7 @@ pub fn print_board(board: &Board, moves: Option<&MoveList>) {
         while x <= 7 {
             let idx = (y * 8 + x) as usize;
             let colored_str = char_board[idx].0.to_string().color(char_board[idx].1);
-            print!("{} ", colored_str);
+            print!("{colored_str} ");
 
             x += 1;
         }
@@ -59,23 +59,21 @@ fn get_char_board(board: &Board, moves: Option<&MoveList>) -> [(char, &'static s
 
             let (piece, color) = board.piece_and_color_at_position(pos.to_bit());
             let mut text_color = "white";
-            if let Some(m) = moves {
-                if m.list
+            if let Some(m) = moves
+                && m.list
                     .iter()
                     .any(|chess_move| chess_move.mv.decode().from == pos)
                 {
                     text_color = "green";
                 }
-            }
 
-            if let Some(m) = moves {
-                if m.list
+            if let Some(m) = moves
+                && m.list
                     .iter()
                     .any(|chess_move| chess_move.mv.decode().to == pos)
                 {
                     text_color = "red";
                 }
-            }
             char_board[idx] = (Piece::to_unicode_char(piece, color), text_color);
         }
     }
@@ -113,7 +111,7 @@ pub fn print_moves(moves: &MoveList) {
         MoveType::QueenPromoCapture,
     ];
 
-    for move_type_variant in all_move_types.iter() {
+    for move_type_variant in &all_move_types {
         let current_moves: &[EncodedMove] = match moves_by_type.get(move_type_variant) {
             Some(mvs) => mvs,
             None => &[],
@@ -145,11 +143,11 @@ pub fn format_usize(n: usize) -> String {
     let units = ["", "k", "M", "G", "T", "P", "E"];
 
     if n < 1000 {
-        return format!("{}", n);
+        return format!("{n}");
     }
 
     // Calculates the exponent (0 for <1000, 1 for k, 2 for M, etc.)
-    let exp = (n_f.ln() / 1000.0_f64.ln()).floor() as usize;
+    let exp = n_f.log(1000.0_f64).floor() as usize;
 
     // Ensure we don't go out of bounds of the array
     let exp = exp.min(units.len() - 1);
@@ -166,11 +164,11 @@ pub fn format_f64(n: f64) -> String {
     let sign = if n < 0.0 { "-" } else { "" };
 
     if abs_n < 1000.0 {
-        return format!("{}{:.2}", sign, abs_n);
+        return format!("{sign}{abs_n:.2}");
     }
 
     // Calculates the exponent (0 for <1000, 1 for k, 2 for M, etc.)
-    let exp = (abs_n.ln() / 1000.0_f64.ln()).floor() as usize;
+    let exp = abs_n.log(1000.0_f64).floor() as usize;
 
     // Ensure we don't go out of bounds of the array
     let exp = exp.min(units.len() - 1);

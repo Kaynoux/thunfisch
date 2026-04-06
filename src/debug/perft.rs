@@ -93,7 +93,7 @@ pub fn perft_debug(board: &mut Board, depth: usize) {
         return;
     }
     let start = Instant::now();
-    println!("Perft divide depth {}:", depth);
+    println!("Perft divide depth {depth}:");
     let mut total_nodes = 0;
     let moves = board.generate_all_moves();
     for encoded_mv in moves.list {
@@ -171,8 +171,8 @@ pub fn perft_debug(board: &mut Board, depth: usize) {
         nodes_per_seconds.to_formatted_string(&Locale::en)
     );
 
-    println!("Captures: {}", captures);
-    println!("En Passants: {}", ep_captures);
+    println!("Captures: {captures}");
+    println!("En Passants: {ep_captures}");
     println!(
         "Total Castles: {}  Queen Castles: {}  King Castles: {}",
         queen_castles + king_castles,
@@ -185,7 +185,7 @@ pub fn perft_debug(board: &mut Board, depth: usize) {
         normal_promotions,
         capture_promotions
     );
-    println!("Double moves: {}", double_moves);
+    println!("Double moves: {double_moves}");
 }
 
 pub fn perft(board: &mut Board, depth: usize) {
@@ -272,7 +272,7 @@ pub fn perft_perftree_format(board: &mut Board, depth: usize) {
         println!("{} {} ", mv.decode().to_coords(), nodes_for_move,);
     }
     println!();
-    println!("{}", total_nodes);
+    println!("{total_nodes}");
 }
 pub fn r_perft(board: &mut Board, depth: usize) -> usize {
     if depth == 0 {

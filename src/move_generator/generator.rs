@@ -167,7 +167,7 @@ impl Board {
         moves::generate_castle_moves(&mut moves, check_counter, friendly, self);
         moves::generate_ep_moves(self, &mut moves, friendly, hv_pinmask, diag_pinmask);
 
-        return moves;
+        moves
     }
 
     pub fn is_in_check(&mut self) -> bool {

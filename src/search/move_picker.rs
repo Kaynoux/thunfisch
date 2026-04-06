@@ -27,14 +27,14 @@ pub struct MoveList {
 }
 
 impl MoveList {
-    pub fn new() -> MoveList {
-        MoveList {
+    pub fn new() -> Self {
+        Self {
             list: ArrayVec::<MoveListMove, MAX_MOVES_COUNT>::new(),
         }
     }
 
     pub fn push(&mut self, mv: EncodedMove) {
-        self.list.push(MoveListMove { score: 0, mv: mv });
+        self.list.push(MoveListMove { score: 0, mv });
     }
 }
 
@@ -52,19 +52,21 @@ impl MovePicker {
         tt_move: Option<EncodedMove>,
         killer_mv: Option<EncodedMove>,
         skip_quiets: bool,
-    ) -> MovePicker {
-        MovePicker {
+    ) -> Self {
+        Self {
             tt_move,
             killer_mv,
             move_list: MoveList::new(),
             state: GenerationState::TTMove,
             move_index: 0,
-            skip_quiets: skip_quiets,
+            skip_quiets,
         }
     }
 
     pub fn next(&mut self, board: &mut Board) -> Option<EncodedMove> {
-        let next = match self.state {
+        
+
+        match self.state {
             GenerationState::TTMove => {
                 self.state = GenerationState::Captures;
                 if settings::ORDER_TT_MV_FIRST
@@ -79,21 +81,19 @@ impl MovePicker {
             GenerationState::Captures => {
                 board.generate_moves::<false>(&mut self.move_list);
 
-                mvv_lva(&mut self.move_list, &board);
+                mvv_lva(&mut self.move_list, board);
                 self.state = GenerationState::YieldCaptures;
                 self.next(board)
             }
             GenerationState::YieldCaptures => {
                 if let Some(mv) = self.yield_next_best_move() {
                     Some(mv)
+                } else if self.skip_quiets {
+                    self.state = GenerationState::Done;
+                    None
                 } else {
-                    if self.skip_quiets {
-                        self.state = GenerationState::Done;
-                        None
-                    } else {
-                        self.state = GenerationState::Killer;
-                        self.next(board)
-                    }
+                    self.state = GenerationState::Killer;
+                    self.next(board)
                 }
             }
             GenerationState::Killer => {
@@ -124,9 +124,7 @@ impl MovePicker {
             }
 
             GenerationState::Done => None,
-        };
-
-        next
+        }
     }
 
     pub fn yield_next_best_move(&mut self) -> Option<EncodedMove> {

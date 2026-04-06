@@ -9,7 +9,7 @@ use crate::{
     prelude::*,
 };
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum MoveDirection {
     HV,
     Diag,
@@ -20,7 +20,7 @@ pub enum MoveDirection {
 impl DecodedMove {
     /// Identifies the `MoveDirection` of the move based on where the squares lie relative to
     /// each other on the chess board.
-    pub fn move_direction(&self) -> MoveDirection {
+    pub const fn move_direction(&self) -> MoveDirection {
         match (
             self.to.x().abs_diff(self.from.x()),
             self.to.y().abs_diff(self.from.y()),
@@ -37,7 +37,7 @@ impl DecodedMove {
 
 impl Board {
     /// Assumption: Our move generation generates only legal moves but these moves can be now illegal
-    /// Does not handle castles at all atm, they are completly handled in is_legal
+    /// Does not handle castles at all atm, they are completly handled in `is_legal`
     #[inline]
     pub fn is_pseudo_legal(&self, mv: &DecodedMove) -> bool {
         let mv_direction = mv.move_direction();
@@ -89,7 +89,7 @@ impl Board {
             return false;
         }
 
-        return true;
+        true
     }
     /// Checks whether `mv` is legal on `self`.
     pub fn is_legal(&mut self, mv: &DecodedMove) -> bool {
@@ -181,12 +181,12 @@ impl Board {
                         || (PAWN_ATTACK_TARGETS[1][mv.from.i()] & opponents & checkmask)
                             .is_position_set(to_bit)
                 }
-                MoveType::EpCapture => self.ep_target().map_or(false, |target| {
+                MoveType::EpCapture => self.ep_target().is_some_and(|target| {
                     let captured_pawn = pawn_quiet_single_target(target, !self.current_color());
-                    return target == to_bit
+                    target == to_bit
                         && (checkmask.is_position_set(to_bit)
                             || checkmask.is_position_set(captured_pawn))
-                        && !diag_pinmask.is_position_set(captured_pawn);
+                        && !diag_pinmask.is_position_set(captured_pawn)
                 }),
                 _ => false,
             },
@@ -218,7 +218,7 @@ impl Board {
     }
 
     /// Calculate whether castling to `side` is legal. for the given color.
-    /// If MoveType is not a castling move this returns false.
+    /// If `MoveType` is not a castling move this returns false.
     fn is_castling_legal(&mut self, friendly: Color, side: MoveType) -> bool {
         let occupied = self.occupied();
         let attackmask = self.get_attackmask();

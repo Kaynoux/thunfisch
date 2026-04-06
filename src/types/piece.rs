@@ -13,7 +13,7 @@ pub enum Piece {
 }
 
 impl Piece {
-    pub fn to_polyglot(self) -> usize {
+    pub const fn to_polyglot(self) -> usize {
         match self {
             Pawn => 0,
             Knight => 1,
@@ -25,7 +25,7 @@ impl Piece {
         }
     }
     /// Returns the correct FIN symbol by matching the piece together with the provided color.
-    pub fn to_fin_char(self, color: Color) -> char {
+    pub const fn to_fin_char(self, color: Color) -> char {
         match (self, color) {
             (Empty, _) => ' ',
             (Pawn, White) => 'P',
@@ -43,7 +43,7 @@ impl Piece {
         }
     }
 
-    pub fn to_unicode_char(self, color: Color) -> char {
+    pub const fn to_unicode_char(self, color: Color) -> char {
         match (self, color) {
             (Empty, _) => '.',
             (Pawn, Black) => '♙',
@@ -61,7 +61,7 @@ impl Piece {
         }
     }
 
-    pub fn from_char(piece_char: char) -> Option<Piece> {
+    pub const fn from_char(piece_char: char) -> Option<Self> {
         match piece_char {
             'p' => Some(Pawn),
             'n' => Some(Knight),
@@ -73,7 +73,7 @@ impl Piece {
         }
     }
 
-    pub fn to_lowercase_char(self) -> char {
+    pub const fn to_lowercase_char(self) -> char {
         match self {
             Empty => ' ',
             Pawn => 'p',
@@ -87,7 +87,7 @@ impl Piece {
 
     /// Construct a piece from a lowercase character.
     /// Returns Err(()) if there's no matching piece for the character.
-    pub fn from_lowercase_char(c: char) -> Result<Piece, ()> {
+    pub const fn from_lowercase_char(c: char) -> Result<Self, ()> {
         match c {
             '_' => Ok(Empty),
             'p' => Ok(Pawn),

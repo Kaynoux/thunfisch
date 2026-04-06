@@ -1,14 +1,14 @@
 use crate::prelude::{Bit, Bitboard};
 use std::ops::{Index, Sub};
 
-#[derive(Copy, Clone, PartialEq, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Debug)]
 pub struct Square(pub usize);
 
 impl Sub for Square {
     type Output = i64;
 
     fn sub(self, rhs: Self) -> i64 {
-        return self.0 as i64 - rhs.0 as i64;
+        self.0 as i64 - rhs.0 as i64
     }
 }
 
@@ -34,8 +34,8 @@ impl Square {
         self.0
     }
 
-    pub const fn from_xy(x: usize, y: usize) -> Square {
-        Square(y * 8 + x)
+    pub const fn from_xy(x: usize, y: usize) -> Self {
+        Self(y * 8 + x)
     }
 
     pub const fn y(self) -> usize {
@@ -48,11 +48,8 @@ impl Square {
 
     /// Converts UCI notation to square
     #[inline]
-    pub fn from_coords(coords: &str) -> Option<Square> {
-        let (c1, c2) = match Bit::get_first_two_string_chars(coords) {
-            Some(c1c2) => c1c2,
-            None => return None,
-        };
+    pub fn from_coords(coords: &str) -> Option<Self> {
+        let (c1, c2) = Bit::get_first_two_string_chars(coords)?;
 
         let x: isize = match c1 {
             'a' => 0,
@@ -78,7 +75,7 @@ impl Square {
             _ => return None,
         };
 
-        Some(Square((y * 8 + x) as usize))
+        Some(Self((y * 8 + x) as usize))
     }
 }
 

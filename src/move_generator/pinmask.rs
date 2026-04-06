@@ -3,8 +3,8 @@ use crate::move_generator::sliding_targets::{get_bishop_targets, get_rook_target
 use crate::prelude::*;
 
 /// Calculates two Pin mask one for horizotal and vertical (hv) and one for diagnoals (diag)
-/// Explained here unter section pinmask: https://www.codeproject.com/Articles/5313417/Worlds-fastest-Bitboard-Chess-Movegenerator
-/// https://www.chessprogramming.org/Pin
+/// Explained here unter section pinmask: <https://www.codeproject.com/Articles/5313417/Worlds-fastest-Bitboard-Chess-Movegenerator>
+/// <https://www.chessprogramming.org/Pin>
 pub fn generate_pin_masks(board: &Board) -> (Bitboard, Bitboard) {
     let mut pin_hv = Bitboard::EMPTY;
     let mut pin_diag = Bitboard::EMPTY;
@@ -41,14 +41,14 @@ pub fn generate_pin_masks(board: &Board) -> (Bitboard, Bitboard) {
 }
 
 /// calculate squares which will be attacked by the rook when the blockers will be seen as transparent
-/// https://www.chessprogramming.org/X-ray_Attacks_(Bitboards)
+/// <https://www.chessprogramming.org/X-ray_Attacks>_(Bitboards)
 fn get_rook_xray_targets(square: Square, occ: Bitboard, blockers: Bitboard) -> Bitboard {
     let targets = get_rook_targets(square, occ); // normal rook targets
     targets ^ get_rook_targets(square, occ ^ (targets & blockers)) // removes the blockers from the target calc and removes all prev targets so only the new ones stay
 }
 
 /// calculate squares which will be attacked by the bishop when the blockers will be seen as transparent
-/// https://www.chessprogramming.org/X-ray_Attacks_(Bitboards)
+/// <https://www.chessprogramming.org/X-ray_Attacks>_(Bitboards)
 fn get_bishop_xray_targets(square: Square, occ: Bitboard, blockers: Bitboard) -> Bitboard {
     let targets = get_bishop_targets(square, occ);
     targets ^ get_bishop_targets(square, occ ^ (targets & blockers))

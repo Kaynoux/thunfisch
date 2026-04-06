@@ -10,7 +10,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
 };
 
-/// https://www.chessprogramming.org/Quiescence_Search
+/// <https://www.chessprogramming.org/Quiescence_Search>
 pub fn quiescence_search(
     board: &mut Board,
     mut alpha: i32,
@@ -135,14 +135,13 @@ pub fn quiescence_search(
             best_score = score;
             if score > alpha {
                 best_move = Some(mv);
-                alpha = score
+                alpha = score;
             }
 
-            if settings::AB {
-                if alpha >= beta {
+            if settings::AB
+                && alpha >= beta {
                     break;
                 }
-            }
         }
     }
 

@@ -41,9 +41,9 @@ pub fn calc_check_mask(board: &Board) -> (Bitboard, usize) {
     (checkmask, check_counter)
 }
 
-/// The captured removed_pawn should be Bit(0) by default
+/// The captured `removed_pawn` should be Bit(0) by default
 /// It is only needed when a pawn should be removed from the enemy pawns to cover an happening ep move
-/// See this edge case here https://lichess.org/editor/8/8/8/1Ppp3r/RK3p1k/8/4P1P1/8_w_-_c6_0_5?color=white
+/// See this edge case here <https://lichess.org/editor/8/8/8/1Ppp3r/RK3p1k/8/4P1P1/8_w>_-_`c6_0_5?color=white`
 pub fn calculate_attackmask(
     board: &Board,
     occupied: Bitboard,

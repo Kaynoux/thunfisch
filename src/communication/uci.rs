@@ -137,9 +137,9 @@ pub fn handle_uci_communication() {
                 let mv_str: &str = args[0];
                 let mv = DecodedMove::from_coords(mv_str.to_string(), &board);
                 if board.is_legal(&mv) {
-                    println!("yes")
+                    println!("yes");
                 } else {
-                    println!("no")
+                    println!("no");
                 }
             }
             Some("pinmask") => {
@@ -149,8 +149,8 @@ pub fn handle_uci_communication() {
             Some("checkmask") => {
                 let (check_mask, check_counter) = masks::calc_check_mask(&board);
 
-                println!("Check Counter: {}", check_counter);
-                println!("{:?}", check_mask);
+                println!("Check Counter: {check_counter}");
+                println!("{check_mask:?}");
             }
             Some("attackmask") => {
                 let attackmask = masks::calculate_attackmask(
@@ -159,7 +159,7 @@ pub fn handle_uci_communication() {
                     !board.current_color(),
                     None,
                 );
-                println!("{:?}", attackmask);
+                println!("{attackmask:?}");
             }
             Some("empty") => {
                 println!("{:?}", board.empty());
@@ -174,18 +174,17 @@ pub fn handle_uci_communication() {
                 println!("{:?}", board.occupied());
             }
             Some("piece") => {
-                if let Some(&args) = parts.take(1).collect::<Vec<&str>>().get(0) {
+                if let Some(&args) = parts.take(1).collect::<Vec<&str>>().first() {
                     let mut parse_error_occurred = false;
 
                     let bitboard = args
                         .chars()
-                        .into_iter()
                         .map(|c| c.to_ascii_lowercase())
                         .map_while(|c| {
                             Piece::from_lowercase_char(c)
-                                .inspect_err(|_| {
-                                    println!("invalid character: {}", c);
-                                    parse_error_occurred = true
+                                .inspect_err(|()| {
+                                    println!("invalid character: {c}");
+                                    parse_error_occurred = true;
                                 })
                                 .ok()
                         })
@@ -196,9 +195,9 @@ pub fn handle_uci_communication() {
                         .reduce(|a, b| a | b);
 
                     if !parse_error_occurred && let Some(piece_bb) = bitboard {
-                        println!("{:?}", piece_bb)
+                        println!("{piece_bb:?}");
                     }
-                };
+                }
             }
             Some("hash") => {
                 println!("{:?}", board.hash());
@@ -209,19 +208,19 @@ pub fn handle_uci_communication() {
                     "Hash from Scratch: {:#x} {:?}",
                     board.generate_hash(),
                     board.generate_hash()
-                )
+                );
             }
 
             Some("tt") => {
                 let args: Vec<&str> = parts.collect();
                 match TT.handle_debug(&args, board.hash()) {
-                    Err(e) => eprintln!("{}", e),
-                    Ok(v) => println!("{}", v),
+                    Err(e) => eprintln!("{e}"),
+                    Ok(v) => println!("{v}"),
                 }
             }
             Some("quit") => break,
             Some(cmd) => {
-                eprintln!("Unknown command: {}", cmd);
+                eprintln!("Unknown command: {cmd}");
             }
             None => {}
         }
