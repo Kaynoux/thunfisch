@@ -1,5 +1,6 @@
 pub mod between;
 pub mod generator;
+pub mod is_legal;
 pub mod magics;
 pub mod masks;
 pub mod moves;

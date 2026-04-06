@@ -20,9 +20,9 @@ pub fn r_detailed_perft(
         return 1;
     }
     let mut nodes = 0;
-    let moves = board.generate_moves::<false>();
-    for encoded_mv in moves {
-        board.make_move(&encoded_mv.decode());
+    let moves = board.generate_all_moves();
+    for encoded_mv in moves.list {
+        board.make_move(&encoded_mv.mv.decode());
         nodes += r_detailed_perft(
             board,
             depth - 1,
@@ -35,7 +35,7 @@ pub fn r_detailed_perft(
             double_moves,
         );
         board.unmake_move();
-        let mv = encoded_mv.decode();
+        let mv = encoded_mv.mv.decode();
         let mv_type = mv.mv_type;
 
         match mv_type {
@@ -95,9 +95,9 @@ pub fn perft_debug(board: &mut Board, depth: usize) {
     let start = Instant::now();
     println!("Perft divide depth {}:", depth);
     let mut total_nodes = 0;
-    let moves = board.generate_moves::<false>();
-    for encoded_mv in &moves {
-        let mv = encoded_mv.decode();
+    let moves = board.generate_all_moves();
+    for encoded_mv in moves.list {
+        let mv = encoded_mv.mv.decode();
         board.make_move(&mv);
         let nodes_for_move = r_detailed_perft(
             board,
@@ -229,11 +229,12 @@ pub fn r_perft_rayon(board: &mut Board, depth: usize) -> usize {
         return 1;
     }
     board
-        .generate_moves::<false>()
+        .generate_all_moves()
+        .list
         .par_iter()
         .map(|mv| {
             let mut b2 = board.clone();
-            b2.make_move(&mv.decode());
+            b2.make_move(&mv.mv.decode());
             r_perft(&mut b2, depth - 1)
         })
         .sum::<usize>()
@@ -245,11 +246,12 @@ pub fn hash_test_perft(board: &mut Board, depth: usize) -> usize {
         return 1;
     }
     board
-        .generate_moves::<false>()
+        .generate_all_moves()
+        .list
         .par_iter()
         .map(|mv| {
             let mut b2 = board.clone();
-            b2.make_move(&mv.decode());
+            b2.make_move(&mv.mv.decode());
             // Compare hash from scratch with the incremental hash to test if the hashing works
             assert_eq!(b2.hash(), b2.generate_hash());
             r_perft(&mut b2, depth - 1)
@@ -259,9 +261,9 @@ pub fn hash_test_perft(board: &mut Board, depth: usize) -> usize {
 
 pub fn perft_perftree_format(board: &mut Board, depth: usize) {
     let mut total_nodes = 0;
-    let moves = board.generate_moves::<false>();
-    for encoded_mv in &moves {
-        let mv = encoded_mv.decode();
+    let moves = board.generate_all_moves();
+    for encoded_mv in &moves.list {
+        let mv = encoded_mv.mv.decode();
         board.make_move(&mv);
         let nodes_for_move = r_perft(board, depth - 1);
         board.unmake_move();
@@ -277,14 +279,14 @@ pub fn r_perft(board: &mut Board, depth: usize) -> usize {
         return 1;
     }
     let mut nodes = 0;
-    let moves = board.generate_moves::<false>();
+    let moves = board.generate_all_moves();
 
     if depth == 1 {
-        return moves.len();
+        return moves.list.len();
     }
 
-    for mv in moves {
-        board.make_move(&mv.decode());
+    for mv in moves.list {
+        board.make_move(&mv.mv.decode());
         nodes += r_perft(board, depth - 1);
         board.unmake_move();
     }

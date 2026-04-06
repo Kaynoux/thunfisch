@@ -11,4 +11,9 @@ pub struct UnmakeInfo {
     pub ep_target: Option<Bit>,
     pub halfmove_clock: usize,
     pub hash: u64,
+    pub attackmask: Bitboard,
+    pub checkmask: Bitboard,
+    pub check_counter: usize,
+    pub hv_pinmask: Bitboard,
+    pub diag_pinmask: Bitboard,
 }

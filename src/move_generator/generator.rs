@@ -1,30 +1,95 @@
-use super::masks;
 use super::moves;
-use super::pinmask;
 use crate::prelude::*;
-use arrayvec::ArrayVec;
+use crate::search::move_picker::MoveList;
 
 // 218 is the limit: https://www.chessprogramming.org/Chess_Position
-pub const ARRAY_LENGTH: usize = 256;
+pub const MAX_MOVES_COUNT: usize = 218;
 
 impl Board {
-    pub fn generate_moves<const SPECIAL_MOVES_ONLY: bool>(
-        &mut self,
-    ) -> ArrayVec<EncodedMove, ARRAY_LENGTH> {
+    pub fn generate_moves<const QUIETS: bool>(&mut self, moves: &mut MoveList) {
         let friendly = self.current_color();
-        let mut moves = ArrayVec::<EncodedMove, ARRAY_LENGTH>::new();
 
-        let (hv_pinmask, diag_pinmask) = pinmask::generate_pin_masks(self);
+        let (hv_pinmask, diag_pinmask) = self.get_pinmasks();
         let pinmask = hv_pinmask | diag_pinmask;
 
-        let (check_mask, check_counter) = masks::calc_check_mask(self);
+        let check_counter = self.get_check_counter();
+        let check_mask = self.get_checkmask();
 
+        // if it's double check we know we have to move the king so we return immediately
+        if check_counter == 2 {
+            moves::generate_king_move::<QUIETS>(moves, friendly, self);
+            return;
+        }
+
+        moves::generate_pawn_moves::<QUIETS>(
+            moves,
+            self,
+            friendly,
+            hv_pinmask,
+            diag_pinmask,
+            check_mask,
+        );
+        moves::generate_knight_moves::<QUIETS>(moves, pinmask, friendly, self, check_mask);
+        moves::generate_bishop_moves::<QUIETS>(
+            moves,
+            hv_pinmask,
+            diag_pinmask,
+            friendly,
+            self,
+            check_mask,
+        );
+
+        moves::generate_rook_moves::<QUIETS>(
+            moves,
+            hv_pinmask,
+            diag_pinmask,
+            friendly,
+            self,
+            check_mask,
+        );
+
+        moves::generate_queen_moves::<QUIETS>(
+            moves,
+            hv_pinmask,
+            diag_pinmask,
+            friendly,
+            self,
+            check_mask,
+        );
+
+        // King moves after other pieces (matches legacy ordering for better move ordering)
+        moves::generate_king_move::<QUIETS>(moves, friendly, self);
+
+        // castling is a quiet move
+        if QUIETS {
+            moves::generate_castle_moves(moves, check_counter, friendly, self);
+        }
+
+        // en passant is a capture
+        if !QUIETS {
+            moves::generate_ep_moves(self, moves, friendly, hv_pinmask, diag_pinmask);
+        }
+    }
+
+    /// Generates all possible moves, should only be used for tests and perft and not in the actual search, because it does not seperate between quiets and not
+    pub fn generate_all_moves(&mut self) -> MoveList {
+        let mut moves = MoveList::new();
+        let friendly = self.current_color();
+
+        let (hv_pinmask, diag_pinmask) = self.get_pinmasks();
+        let pinmask = hv_pinmask | diag_pinmask;
+
+        let check_counter = self.get_check_counter();
+        let check_mask = self.get_checkmask();
+
+        // if it's double check we know we have to move the king so we return immediately
         if check_counter == 2 {
             moves::generate_king_move::<false>(&mut moves, friendly, self);
+            moves::generate_king_move::<true>(&mut moves, friendly, self);
             return moves;
         }
 
-        moves::generate_pawn_moves::<SPECIAL_MOVES_ONLY>(
+        moves::generate_pawn_moves::<false>(
             &mut moves,
             self,
             friendly,
@@ -32,10 +97,27 @@ impl Board {
             diag_pinmask,
             check_mask,
         );
-        moves::generate_knight_moves::<SPECIAL_MOVES_ONLY>(
-            &mut moves, pinmask, friendly, self, check_mask,
+        moves::generate_pawn_moves::<true>(
+            &mut moves,
+            self,
+            friendly,
+            hv_pinmask,
+            diag_pinmask,
+            check_mask,
         );
-        moves::generate_bishop_moves::<SPECIAL_MOVES_ONLY>(
+
+        moves::generate_knight_moves::<false>(&mut moves, pinmask, friendly, self, check_mask);
+        moves::generate_knight_moves::<true>(&mut moves, pinmask, friendly, self, check_mask);
+
+        moves::generate_bishop_moves::<false>(
+            &mut moves,
+            hv_pinmask,
+            diag_pinmask,
+            friendly,
+            self,
+            check_mask,
+        );
+        moves::generate_bishop_moves::<true>(
             &mut moves,
             hv_pinmask,
             diag_pinmask,
@@ -44,7 +126,7 @@ impl Board {
             check_mask,
         );
 
-        moves::generate_rook_moves::<SPECIAL_MOVES_ONLY>(
+        moves::generate_rook_moves::<false>(
             &mut moves,
             hv_pinmask,
             diag_pinmask,
@@ -53,7 +135,7 @@ impl Board {
             check_mask,
         );
 
-        moves::generate_queen_moves::<SPECIAL_MOVES_ONLY>(
+        moves::generate_rook_moves::<true>(
             &mut moves,
             hv_pinmask,
             diag_pinmask,
@@ -62,20 +144,34 @@ impl Board {
             check_mask,
         );
 
-        moves::generate_king_move::<SPECIAL_MOVES_ONLY>(&mut moves, friendly, self);
+        moves::generate_queen_moves::<false>(
+            &mut moves,
+            hv_pinmask,
+            diag_pinmask,
+            friendly,
+            self,
+            check_mask,
+        );
+        moves::generate_queen_moves::<true>(
+            &mut moves,
+            hv_pinmask,
+            diag_pinmask,
+            friendly,
+            self,
+            check_mask,
+        );
 
-        if !SPECIAL_MOVES_ONLY {
-            moves::generate_castle_moves(&mut moves, check_counter, friendly, self);
-        }
+        moves::generate_king_move::<false>(&mut moves, friendly, self);
+        moves::generate_king_move::<true>(&mut moves, friendly, self);
 
+        moves::generate_castle_moves(&mut moves, check_counter, friendly, self);
         moves::generate_ep_moves(self, &mut moves, friendly, hv_pinmask, diag_pinmask);
 
-        moves
+        return moves;
     }
 
-    pub fn is_in_check(&self) -> bool {
-        let check_count = masks::calc_check_mask(self).1;
-        if check_count == 0 {
+    pub fn is_in_check(&mut self) -> bool {
+        if self.get_check_counter() == 0 {
             return false;
         }
         true

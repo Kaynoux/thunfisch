@@ -4,14 +4,34 @@ use crate::debug::visualize;
 use crate::move_generator::masks;
 use crate::move_generator::pinmask;
 use crate::prelude::*;
+use crate::search::iterative_deepening;
 use crate::search::transposition_table::TT;
+use std::env;
 use std::io::{self, BufRead, Write};
+use std::process::exit;
+use std::time::Duration;
 
 pub fn handle_uci_communication() {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
     const START_POS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     let mut board = Board::from_fen(START_POS);
+
+    let args: Vec<String> = env::args().collect();
+    if args.iter().any(|arg| arg.contains("flamegraph")) {
+        let best_move = iterative_deepening::iterative_deepening(
+            &mut board,
+            100,
+            Duration::from_millis(1000),
+            false,
+            false,
+        );
+        if let Some(mv) = best_move {
+            println!("info pv {}", mv.decode().to_coords());
+            println!("bestmove {}", mv.decode().to_coords());
+        }
+        exit(0);
+    }
 
     for line_res in stdin.lock().lines() {
         let line = match line_res {
@@ -68,6 +88,7 @@ pub fn handle_uci_communication() {
                 println!("  moves              - Print legal moves");
                 println!("  eval               - Prints current Evaluation with Depth of 0");
                 println!("  do <move>          - Play move (e.g. do e2e4)");
+                println!("  islegal <move>     - Check whether move is legal (e.g. islegal e2e4)");
                 println!("  pinmask            - Show pin masks");
                 println!("  checkmask          - Show check mask");
                 println!("  attackmask         - Show attack mask");
@@ -101,7 +122,7 @@ pub fn handle_uci_communication() {
             Some("fen") => println!("Current Fen: {}", board.generate_fen()),
             Some("draw") => visualize::print_board(&board, None),
             Some("moves") => {
-                let moves = board.generate_moves::<false>();
+                let moves = board.generate_all_moves();
                 visualize::print_board(&board, Some(&moves));
             }
             Some("eval") => println!("Depth 0 Board Evaluation: {}", board.evaluate()),
@@ -110,6 +131,16 @@ pub fn handle_uci_communication() {
                 let mv_str: &str = args[0];
                 let mv = DecodedMove::from_coords(mv_str.to_string(), &board);
                 board.make_move(&mv);
+            }
+            Some("islegal") => {
+                let args: Vec<&str> = parts.collect();
+                let mv_str: &str = args[0];
+                let mv = DecodedMove::from_coords(mv_str.to_string(), &board);
+                if board.is_legal(&mv) {
+                    println!("yes")
+                } else {
+                    println!("no")
+                }
             }
             Some("pinmask") => {
                 let (hv_pinmask, diag_pinmask) = pinmask::generate_pin_masks(&board);
@@ -161,7 +192,8 @@ pub fn handle_uci_communication() {
                         .map(|piece| {
                             board.figure_bb(Color::White, piece)
                                 ^ board.figure_bb(Color::Black, piece)
-                        }).reduce(|a, b| a | b);
+                        })
+                        .reduce(|a, b| a | b);
 
                     if !parse_error_occurred && let Some(piece_bb) = bitboard {
                         println!("{:?}", piece_bb)

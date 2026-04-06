@@ -1,6 +1,6 @@
 use crate::prelude::*;
 #[repr(transparent)]
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, PartialEq, Hash, Eq)]
 pub struct EncodedMove(pub u16);
 
 /// contains all information about a move in a u16

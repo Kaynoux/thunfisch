@@ -6,6 +6,7 @@ use super::sliding_targets::get_bishop_targets;
 use super::sliding_targets::get_rook_targets;
 use crate::prelude::*;
 
+/// NOTE: is all ones when there are no checks
 pub fn calc_check_mask(board: &Board) -> (Bitboard, usize) {
     let friendly = board.current_color();
     let enemy = !friendly;

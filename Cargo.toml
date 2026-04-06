@@ -19,7 +19,6 @@ rfp = []
 pvs = []
 killers = []
 
-
 [dependencies]
 colored = "2"
 rayon = "1.10.0"

@@ -40,6 +40,10 @@ impl fmt::Debug for Bitboard {
 impl Bitboard {
     pub const EMPTY: Bitboard = Bitboard(0);
     pub const FULL: Bitboard = Bitboard(u64::MAX);
+    pub const UNSET_CHECK_MASK: Bitboard = Bitboard(0);
+    pub const UNSET_ATTACK_MASK: Bitboard = Bitboard(u64::MAX);
+    pub const UNSET_PINMASK: Bitboard = Bitboard(u64::MAX);
+
     #[inline(always)]
     pub fn is_position_set(self, position: Bit) -> bool {
         (self & position) != Bitboard(0)

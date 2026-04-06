@@ -5,3 +5,4 @@ pub mod move_ordering;
 pub mod mvv_lva;
 pub mod quiescence_search;
 pub mod transposition_table;
+pub mod move_picker;

@@ -1,16 +1,18 @@
-use crate::move_generator::generator::ARRAY_LENGTH;
 use crate::prelude::*;
-use arrayvec::ArrayVec;
+use crate::search::move_picker::MoveList;
 use colored;
 use colored::Colorize;
 use std::collections::HashMap;
 
-pub fn print_board(board: &Board, moves: Option<&ArrayVec<EncodedMove, ARRAY_LENGTH>>) {
+pub fn print_board(board: &Board, moves: Option<&MoveList>) {
     println!(
-        "Current Color: {:?}\nHalfmove Clock: {}\nTotal Halfmove Counter: {}\nPrevious occurrences: {}\nHash: {}, Previous (latest first): {:?}",
+        "Current Color: {:?}\nHalfmove Clock: {}\nTotal Halfmove Counter: {}\nEn Passant target:{},\nPrevious occurrences: {}\nHash: {}, Previous (latest first): {:?}",
         board.current_color(),
         board.halfmove_clock(),
         board.total_halfmove_counter(),
+        board
+            .ep_target()
+            .map_or("-".to_owned(), |target| target.to_coords()),
         board.count_repetitions(),
         board.hash(),
         board
@@ -23,8 +25,8 @@ pub fn print_board(board: &Board, moves: Option<&ArrayVec<EncodedMove, ARRAY_LEN
     );
     println!("FEN: {}", board.generate_fen());
     // println!("Phase: {}", board.get_game_phase());
-    if let Some(m) = moves {
-        print_moves(m);
+    if let Some(mv) = moves {
+        print_moves(mv);
     }
 
     let char_board: [(char, &str); 64] = get_char_board(board, moves);
@@ -48,10 +50,7 @@ pub fn print_board(board: &Board, moves: Option<&ArrayVec<EncodedMove, ARRAY_LEN
     println!("-------------------");
 }
 
-fn get_char_board(
-    board: &Board,
-    moves: Option<&ArrayVec<EncodedMove, ARRAY_LENGTH>>,
-) -> [(char, &'static str); 64] {
+fn get_char_board(board: &Board, moves: Option<&MoveList>) -> [(char, &'static str); 64] {
     let mut char_board = [(' ', "white"); 64];
     for y in 0usize..=7usize {
         for x in 0usize..=7usize {
@@ -61,13 +60,19 @@ fn get_char_board(
             let (piece, color) = board.piece_and_color_at_position(pos.to_bit());
             let mut text_color = "white";
             if let Some(m) = moves {
-                if m.iter().any(|chess_move| chess_move.decode().from == pos) {
+                if m.list
+                    .iter()
+                    .any(|chess_move| chess_move.mv.decode().from == pos)
+                {
                     text_color = "green";
                 }
             }
 
             if let Some(m) = moves {
-                if m.iter().any(|chess_move| chess_move.decode().to == pos) {
+                if m.list
+                    .iter()
+                    .any(|chess_move| chess_move.mv.decode().to == pos)
+                {
                     text_color = "red";
                 }
             }
@@ -86,9 +91,10 @@ pub fn group_moves_by_type(moves: &[EncodedMove]) -> HashMap<MoveType, Vec<Encod
     map
 }
 
-pub fn print_moves(moves: &ArrayVec<EncodedMove, ARRAY_LENGTH>) {
-    println!("total moves = {}", moves.len());
-    let moves_by_type = group_moves_by_type(moves);
+pub fn print_moves(moves: &MoveList) {
+    println!("total moves = {}", moves.list.len());
+    let mv_only: Vec<EncodedMove> = moves.list.iter().map(|m| m.mv).collect();
+    let moves_by_type = group_moves_by_type(&mv_only);
 
     let all_move_types = [
         MoveType::Quiet,
@@ -125,9 +131,9 @@ pub fn print_moves(moves: &ArrayVec<EncodedMove, ARRAY_LENGTH>) {
         }
     }
 
-    for (i, mv) in moves.iter().enumerate() {
+    for (i, mv) in mv_only.iter().enumerate() {
         print!("{}", mv.decode().to_coords());
-        if i < moves.len() - 1 {
+        if i < moves.list.len() - 1 {
             print!(", ");
         }
     }
