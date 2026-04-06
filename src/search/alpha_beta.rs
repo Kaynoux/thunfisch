@@ -18,7 +18,7 @@ const MAX_QUIESCENCE_SEARCH_DEPTH: usize = 12;
 /// There's different approaches to this one as well. CPW suggests 150 * depth, smol.cs does 75 * depth.
 /// Generally: The smaller `rfp_margin`, the more aggressively we prune.
 /// THIS IS TUNABLE.
-#[inline(always)]
+#[inline]
 pub const fn rfp_margin(depth: usize) -> usize {
     50 * depth
 }

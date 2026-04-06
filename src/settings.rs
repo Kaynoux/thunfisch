@@ -12,7 +12,7 @@ pub mod settings {
     pub const PVS: bool = cfg!(feature = "pvs");
     pub const KILLERS: bool = cfg!(feature = "killers");
 
-    #[inline(always)]
+    #[inline]
     pub fn repr() -> String {
         format!(
             "Activated Features: AB={:?} QS={:?} TT-AB={:?} TT-QS={:?} MVV-LVA={:?} QS_CHECK_EVASION_LIMIT={:?} ORDER_TT_MV_FIRST={:?} TT_CUTTOFFS={:?} NMP={:?} RFP={:?} PVS={:?}, KILLERS={:?}",

@@ -1,7 +1,15 @@
 [package]
 name = "thunfisch"
+description = "Thunfisch is a UCI-compatible chess engine written from scratch in Rust. It uses magic‐bitboard move generation, iterative deepening with alpha-beta and quiescence search and a transposition table."
 version = "0.1.0"
 edition = "2024"
+license = "GPL-3.0-only"
+repository = "https://github.com/Kaynoux/thunfisch"
+license-file = "LICENSE"
+authors = ["Lukas Piorek", "Emil Schläger"]
+keywords = ["chess"]
+categories = ["games"]
+
 
 [features]
 default = ["all"]

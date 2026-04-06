@@ -13,23 +13,23 @@ impl Sub for Square {
 }
 
 impl Square {
-    #[inline(always)]
+    #[inline]
     pub const fn to_bit(self) -> Bit {
         Bit(1u64 << self.0)
     }
 
-    #[inline(always)]
+    #[inline]
     pub const fn to_bitboard(self) -> Bitboard {
         Bitboard(1u64 << self.0)
     }
 
-    #[inline(always)]
+    #[inline]
     pub const fn next(&mut self) {
         self.0 += 1;
     }
 
     /// Quick way to access array index by Square
-    #[inline(always)]
+    #[inline]
     pub const fn i(self) -> usize {
         self.0
     }
@@ -47,7 +47,7 @@ impl Square {
     }
 
     /// Converts UCI notation to square
-    #[inline(always)]
+    #[inline]
     pub fn from_coords(coords: &str) -> Option<Square> {
         let (c1, c2) = match Bit::get_first_two_string_chars(coords) {
             Some(c1c2) => c1c2,

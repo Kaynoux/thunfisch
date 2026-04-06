@@ -38,7 +38,7 @@ impl DecodedMove {
 impl Board {
     /// Assumption: Our move generation generates only legal moves but these moves can be now illegal
     /// Does not handle castles at all atm, they are completly handled in is_legal
-    #[inline(always)]
+    #[inline]
     pub fn is_pseudo_legal(&self, mv: &DecodedMove) -> bool {
         let mv_direction = mv.move_direction();
         let current_color = self.current_color();

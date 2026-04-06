@@ -83,17 +83,17 @@ impl Board {
         diag_pinmask: Bitboard::UNSET_PINMASK,   // can never be full so unset value
     };
 
-    #[inline(always)]
+    #[inline]
     pub fn color_bbs(&self, color: Color) -> Bitboard {
         self.color_bbs[color as usize]
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn color_bbs_without_king(&self, color: Color) -> Bitboard {
         self.color_bbs(color) & !self.king(color)
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn empty(&self) -> Bitboard {
         self.figure_bbs[Figure::Empty as usize]
     }
@@ -183,12 +183,12 @@ impl Board {
         self.black_king_castle = black_king;
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn piece_and_color_at_position(&self, pos: Bit) -> (Piece, Color) {
         self.figures[pos.to_square()].piece_and_color()
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn piece_at_position(&self, pos: Square) -> Piece {
         match self.figures[pos.0] {
             Figure::Empty => Empty,
@@ -207,12 +207,12 @@ impl Board {
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub const fn figure_bb(&self, color: Color, piece: Piece) -> Bitboard {
         self.figure_bbs[Figure::from_piece_and_color(piece, color) as usize]
     }
 
-    #[inline(always)]
+    #[inline]
     pub const fn figure_bb_by_index(&self, idx: usize) -> Bitboard {
         self.figure_bbs[idx]
     }
@@ -228,7 +228,7 @@ impl Board {
             .unwrap_or(true); // REsult of reduce should never be None because map should always yield a non-empty iterator
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn king(&self, color: Color) -> Bit {
         match color {
             Black => Bit(self.figure_bbs[Figure::BlackKing as usize].0),
