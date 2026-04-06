@@ -140,27 +140,32 @@ pub fn generate_pawn_moves<const QUIETS: bool>(
         }
     }
 
-    if !QUIETS {
-        for from_bit in pawns_promotion_not_pinned.iter_mut() {
-            let from = from_bit.to_square();
+    for from_bit in pawns_promotion_not_pinned.iter_mut() {
+        let from = from_bit.to_square();
 
-            let potential_quiet_target_1 =
-                normal_targets::pawn_quiet_single_target(from_bit, friendly);
-            let quiet_target_1 = potential_quiet_target_1 & empty & check_mask;
+        let potential_quiet_target_1 = normal_targets::pawn_quiet_single_target(from_bit, friendly);
+        let quiet_target_1 = potential_quiet_target_1 & empty & check_mask;
 
-            if quiet_target_1 != Bit(0) {
-                let to_1 = quiet_target_1.to_square();
+        if quiet_target_1 != Bit(0) {
+            let to_1 = quiet_target_1.to_square();
+            if !QUIETS {
                 moves.push(EncodedMove::encode(from, to_1, MoveType::QueenPromo));
+            } else {
+                // We consider underpromotions quiet
                 moves.push(EncodedMove::encode(from, to_1, MoveType::RookPromo));
                 moves.push(EncodedMove::encode(from, to_1, MoveType::BishopPromo));
                 moves.push(EncodedMove::encode(from, to_1, MoveType::KnightPromo));
             }
+        }
 
-            let mut capture_targets =
-                normal_targets::PAWN_ATTACK_TARGETS[friendly as usize][from] & enemy & check_mask;
-            for to_bit in capture_targets.iter_mut() {
-                let to = to_bit.to_square();
+        let mut capture_targets =
+            normal_targets::PAWN_ATTACK_TARGETS[friendly as usize][from] & enemy & check_mask;
+        for to_bit in capture_targets.iter_mut() {
+            let to = to_bit.to_square();
+            if !QUIETS {
                 moves.push(EncodedMove::encode(from, to, MoveType::QueenPromoCapture));
+            } else {
+                // We consider underpromotions quiet
                 moves.push(EncodedMove::encode(from, to, MoveType::RookPromoCapture));
                 moves.push(EncodedMove::encode(from, to, MoveType::BishopPromoCapture));
                 moves.push(EncodedMove::encode(from, to, MoveType::KnightPromoCapture));
@@ -168,16 +173,18 @@ pub fn generate_pawn_moves<const QUIETS: bool>(
         }
     }
 
-    if !QUIETS {
-        for from_bit in pawns_promotion_hv_pinned.iter_mut() {
-            let from = from_bit.to_square();
+    for from_bit in pawns_promotion_hv_pinned.iter_mut() {
+        let from = from_bit.to_square();
 
-            let potential_target = normal_targets::pawn_quiet_single_target(from_bit, friendly);
-            let target_1 = potential_target & empty & check_mask & hv_pinmask;
+        let potential_target = normal_targets::pawn_quiet_single_target(from_bit, friendly);
+        let target_1 = potential_target & empty & check_mask & hv_pinmask;
 
-            if target_1 != Bit(0) {
-                let to_1 = target_1.to_square();
+        if target_1 != Bit(0) {
+            let to_1 = target_1.to_square();
+            if !QUIETS {
                 moves.push(EncodedMove::encode(from, to_1, MoveType::QueenPromo));
+            } else {
+                // We consider underpromotions quiet
                 moves.push(EncodedMove::encode(from, to_1, MoveType::RookPromo));
                 moves.push(EncodedMove::encode(from, to_1, MoveType::BishopPromo));
                 moves.push(EncodedMove::encode(from, to_1, MoveType::KnightPromo));
@@ -185,16 +192,18 @@ pub fn generate_pawn_moves<const QUIETS: bool>(
         }
     }
 
-    if !QUIETS {
-        for from_bit in pawns_promotion_diag_pinned.iter_mut() {
-            let from = from_bit.to_square();
-            let mut capture_targets = normal_targets::PAWN_ATTACK_TARGETS[friendly as usize][from]
-                & enemy
-                & check_mask
-                & diag_pinmask;
-            for to_bit in capture_targets.iter_mut() {
-                let to = to_bit.to_square();
+    for from_bit in pawns_promotion_diag_pinned.iter_mut() {
+        let from = from_bit.to_square();
+        let mut capture_targets = normal_targets::PAWN_ATTACK_TARGETS[friendly as usize][from]
+            & enemy
+            & check_mask
+            & diag_pinmask;
+        for to_bit in capture_targets.iter_mut() {
+            let to = to_bit.to_square();
+            if !QUIETS {
                 moves.push(EncodedMove::encode(from, to, MoveType::QueenPromoCapture));
+            } else {
+                // We consider underpromotions quiet (even captures)
                 moves.push(EncodedMove::encode(from, to, MoveType::RookPromoCapture));
                 moves.push(EncodedMove::encode(from, to, MoveType::BishopPromoCapture));
                 moves.push(EncodedMove::encode(from, to, MoveType::KnightPromoCapture));
