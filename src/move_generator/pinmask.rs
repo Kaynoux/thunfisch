@@ -17,13 +17,14 @@ pub fn generate_pin_masks(board: &Board) -> (Bitboard, Bitboard) {
     let friendly_bb = board.color_bbs(friendly);
 
     // all enemy rooks and queens
-    let enemy_rq = board.figure_bb(enemy, Rook) | board.figure_bb(enemy, Queen);
+    let enemy_rooks_queens = board.figure_bb(enemy, Rook) | board.figure_bb(enemy, Queen);
     // all enemy bishops and queens
-    let enemy_bq = board.figure_bb(enemy, Bishop) | board.figure_bb(enemy, Queen);
+    let enemy_bishops_queens = board.figure_bb(enemy, Bishop) | board.figure_bb(enemy, Queen);
 
     // which sliders can see the own king through xray
-    let mut hv_sliders = get_rook_xray_targets(king_sq, occ, friendly_bb) & enemy_rq;
-    let mut diag_sliders = get_bishop_xray_targets(king_sq, occ, friendly_bb) & enemy_bq;
+    let mut hv_sliders = get_rook_xray_targets(king_sq, occ, friendly_bb) & enemy_rooks_queens;
+    let mut diag_sliders =
+        get_bishop_xray_targets(king_sq, occ, friendly_bb) & enemy_bishops_queens;
 
     // for these sliders add themself and der path to king (exclusive) to the pinmask
     for slider_bb in hv_sliders.iter_mut() {

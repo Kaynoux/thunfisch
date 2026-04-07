@@ -26,11 +26,10 @@ impl DecodedMove {
             self.to.y().abs_diff(self.from.y()),
         ) {
             // null move
-            (0, 0) => MoveDirection::Teleport,
             (0, 1..=7) | (1..=7, 0) => MoveDirection::HV,
             (1, 1) | (2, 2) | (3, 3) | (4, 4) | (5, 5) | (6, 6) | (7, 7) => MoveDirection::Diag,
             (1, 2) | (2, 1) => MoveDirection::Knight,
-            _ => MoveDirection::Teleport,
+            _ => MoveDirection::Teleport, // Everything else (including (0,0) is considered teleport)
         }
     }
 }
@@ -92,6 +91,7 @@ impl Board {
         true
     }
     /// Checks whether `mv` is legal on `self`.
+    #[allow(clippy::too_many_lines)]
     pub fn is_legal(&mut self, mv: &DecodedMove) -> bool {
         if !self.is_pseudo_legal(mv) {
             return false;
@@ -227,6 +227,9 @@ impl Board {
                 const NEED_TO_BE_EMPTY_QUEEN: Bitboard = Bitboard::from_idx([1, 2, 3]);
                 const NEED_TO_BE_NOT_ATTACKED_QUEEN: Bitboard = Bitboard::from_idx([2, 3]);
 
+                const NEED_TO_BE_EMPTY_KING: Bitboard = Bitboard::from_idx([5, 6]);
+                const NEED_TO_BE_NOT_ATTACKED_KING: Bitboard = Bitboard::from_idx([5, 6]);
+
                 if self.white_queen_castle()
                     && side == MoveType::QueenCastle
                     && NEED_TO_BE_EMPTY_QUEEN & occupied == Bitboard::EMPTY
@@ -234,8 +237,6 @@ impl Board {
                 {
                     return true;
                 }
-                const NEED_TO_BE_EMPTY_KING: Bitboard = Bitboard::from_idx([5, 6]);
-                const NEED_TO_BE_NOT_ATTACKED_KING: Bitboard = Bitboard::from_idx([5, 6]);
 
                 if self.white_king_castle()
                     && side == MoveType::KingCastle
@@ -250,6 +251,9 @@ impl Board {
                 const NEED_TO_BE_EMPTY_QUEEN: Bitboard = Bitboard::from_idx([57, 58, 59]);
                 const NEED_TO_BE_NOT_ATTACKED_QUEEN: Bitboard = Bitboard::from_idx([58, 59]);
 
+                const NEED_TO_BE_EMPTY_KING: Bitboard = Bitboard::from_idx([61, 62]);
+                const NEED_TO_BE_NOT_ATTACKED_KING: Bitboard = Bitboard::from_idx([61, 62]);
+
                 if self.black_queen_castle()
                     && side == MoveType::QueenCastle
                     && NEED_TO_BE_EMPTY_QUEEN & occupied == Bitboard::EMPTY
@@ -257,8 +261,6 @@ impl Board {
                 {
                     return true;
                 }
-                const NEED_TO_BE_EMPTY_KING: Bitboard = Bitboard::from_idx([61, 62]);
-                const NEED_TO_BE_NOT_ATTACKED_KING: Bitboard = Bitboard::from_idx([61, 62]);
 
                 if self.black_king_castle()
                     && side == MoveType::KingCastle
@@ -311,7 +313,7 @@ mod tests_perft {
             ("7k/8/8/8/8/8/8/K6B w - - 0 1", "h1"),
         ];
 
-        for (fen, position) in fens.iter() {
+        for (fen, position) in fens {
             let mut board = Board::from_fen(fen);
             let moves = board.generate_all_moves();
 
@@ -340,7 +342,7 @@ mod tests_perft {
             ("7k/8/8/8/8/8/6K1/R7 w - - 0 1", "a1"),
         ];
 
-        for (fen, position) in fens.iter() {
+        for (fen, position) in fens {
             let mut board = Board::from_fen(fen);
             let moves = board.generate_all_moves();
 
@@ -461,7 +463,7 @@ mod tests_perft {
                 "Move from {} to {} (distance {}) should be Teleport",
                 from.to_bit().to_coords(),
                 to.to_bit().to_coords(),
-                (to.0 as isize - from.0 as isize).abs()
+                (to.0.cast_signed() - from.0.cast_signed()).abs()
             );
         }
     }

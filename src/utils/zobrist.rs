@@ -47,6 +47,7 @@ pub const fn generate_castling_hash(board: &Board) -> u64 {
 
 /// Source for these keys: <https://python-chess.readthedocs.io/en/latest>/_modules/chess/polyglot.html
 /// This polyglot keys are contain a predefined random numbers to generate the same hashes for boards across different engines
+#[allow(clippy::unreadable_literal)]
 const POLYGLOT_KEYS: [u64; 781] = [
     0x9D39247E33776D41,
     0x2AF7398005AAA5C7,

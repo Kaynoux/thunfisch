@@ -7,17 +7,15 @@ use crate::search::transposition_table::TT;
 
 pub const MAX_DEPTH: usize = 128;
 
-pub fn bestmove(args: Vec<&str>, board: &mut Board) {
+#[allow(clippy::too_many_lines)]
+pub fn bestmove(args: &[&str], board: &mut Board) {
     // Both just relevant for printing debug information
     let debug = args.contains(&"--debug"); // Debug does not work with uci
     let help = args.contains(&"--help");
 
     // Handle perft
     if args.len() >= 2 && args[0] == "perft" {
-        let depth: usize = match args[1].parse() {
-            Ok(d) => d,
-            Err(_) => 0,
-        };
+        let depth = args[1].parse().unwrap_or_default();
 
         let perftree = args.contains(&"--perftree");
         let rayon = args.contains(&"--rayon");
@@ -41,10 +39,7 @@ pub fn bestmove(args: Vec<&str>, board: &mut Board) {
 
     // Fixed Depth
     if args.len() >= 2 && args[0] == "depth" {
-        depth = match args[1].parse() {
-            Ok(d) => d,
-            Err(_) => 0,
-        };
+        depth = args[1].parse().unwrap_or_default();
     // Time control
     } else {
         let mut wtime: u64 = 0;

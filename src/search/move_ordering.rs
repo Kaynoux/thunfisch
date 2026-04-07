@@ -1,7 +1,7 @@
 use crate::prelude::*;
 use crate::search::move_picker::MoveList;
 use crate::search::mvv_lva::MVV_LVA_TABLE;
-use crate::settings::settings;
+use crate::settings;
 
 const CAPTURE_BONUS: i32 = 1024;
 

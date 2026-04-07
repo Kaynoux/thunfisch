@@ -4,7 +4,7 @@ use crate::prelude::*;
 use crate::search::move_picker::MovePicker;
 use crate::search::quiescence_search;
 use crate::search::transposition_table::Bound;
-use crate::settings::settings;
+use crate::settings;
 
 use std::cmp::min;
 use std::sync::{

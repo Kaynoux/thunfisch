@@ -5,7 +5,7 @@ use crate::prelude::*;
 use crate::search::move_picker::MoveList;
 
 // Approach for legal move generation is inspired by https://www.codeproject.com/Articles/5313417/Worlds-fastest-Bitboard-Chess-Movegenerator
-
+#[allow(clippy::too_many_lines)]
 pub fn generate_pawn_moves<const QUIETS: bool>(
     moves: &mut MoveList,
     board: &Board,
@@ -19,14 +19,14 @@ pub fn generate_pawn_moves<const QUIETS: bool>(
 
     // pawns on the second last row need to promote
     let promotion_row = match friendly {
-        White => Bitboard(0xFF000000000000),
+        White => Bitboard(0x00FF_0000_0000_0000),
         Black => Bitboard(0xFF00),
     };
 
     // pawns on the second row can double push
     let double_row = match friendly {
         White => Bitboard(0xff00),
-        Black => Bitboard(0xff000000000000),
+        Black => Bitboard(0x00ff_0000_0000_0000),
     };
 
     let all_pawns = board.figure_bb(friendly, Pawn);
@@ -494,6 +494,9 @@ pub fn generate_castle_moves(
             const NEED_TO_BE_EMPTY_QUEEN: Bitboard = Bitboard::from_idx([1, 2, 3]);
             const NEED_TO_BE_NOT_ATTACKED_QUEEN: Bitboard = Bitboard::from_idx([2, 3]);
 
+            const NEED_TO_BE_EMPTY_KING: Bitboard = Bitboard::from_idx([5, 6]);
+            const NEED_TO_BE_NOT_ATTACKED_KING: Bitboard = Bitboard::from_idx([5, 6]);
+
             if board.white_queen_castle()
                 && NEED_TO_BE_EMPTY_QUEEN & occupied == Bitboard::EMPTY
                 && attackmask & NEED_TO_BE_NOT_ATTACKED_QUEEN == Bitboard::EMPTY
@@ -504,8 +507,6 @@ pub fn generate_castle_moves(
                     MoveType::QueenCastle,
                 ));
             }
-            const NEED_TO_BE_EMPTY_KING: Bitboard = Bitboard::from_idx([5, 6]);
-            const NEED_TO_BE_NOT_ATTACKED_KING: Bitboard = Bitboard::from_idx([5, 6]);
 
             if board.white_king_castle()
                 && NEED_TO_BE_EMPTY_KING & occupied == Bitboard::EMPTY
@@ -522,6 +523,9 @@ pub fn generate_castle_moves(
             const NEED_TO_BE_EMPTY_QUEEN: Bitboard = Bitboard::from_idx([57, 58, 59]);
             const NEED_TO_BE_NOT_ATTACKED_QUEEN: Bitboard = Bitboard::from_idx([58, 59]);
 
+            const NEED_TO_BE_EMPTY_KING: Bitboard = Bitboard::from_idx([61, 62]);
+            const NEED_TO_BE_NOT_ATTACKED_KING: Bitboard = Bitboard::from_idx([61, 62]);
+
             if board.black_queen_castle()
                 && NEED_TO_BE_EMPTY_QUEEN & occupied == Bitboard::EMPTY
                 && attackmask & NEED_TO_BE_NOT_ATTACKED_QUEEN == Bitboard::EMPTY
@@ -532,8 +536,6 @@ pub fn generate_castle_moves(
                     MoveType::QueenCastle,
                 ));
             }
-            const NEED_TO_BE_EMPTY_KING: Bitboard = Bitboard::from_idx([61, 62]);
-            const NEED_TO_BE_NOT_ATTACKED_KING: Bitboard = Bitboard::from_idx([61, 62]);
 
             if board.black_king_castle()
                 && NEED_TO_BE_EMPTY_KING & occupied == Bitboard::EMPTY

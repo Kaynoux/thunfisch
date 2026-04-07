@@ -3,7 +3,7 @@ use crate::search::alpha_beta::MATE_SCORE;
 use crate::search::move_picker::MovePicker;
 use crate::search::transposition_table::Bound;
 use crate::search::transposition_table::TT;
-use crate::settings::settings;
+use crate::settings;
 
 use std::sync::{
     Arc,

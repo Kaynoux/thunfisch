@@ -31,6 +31,7 @@ pub static LINE_THROUGH: [[Bitboard; 64]; 64] = {
     arr
 };
 
+#[allow(clippy::cast_possible_wrap, clippy::cast_sign_loss)]
 const fn init_in_between(from: Square, to: Square) -> Bitboard {
     if from.0 == to.0 {
         return Bitboard::EMPTY;
@@ -106,6 +107,7 @@ const fn init_in_between(from: Square, to: Square) -> Bitboard {
     Bitboard(result_bb)
 }
 
+#[allow(clippy::cast_possible_wrap, clippy::cast_sign_loss)]
 const fn init_line_through(from: Square, to: Square) -> Bitboard {
     let from_x = from.x();
     let from_y = from.y();

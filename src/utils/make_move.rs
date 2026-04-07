@@ -3,6 +3,7 @@ use crate::{prelude::*, types::board::UNSET_CHECK_COUNTER};
 impl Board {
     /// Executes a given move on the board
     /// <https://www.chessprogramming.org/Make_Move>
+    #[allow(clippy::too_many_lines)]
     pub fn make_move(&mut self, encoded_move: EncodedMove) {
         let mv = encoded_move.decode();
         let mv_type = mv.mv_type;
@@ -229,12 +230,11 @@ mod tests {
         );
 
         // Verify all pieces are in their original positions
-        for i in 0..64 {
+        for (i, initial) in initial_board_state.iter().enumerate().take(64) {
             assert_eq!(
                 board.figures(Square(i)),
-                initial_board_state[i],
-                "Piece at square {} should be restored",
-                i
+                *initial,
+                "Piece at square {i} should be restored",
             );
         }
     }

@@ -3,13 +3,11 @@ use crate::prelude::*;
 impl Board {
     /// Unmakes the last move by using unmake info from the stack
     /// <https://www.chessprogramming.org/Unmake_Move>
+    #[allow(clippy::too_many_lines)]
     pub fn unmake_move(&mut self) {
-        let prev = if let Some(info) = self.pop_unmake_info_stack() {
-            info
-        } else {
-            println!("info: Could not undo move because there was no previous move");
-            return;
-        };
+        let prev = self
+            .pop_unmake_info_stack()
+            .expect("unmake_move called on empty unmake info stack");
         self.pop_repetition_stack();
 
         let mv = prev.mv.decode();
@@ -129,12 +127,9 @@ impl Board {
     }
 
     pub fn unmake_null_move(&mut self) {
-        let prev = if let Some(info) = self.pop_unmake_info_stack() {
-            info
-        } else {
-            println!("info: Could not undo move because there was no previous move");
-            return;
-        };
+        let prev = self
+            .pop_unmake_info_stack()
+            .expect("unmake_move called on empty unmake info stack while unmaking a null move");
         self.pop_repetition_stack();
 
         self.toggle_current_color();

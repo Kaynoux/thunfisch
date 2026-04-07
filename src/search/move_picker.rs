@@ -2,7 +2,7 @@ use arrayvec::ArrayVec;
 
 use crate::{
     move_generator::generator::MAX_MOVES_COUNT, prelude::*, search::move_ordering::mvv_lva,
-    settings::settings,
+    settings,
 };
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]

@@ -36,6 +36,7 @@ pub static PAWN_ATTACK_TARGETS: [[Bitboard; 64]; 2] = {
     table
 };
 
+#[allow(clippy::cast_possible_wrap, clippy::cast_sign_loss)]
 pub static KNIGHT_TARGETS: [Bitboard; 64] = {
     let mut table = [Bitboard(0); 64];
     let offsets = [
@@ -71,6 +72,7 @@ pub static KNIGHT_TARGETS: [Bitboard; 64] = {
     table
 };
 
+#[allow(clippy::cast_possible_wrap, clippy::cast_sign_loss)]
 pub static KING_TARGETS: [Bitboard; 64] = {
     let mut table = [Bitboard(0); 64];
     let offsets = [

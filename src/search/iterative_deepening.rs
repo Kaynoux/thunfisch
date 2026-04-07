@@ -5,7 +5,7 @@ use crate::debug::visualize::format_usize;
 use crate::prelude::*;
 use crate::search::alpha_beta::alpha_beta;
 
-use crate::settings::settings;
+use crate::settings;
 
 use std::i32;
 use std::time::Instant;

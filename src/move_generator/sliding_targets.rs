@@ -4,6 +4,7 @@ use crate::prelude::*;
 
 /// Precalculates Black Magic Bitboards which are indexed with a hash key and return the possible sliding target positions
 /// <https://www.chessprogramming.org/Magic_Bitboards>
+#[allow(clippy::cast_possible_wrap, clippy::cast_sign_loss)]
 static SLIDING_TARGETS: [Bitboard; 88772] = {
     let mut targets = [Bitboard::EMPTY; 88772];
     let mut square = 0;

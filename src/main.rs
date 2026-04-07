@@ -19,6 +19,9 @@ mod settings;
 mod types;
 mod utils;
 
+#[cfg(not(target_pointer_width = "64"))]
+compile_error!("Dieses Projekt unterstützt nur 64-Bit-Systeme.");
+
 fn main() {
     // trigger lazy initialization before we do anything to avoid
     // paying that cost during a game

@@ -12,7 +12,7 @@ pub fn print_board(board: &Board, moves: Option<&MoveList>) {
         board.total_halfmove_counter(),
         board
             .ep_target()
-            .map_or("-".to_owned(), super::super::types::bit::Bit::to_coords),
+            .map_or_else(|| "-".to_owned(), Bit::to_coords),
         board.count_repetitions(),
         board.hash(),
         board
@@ -30,20 +30,14 @@ pub fn print_board(board: &Board, moves: Option<&MoveList>) {
     }
 
     let char_board: [(char, &str); 64] = get_char_board(board, moves);
-    let mut y: i32 = 7;
-    let mut x: i32 = 0;
 
-    while y >= 0 {
+    for y in (0..8).rev() {
         print!("{} | ", y + 1);
-        while x <= 7 {
-            let idx = (y * 8 + x) as usize;
-            let colored_str = char_board[idx].0.to_string().color(char_board[idx].1);
-            print!("{colored_str} ");
-
-            x += 1;
+        for x in 0..8 {
+            let idx = y * 8 + x;
+            let (c, color) = char_board[idx];
+            print!("{} ", c.to_string().color(color));
         }
-        x = 0;
-        y -= 1;
         println!();
     }
     println!("    A B C D E F G H");
@@ -58,22 +52,14 @@ fn get_char_board(board: &Board, moves: Option<&MoveList>) -> [(char, &'static s
             let pos = Square(idx);
 
             let (piece, color) = board.piece_and_color_at_position(pos.to_bit());
-            let mut text_color = "white";
-            if let Some(m) = moves
-                && m.list
-                    .iter()
-                    .any(|chess_move| chess_move.mv.decode().from == pos)
-            {
-                text_color = "green";
-            }
-
-            if let Some(m) = moves
-                && m.list
-                    .iter()
-                    .any(|chess_move| chess_move.mv.decode().to == pos)
-            {
-                text_color = "red";
-            }
+            let text_color =
+                if moves.is_some_and(|m| m.list.iter().any(|cm| cm.mv.decode().from == pos)) {
+                    "green"
+                } else if moves.is_some_and(|m| m.list.iter().any(|cm| cm.mv.decode().to == pos)) {
+                    "red"
+                } else {
+                    "white"
+                };
             char_board[idx] = (Piece::to_unicode_char(piece, color), text_color);
         }
     }
@@ -139,27 +125,33 @@ pub fn print_moves(moves: &MoveList) {
 }
 
 pub fn format_usize(n: usize) -> String {
-    let n_f = n as f64;
     let units = ["", "k", "M", "G", "T", "P", "E"];
 
     if n < 1000 {
         return format!("{n}");
     }
 
-    // Calculates the exponent (0 for <1000, 1 for k, 2 for M, etc.)
-    let exp = n_f.log(1000.0_f64).floor() as usize;
+    let mut value = n;
+    let mut exp = 0;
 
-    // Ensure we don't go out of bounds of the array
-    let exp = exp.min(units.len() - 1);
+    while value >= 1000 && exp < units.len() - 1 {
+        value /= 1000;
+        exp += 1;
+    }
 
-    let value = n_f / 1000.0_f64.powi(exp as i32);
+    #[allow(clippy::cast_possible_truncation)]
+    let divisor = 1000usize.pow(exp as u32) / 10;
+    let remainder = if divisor > 0 { (n / divisor) % 10 } else { 0 };
 
-    // Formats to a maximum of 1 decimal place, removes .0 if it's an integer
-    format!("{:.1}{}", value, units[exp]).replace(".0", "")
+    if remainder > 0 {
+        format!("{value}.{remainder}{}", units[exp])
+    } else {
+        format!("{value}{}", units[exp])
+    }
 }
 
 pub fn format_f64(n: f64) -> String {
-    let abs_n = n.abs();
+    let mut abs_n = n.abs();
     let units = ["", "k", "M", "G", "T", "P", "E"];
     let sign = if n < 0.0 { "-" } else { "" };
 
@@ -167,14 +159,12 @@ pub fn format_f64(n: f64) -> String {
         return format!("{sign}{abs_n:.2}");
     }
 
-    // Calculates the exponent (0 for <1000, 1 for k, 2 for M, etc.)
-    let exp = abs_n.log(1000.0_f64).floor() as usize;
-
-    // Ensure we don't go out of bounds of the array
-    let exp = exp.min(units.len() - 1);
-
-    let value = abs_n / 1000.0_f64.powi(exp as i32);
+    let mut exp = 0;
+    while abs_n >= 1000.0 && exp < units.len() - 1 {
+        abs_n /= 1000.0;
+        exp += 1;
+    }
 
     // Always formats to exactly 2 decimal places
-    format!("{}{:.2}{}", sign, value, units[exp])
+    format!("{sign}{abs_n:.2}{}", units[exp])
 }
