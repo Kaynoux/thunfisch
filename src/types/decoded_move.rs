@@ -12,17 +12,17 @@ impl DecodedMove {
         let from = self.from.to_bit().to_coords();
         let to = self.to.to_bit().to_coords();
 
-        match self.mv_type.to_promotion_piece() {
-            Some(prom) => format!("{}{}{}", from, to, prom.to_lowercase_char()),
-            None => format!("{from}{to}"),
-        }
+        self.mv_type.to_promotion_piece().map_or_else(
+            || format!("{from}{to}"),
+            |prom| format!("{}{}{}", from, to, prom.to_lowercase_char()),
+        )
     }
 
     pub fn is_quiet(&self) -> bool {
         self.mv_type == MoveType::Quiet
     }
 
-    pub fn from_coords(move_str: String, board: &Board) -> Self {
+    pub fn from_coords(move_str: &str, board: &Board) -> Self {
         // 4 or 5 character string are valid (5 because of promotion)
         assert!(
             move_str.len() == 4 || move_str.len() == 5,
@@ -49,12 +49,12 @@ impl DecodedMove {
         }
 
         if from_piece == King
-            && ((from_pos.to_x() as isize) - (to_pos.to_x() as isize)) == 2
+            && (from_pos.to_x()) - (to_pos.to_x()) == 2
             && (from_pos.to_y() == to_pos.to_y())
         {
             mv_type = MoveType::QueenCastle;
         } else if from_piece == King
-            && ((from_pos.to_x() as isize) - (to_pos.to_x() as isize)) == -2
+            && (to_pos.to_x() - from_pos.to_x()) == 2
             && (from_pos.to_y() == to_pos.to_y())
         {
             mv_type = MoveType::KingCastle;
@@ -105,6 +105,7 @@ impl DecodedMove {
         }
     }
 
+    #[allow(clippy::cast_possible_truncation)]
     pub const fn encode(self) -> EncodedMove {
         let from_idx = self.from.0 as u16;
         let to_idx = self.to.0 as u16;
@@ -129,9 +130,8 @@ mod tests {
 
         let board = Board::from_fen(fen);
 
-        for mv_ref in moves.iter() {
-            let mv = *mv_ref;
-            let decoded = DecodedMove::from_coords(mv.to_string(), &board);
+        for mv in moves {
+            let decoded = DecodedMove::from_coords(mv, &board);
             assert_eq!(mv, decoded.to_coords(), "Str -> Decoded -> Str");
 
             let encoded = decoded.encode();

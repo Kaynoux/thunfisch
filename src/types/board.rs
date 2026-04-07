@@ -9,6 +9,7 @@ pub const UNSET_CHECK_COUNTER: usize = 100;
 
 /// Represents the global game state
 #[derive(Clone)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct Board {
     /// 0 -> white, 1 -> black (see `Color`)
     /// where are pieces
@@ -170,6 +171,7 @@ impl Board {
     }
 
     /// Attention: Does not update hash
+    #[allow(clippy::fn_params_excessive_bools)]
     pub const fn set_castling_rights(
         &mut self,
         white_queen: bool,

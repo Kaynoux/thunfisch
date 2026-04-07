@@ -66,7 +66,7 @@ impl Board {
 
         // See if the move type is now wrong
         // Capture move but not an capture
-        let is_capture = MoveType::is_capture(&mv_type);
+        let is_capture = MoveType::is_capture(mv_type);
         if is_capture && to_is_empty && mv_type != MoveType::EpCapture {
             return false;
         }
@@ -77,7 +77,7 @@ impl Board {
         }
 
         // Ep or promotion but not by a pawn
-        if (mv_type == MoveType::EpCapture || MoveType::is_promotion(&mv_type))
+        if (mv_type == MoveType::EpCapture || MoveType::is_promotion(mv_type))
             && from_piece != Piece::Pawn
         {
             return false;

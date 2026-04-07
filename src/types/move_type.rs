@@ -28,7 +28,7 @@ pub enum MoveType {
 }
 
 impl MoveType {
-    pub const fn to_promotion_piece(&self) -> Option<Piece> {
+    pub const fn to_promotion_piece(self) -> Option<Piece> {
         match self {
             Self::KnightPromo | Self::KnightPromoCapture => Some(Knight),
             Self::BishopPromo | Self::BishopPromoCapture => Some(Bishop),
@@ -38,7 +38,7 @@ impl MoveType {
         }
     }
 
-    pub const fn to_promotion_color_piece(&self, color: Color) -> Option<Figure> {
+    pub const fn to_promotion_color_piece(self, color: Color) -> Option<Figure> {
         match (self, color) {
             (Self::KnightPromo | Self::KnightPromoCapture, White) => Some(Figure::WhiteKnight),
             (Self::BishopPromo | Self::BishopPromoCapture, White) => Some(Figure::WhiteBishop),
@@ -52,31 +52,31 @@ impl MoveType {
         }
     }
 
-    pub const fn is_promotion(&self) -> bool {
-        (*self as u16) & 0b1000_0000_0000_0000 != 0
+    pub const fn is_promotion(self) -> bool {
+        (self as u16) & 0b1000_0000_0000_0000 != 0
     }
 
-    pub const fn is_capture(&self) -> bool {
-        (*self as u16) & 0b0100_0000_0000_0000 != 0
+    pub const fn is_capture(self) -> bool {
+        (self as u16) & 0b0100_0000_0000_0000 != 0
     }
 
     pub const fn from_u16(value: u16) -> Self {
         match value {
-            0b0000000000000000 => Self::Quiet,
-            0b0001000000000000 => Self::DoubleMove,
-            0b0010000000000000 => Self::KingCastle,
-            0b0011000000000000 => Self::QueenCastle,
-            0b0100000000000000 => Self::Capture,
-            0b0101000000000000 => Self::EpCapture,
+            0b0000_0000_0000_0000 => Self::Quiet,
+            0b0001_0000_0000_0000 => Self::DoubleMove,
+            0b0010_0000_0000_0000 => Self::KingCastle,
+            0b0011_0000_0000_0000 => Self::QueenCastle,
+            0b0100_0000_0000_0000 => Self::Capture,
+            0b0101_0000_0000_0000 => Self::EpCapture,
             // 6, 7 are unused
-            0b1000000000000000 => Self::KnightPromo,
-            0b1001000000000000 => Self::BishopPromo,
-            0b1010000000000000 => Self::RookPromo,
-            0b1011000000000000 => Self::QueenPromo,
-            0b1100000000000000 => Self::KnightPromoCapture,
-            0b1101000000000000 => Self::BishopPromoCapture,
-            0b1110000000000000 => Self::RookPromoCapture,
-            0b1111000000000000 => Self::QueenPromoCapture,
+            0b1000_0000_0000_0000 => Self::KnightPromo,
+            0b1001_0000_0000_0000 => Self::BishopPromo,
+            0b1010_0000_0000_0000 => Self::RookPromo,
+            0b1011_0000_0000_0000 => Self::QueenPromo,
+            0b1100_0000_0000_0000 => Self::KnightPromoCapture,
+            0b1101_0000_0000_0000 => Self::BishopPromoCapture,
+            0b1110_0000_0000_0000 => Self::RookPromoCapture,
+            0b1111_0000_0000_0000 => Self::QueenPromoCapture,
             _ => panic!("could not convert u16 to move type"),
         }
     }

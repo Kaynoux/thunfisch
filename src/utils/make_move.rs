@@ -143,7 +143,7 @@ mod tests {
         let mut board =
             Board::from_fen("rnbqkbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq - 0 2");
 
-        let mv = DecodedMove::from_coords("d8h4".to_string(), &board);
+        let mv = DecodedMove::from_coords("d8h4", &board);
         board.make_move(mv.encode());
 
         assert!(board.is_in_check(), "White should be in check");

@@ -82,7 +82,7 @@ impl Bit {
 
     #[inline]
     pub const fn get_offset_pos(self, dx: isize, dy: isize) -> Self {
-        let pos_idx = self.to_square().0 as isize;
+        let pos_idx = self.to_square().0.cast_signed();
         let new_x: isize = pos_idx % 8 + dx;
         let new_y: isize = pos_idx / 8 + dy;
         if new_x >= 0 && new_x <= 7 && new_y >= 0 && new_y <= 7 {
@@ -107,6 +107,7 @@ impl Bit {
     }
 
     #[inline]
+    #[allow(clippy::cast_possible_truncation)]
     pub fn to_coords(self) -> String {
         let (x, y) = self.to_xy();
         let file = (b'a' + x as u8) as char;
@@ -120,7 +121,7 @@ impl Bit {
     }
 
     #[inline]
-    pub const fn to_bb(&self) -> Bitboard {
+    pub const fn to_bb(self) -> Bitboard {
         Bitboard(self.0)
     }
 }

@@ -66,7 +66,7 @@ pub fn handle_input(board: &mut Board, args: &[&str]) {
 
         // makes every move in order the perfectly recreate the input
         for &mv_str in &moves {
-            let mv = DecodedMove::from_coords(mv_str.to_string(), board);
+            let mv = DecodedMove::from_coords(mv_str, board);
             board.make_move(mv.encode());
         }
     }

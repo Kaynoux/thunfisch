@@ -8,12 +8,13 @@ pub struct EncodedMove(pub u16);
 /// Format: `[type | to | from]`
 impl EncodedMove {
     pub const fn decode(self) -> DecodedMove {
-        let from = Square((self.0 & 0b0000000000111111) as usize);
-        let to = Square(((self.0 & 0b0000111111000000) >> 6) as usize);
-        let mv_type = MoveType::from_u16(self.0 & 0b1111000000000000);
+        let from = Square((self.0 & 0b0000_0000_0011_1111) as usize);
+        let to = Square(((self.0 & 0b0000_1111_1100_0000) >> 6) as usize);
+        let mv_type = MoveType::from_u16(self.0 & 0b1111_0000_0000_0000);
         DecodedMove { from, to, mv_type }
     }
 
+    #[allow(clippy::cast_possible_truncation)]
     pub const fn encode(from: Square, to: Square, mv_type: MoveType) -> Self {
         let from_idx = from.0 as u16;
         let to_idx = to.0 as u16;

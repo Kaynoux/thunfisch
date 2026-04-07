@@ -72,13 +72,13 @@ pub fn handle_uci_communication() {
             Some("do") => {
                 let args: Vec<&str> = parts.collect();
                 let mv_str: &str = args[0];
-                let mv = DecodedMove::from_coords(mv_str.to_string(), &board);
+                let mv = DecodedMove::from_coords(mv_str, &board);
                 board.make_move(mv.encode());
             }
             Some("islegal") => {
                 let args: Vec<&str> = parts.collect();
                 let mv_str: &str = args[0];
-                let mv = DecodedMove::from_coords(mv_str.to_string(), &board);
+                let mv = DecodedMove::from_coords(mv_str, &board);
                 if board.is_legal(&mv) {
                     println!("yes");
                 } else {
