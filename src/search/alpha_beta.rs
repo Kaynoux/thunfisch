@@ -26,7 +26,7 @@ pub const fn rfp_margin(depth: usize) -> usize {
 /// https://www.chessprogramming.org/Alpha-Beta
 /// Returns the pv, and the associated evaluation
 /// Note that the pv is reversed, i.e. the best move at this depth is at the end of the list
-pub fn alpha_beta(
+pub fn alpha_beta<const IS_PV: bool>(
     board: &mut Board,
     depth: usize,
     mut alpha: i32,
@@ -36,7 +36,7 @@ pub fn alpha_beta(
     ply: usize,
     local_seldepth: &mut usize,
     null_move_allowed: bool,
-    node_type: NodeType,
+
     killers: &mut [EncodedMove; MAX_DEPTH],
 ) -> i32 {
     *local_seldepth = (*local_seldepth).max(ply);
@@ -50,7 +50,7 @@ pub fn alpha_beta(
 
     if depth == 0 {
         if settings::QS && ply < MAX_DEPTH - 1 {
-            let qs_result = quiescence_search::quiescence_search(
+            let qs_result = quiescence_search::quiescence_search::<IS_PV>(
                 board,
                 alpha,
                 beta,
@@ -90,7 +90,7 @@ pub fn alpha_beta(
             // TODO: When using pvs add !pv_node as additionell condition
             let depth_req = depth as i32 + i32::from(tt_score >= beta);
 
-            if settings::TT_CUTTOFFS && (node_type != NodeType::OnPV || !settings::PVS) {
+            if settings::TT_CUTTOFFS && (!IS_PV || !settings::PVS) {
                 if tt_hit.depth() >= depth_req as i32
                     && match bound {
                         Bound::Lower => tt_score >= beta,
@@ -111,7 +111,7 @@ pub fn alpha_beta(
         return 0;
     }
 
-    if node_type != NodeType::OnPV || !settings::PVS {
+    if !IS_PV || !settings::PVS {
         if settings::RFP {
             // apparently RFP should only be done in the later parts of the tree. CPW explicitly mentions
             // pre-frontier nodes, i.e. those nodes where depth == 1. However viridithias, smol.cs and akimbo
@@ -135,7 +135,7 @@ pub fn alpha_beta(
             {
                 board.make_null_move();
                 let reduction = min(depth, 4);
-                let eval = -alpha_beta(
+                let eval = -alpha_beta::<false>(
                     board,
                     depth - reduction,
                     -alpha - 1,
@@ -145,7 +145,6 @@ pub fn alpha_beta(
                     ply + 1,
                     local_seldepth,
                     false,
-                    NodeType::OffPV,
                     killers,
                 );
                 board.unmake_null_move();
@@ -181,7 +180,7 @@ pub fn alpha_beta(
             // We assume that the first move from the move ordering is the PV move;
             // Since the TT move, if existant, is in first place anyway this automatically includes information from shallower search depths
 
-            eval = -alpha_beta(
+            eval = -alpha_beta::<true>(
                 board,
                 depth - 1,
                 -beta,
@@ -191,12 +190,11 @@ pub fn alpha_beta(
                 ply + 1,
                 local_seldepth,
                 true,
-                NodeType::OnPV,
                 killers,
             );
         } else {
             // Search non-PV moves with null window
-            eval = -alpha_beta(
+            eval = -alpha_beta::<false>(
                 board,
                 depth - 1,
                 -alpha - 1,
@@ -206,14 +204,13 @@ pub fn alpha_beta(
                 ply + 1,
                 local_seldepth,
                 true,
-                NodeType::OffPV,
                 killers,
             );
             // Re-search if non-PV move raised Alpha
             // ONLY do re-searching if the current Node is on PV - we don't care for re-searching OffPV nodes
             // (if they actually improve over the PV that variation will be searched again at the last PV node anyway)
-            if eval > alpha && node_type == NodeType::OnPV {
-                eval = -alpha_beta(
+            if eval > alpha && IS_PV {
+                eval = -alpha_beta::<true>(
                     board,
                     depth - 1,
                     -beta,
@@ -223,7 +220,6 @@ pub fn alpha_beta(
                     ply + 1,
                     local_seldepth,
                     true,
-                    NodeType::OnPV,
                     killers,
                 );
             }
@@ -274,7 +270,7 @@ pub fn alpha_beta(
         depth as i8,
         ply as i32,
         bound,
-        false,
+        IS_PV,
     );
 
     best_eval
