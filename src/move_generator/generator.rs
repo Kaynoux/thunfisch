@@ -207,8 +207,8 @@ mod test {
         ];
 
         for (fen_idx, fen) in fens.iter().enumerate() {
-            for (depth_idx, correct_node_count) in perft_results[fen_idx].iter().take(6).enumerate()
-            {
+            // Use take(5) to only test the first 5 depths for example
+            for (depth_idx, correct_node_count) in perft_results[fen_idx].iter().enumerate() {
                 let mut board = Board::from_fen(fen);
                 let calculated_node_count = perft::hash_test_perft(&mut board, depth_idx + 1);
                 assert_eq!(
