@@ -11,6 +11,7 @@ use std::sync::{
 };
 
 /// <https://www.chessprogramming.org/Quiescence_Search>
+#[allow(clippy::too_many_lines, clippy::too_many_arguments)]
 pub fn quiescence_search(
     board: &mut Board,
     mut alpha: i32,
@@ -49,6 +50,7 @@ pub fn quiescence_search(
         -MATE_SCORE
     } else if settings::TT_QS {
         // probe tt
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         if let Some(tt_hit) = TT.probe(board.hash(), ply as i32) {
             search_info.total_tt_hits.fetch_add(1, Ordering::Relaxed);
 
@@ -88,6 +90,7 @@ pub fn quiescence_search(
 
     if eval >= beta {
         if settings::TT_QS {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
             TT.store(board.hash(), None, eval, 0, ply as i32, Bound::Lower, false);
         }
         return eval;
@@ -145,6 +148,7 @@ pub fn quiescence_search(
     }
 
     if is_check && i == 0 {
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         return -MATE_SCORE + ply as i32;
     }
 
@@ -156,6 +160,7 @@ pub fn quiescence_search(
         Bound::Upper
     };
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     TT.store(
         board.hash(),
         best_move,

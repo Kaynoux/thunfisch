@@ -9,8 +9,8 @@ const TOTAL: i32 = KNIGHT * 4 + BISHOP * 4 + ROOK * 4 + QUEEN * 2;
 // [pawn, knight, bishop, rook, queen, king]
 const MG_PIECE_VALUES: [i32; 6] = [82, 337, 365, 477, 1025, 0];
 const EG_PIECE_VALUES: [i32; 6] = [94, 281, 297, 512, 936, 0];
-const MG_TABLE: [[i32; 64]; 12] = init_table(MG_PIECE_VALUES, MG_BASE_POSITION_TABLE);
-const EG_TABLE: [[i32; 64]; 12] = init_table(EG_PIECE_VALUES, EG_BASE_POSITION_TABLE);
+const MG_TABLE: [[i32; 64]; 12] = init_table(&MG_PIECE_VALUES, &MG_BASE_POSITION_TABLE);
+const EG_TABLE: [[i32; 64]; 12] = init_table(&EG_PIECE_VALUES, &EG_BASE_POSITION_TABLE);
 // how impactful to the game phase a figure is if it's still on the board
 // for example: A game is 'more' endgame if there are no more queens on the board
 const GAMEPHASE_INC: [i32; 12] = [
@@ -28,8 +28,8 @@ const fn flip(sq: usize) -> usize {
 /// Each piece has a raw material value `base_piece_value`, which is constant across the entire board.
 /// The position table is variable across the board and will additively alter the value of a piece depending on where it is located.
 const fn init_table(
-    base_piece_value: [i32; 6],
-    base_position_table: [[i32; 64]; 6],
+    base_piece_value: &[i32; 6],
+    base_position_table: &[[i32; 64]; 6],
 ) -> [[i32; 64]; 12] {
     let mut table = [[0i32; 64]; 12];
     let mut piece = 0;

@@ -159,16 +159,25 @@ pub fn iterative_deepening(
         let iteration_nodes = iteration_not_eval_nodes + iteration_eval_nodes;
 
         let iteration_duration = iteration_start.elapsed();
-        let nodes_per_seconds =
-            (iteration_nodes as f64 / iteration_duration.as_secs_f64()) as usize;
 
+        let nodes_per_seconds = if iteration_duration.is_zero() {
+            0
+        } else {
+            (iteration_nodes.saturating_mul(1000))
+                / (iteration_duration.as_millis() as usize).max(1)
+        };
+
+        #[allow(clippy::cast_precision_loss)]
         if debug {
             let iteration_tt_hits = iteration_search_info.total_tt_hits.load(Ordering::Relaxed);
             let global_duration = global_start.elapsed();
 
-            let ebf = if (previouse_iteration_ab_nodes + previouse_iteration_qs_nodes) > 0 {
-                iteration_nodes as f64
-                    / (previouse_iteration_ab_nodes + previouse_iteration_qs_nodes) as f64
+            let current_total_nodes = iteration_nodes as f64;
+            let previous_total_nodes =
+                (previouse_iteration_ab_nodes + previouse_iteration_qs_nodes) as f64;
+
+            let ebf = if previous_total_nodes > 0.0 {
+                current_total_nodes / previous_total_nodes
             } else {
                 0.0
             };

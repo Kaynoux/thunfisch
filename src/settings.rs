@@ -1,4 +1,3 @@
-
 pub const AB: bool = cfg!(feature = "ab");
 pub const QS: bool = cfg!(feature = "qs");
 pub const TT_AB: bool = cfg!(feature = "tt-ab");

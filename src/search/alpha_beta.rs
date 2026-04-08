@@ -26,6 +26,12 @@ pub const fn rfp_margin(depth: usize) -> usize {
 /// <https://www.chessprogramming.org/Alpha-Beta>
 /// Returns the pv, and the associated evaluation
 /// Note that the pv is reversed, i.e. the best move at this depth is at the end of the list
+/// TODO: Reduce number of arguments into a struct
+#[allow(
+    clippy::too_many_arguments,
+    clippy::too_many_lines,
+    clippy::needless_pass_by_value // because node_type should be pass by value because it is a bool essentially 
+)]
 pub fn alpha_beta(
     board: &mut Board,
     depth: usize,
@@ -78,6 +84,7 @@ pub fn alpha_beta(
 
     if settings::TT_AB {
         // TODO: legal detection to prevent collisions
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         if let Some(tt_hit) = TT.probe(board.hash(), ply as i32) {
             search_info.total_tt_hits.fetch_add(1, Ordering::Relaxed);
 
@@ -97,7 +104,7 @@ pub fn alpha_beta(
                     Bound::Lower => tt_score >= beta,
                     Bound::Upper => tt_score <= alpha,
                     Bound::Exact => true,
-                    _ => false,
+                    Bound::None => false,
                 }
             {
                 return tt_score;
@@ -119,6 +126,7 @@ pub fn alpha_beta(
             //
             // NOTE ON THIS: Higher values for depth limiting crash Thunfisch into oblivion.
             // If we get the branching factor under control and consistently hit depth 13-15 we can probably bump this up to ~4
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
             if depth < 4
                 && !board.is_in_check()
                 && eval >= beta
@@ -252,6 +260,7 @@ pub fn alpha_beta(
     // returns the mate score (very low) when in check but adds the ply to give a later check a better eval because the depth is lowers the further you go
     if i == 0 {
         if board.is_in_check() {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
             return -MATE_SCORE + (ply as i32);
         }
         return 0;
@@ -265,6 +274,7 @@ pub fn alpha_beta(
         Bound::Upper
     };
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     TT.store(
         board.hash(),
         best_move,

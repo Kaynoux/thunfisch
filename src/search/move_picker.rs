@@ -161,7 +161,6 @@ mod perft_test_move_picker {
     #[test]
     /// Tests the move generation by checking if it finds the correct amount of moves
     /// Also tests if the hashing works by checking if the incremental hash is the same as a newly calculated one from scratch
-
     fn test_move_picker_perft() {
         // Source: https://www.chessprogramming.org/Perft_Results
         // Position 2 at depth 4 has all types of moves covered
