@@ -7,7 +7,6 @@ use crate::search::alpha_beta::alpha_beta;
 
 use crate::settings;
 
-use std::i32;
 use std::time::Instant;
 use std::{
     sync::{
@@ -19,6 +18,7 @@ use std::{
 };
 
 /// <https://www.chessprogramming.org/Iterative_Deepening>
+#[allow(clippy::too_many_lines)]
 pub fn iterative_deepening(
     board: &mut Board,
     max_depth: usize,
@@ -197,6 +197,8 @@ pub fn iterative_deepening(
                 pv_string
             );
         } else {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let fill_rate = TT.info().2 as usize;
             println!(
                 "info  depth {} seldepth {}  score cp {} nodes {} nps {} time {} tt {} pv {}",
                 depth,
@@ -205,7 +207,7 @@ pub fn iterative_deepening(
                 iteration_nodes,
                 nodes_per_seconds,
                 iteration_duration.as_millis(),
-                TT.info().2 as usize,
+                fill_rate,
                 pv_string,
             );
         }

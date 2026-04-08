@@ -56,11 +56,8 @@ mod tests {
     #[test]
     fn print_mvva_lva_table() {
         let mut value_dist: HashMap<i32, usize> = HashMap::new();
-        for i in 0..6 {
-            for ii in 0..6 {
-                let mvv_lva_val = MVV_LVA_TABLE[i][ii];
-                *value_dist.entry(mvv_lva_val).or_insert(0) += 1;
-            }
+        for &mvv_lva_val in MVV_LVA_TABLE.iter().flatten() {
+            *value_dist.entry(mvv_lva_val).or_insert(0) += 1;
         }
         let mut value_dist = value_dist.iter().collect::<Vec<(&i32, &usize)>>();
         value_dist.sort_by_key(|&(key, _)| key);

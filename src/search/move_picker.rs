@@ -134,17 +134,9 @@ impl MovePicker {
             }
 
             // Find highest score in remaining
-            let mut best_idx = 0;
-            let mut max_score = remaining[0].score;
-            for i in 1..remaining.len() {
-                if remaining[i].score > max_score {
-                    max_score = remaining[i].score;
-                    best_idx = i;
-                }
+            if let Some((best_idx, _)) = remaining.iter().enumerate().max_by_key(|(_, m)| m.score) {
+                remaining.swap(0, best_idx);
             }
-
-            // Swap best move to front
-            remaining.swap(0, best_idx);
 
             // Should we skip this move?
             let best_move = remaining[0].mv;

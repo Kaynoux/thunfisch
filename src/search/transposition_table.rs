@@ -68,7 +68,6 @@ impl Clone for EncodedHashEntry {
 /// this needs to be fixed in the future
 /// Also the Score being 4 bytes leads to the struct being padded to 24 bytes (from the 17 it actually needs)
 /// should also be fixed
-
 #[repr(C)]
 pub struct DecodedTTEntry {
     key: u16,
@@ -98,31 +97,22 @@ impl DecodedTTEntry {
         Some(self.best_move)
     }
 
+    // pass by value should be faster but idk
+    #[allow(clippy::needless_pass_by_value)]
     pub fn from_internal(atom: EncodedHashEntry) -> Self {
-        unsafe { std::mem::transmute(atom.data.load(Ordering::Relaxed)) } // should probably measure how much we actually benefit from unsafe
+        // SAFETY: DecodedTTEntry is #[repr(C)] and has a total size of 8 bytes (64 bits),
+        // matching the size of the u64 loaded from the atomic storage.
+        unsafe { std::mem::transmute(atom.data.load(Ordering::Relaxed)) }
     }
 
-    pub fn to_u64(self) -> u64 {
+    // pass by value should be faster but idk
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn convert_to_u64(self) -> u64 {
+        // SAFETY: DecodedTTEntry is #[repr(C)] and exactly 8 bytes wide.
+        // Transmuting it to u64 is safe as all bit patterns are valid for u64.
         unsafe { std::mem::transmute(self) }
     }
 }
-
-// impl fmt::Display for DecodedTTEntry {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         let (depth, score_type) = self.flags.decode();
-//         write!(
-//             f,
-//             "key: {}\neval: {}\nmv: {}\ndepth: {}\nscore_type: {:?}",
-//             self.key.load(Ordering::Relaxed),
-//             self.eval.load(Ordering::Relaxed),
-//             EncodedMove((self.mv.load(Ordering::Relaxed) - 1) as u16)
-//                 .decode()
-//                 .to_coords(),
-//             depth,
-//             score_type
-//         )
-//     }
-// }
 
 /// <https://www.chessprogramming.org/Transposition_Table>
 pub struct TranspositionTable {
@@ -160,6 +150,7 @@ impl TranspositionTable {
     }
 
     // Adds one but limits age to 63
+    #[allow(clippy::cast_possible_truncation)] // Age mask will never cause truncation
     pub fn increase_age(&self) {
         self.age
             .store((self.get_age() + 1) & (AGE_MASK as u8), Ordering::Relaxed);
@@ -170,6 +161,7 @@ impl TranspositionTable {
     }
 
     /// For the most part taken from Viridithas
+    #[allow(clippy::too_many_arguments, clippy::cast_possible_truncation)]
     pub fn store(
         &self,
         hash: u64,
@@ -234,12 +226,13 @@ impl TranspositionTable {
                 depth,
                 info: TTInfo::encode(self.get_age(), bound, is_pv),
             }
-            .to_u64();
+            .convert_to_u64();
 
             self.entries[idx].data.store(new_entry, Ordering::Relaxed);
         }
     }
 
+    #[allow(clippy::cast_possible_truncation)]
     pub fn probe(&self, hash: u64, ply: i32) -> Option<DecodedTTEntry> {
         let idx = (hash as usize) & (self.entries.len() - 1);
         let mut entry = DecodedTTEntry::from_internal(self.entries[idx].clone());
@@ -268,6 +261,7 @@ impl TranspositionTable {
             }
         }
 
+        #[allow(clippy::cast_precision_loss)]
         let fill_rate = if sample_size > 0 {
             f64::from(filled_sample) / sample_size as f64
         } else {
@@ -275,6 +269,11 @@ impl TranspositionTable {
         };
 
         let total_entries = self.entries.len();
+        #[allow(
+            clippy::cast_possible_truncation,
+            clippy::cast_sign_loss,
+            clippy::cast_precision_loss
+        )]
         let filled_entries = (total_entries as f64 * fill_rate) as usize;
         let size_in_bytes = total_entries * std::mem::size_of::<EncodedHashEntry>();
 
@@ -303,14 +302,11 @@ impl TranspositionTable {
             }
             Some(&"fill") => Ok(format!("{:?}", self.info())),
             Some(&"probe") => {
-                if let Some(entry) = self.probe(hash, 0) {
-                    let move_info = match entry.best_move() {
-                        Some(mv) => {
+                self.probe(hash, 0).map_or_else(|| Ok("No Entry".to_owned()), |entry| {
+                    let move_info = entry.best_move().map_or_else(|| "None".to_string(), |mv| {
                             let decoded = mv.decode();
                             format!("Encoded({}), Coords: {}", mv.0, decoded.to_coords())
-                        }
-                        None => "None".to_string(),
-                    };
+                        });
 
                     Ok(format!(
                         "Hash Key (16-bit): {:X}\nScore: {}\nDepth: {}\nBound: {:?}\nPV Node: {}\nAge: {}\nMove: [{}]",
@@ -322,9 +318,7 @@ impl TranspositionTable {
                         entry.info.age(),
                         move_info
                     ))
-                } else {
-                    Ok("No Entry".to_owned())
-                }
+                })
             }
             Some(cmd) => Err(format!("Unknown command: tt {cmd}")),
             None => Err("Argument Required".to_owned()),
@@ -360,7 +354,7 @@ mod test_tt_encodings {
             info,
         };
 
-        let packed = entry.to_u64();
+        let packed = entry.convert_to_u64();
         let unpacked = DecodedTTEntry::from_internal(EncodedHashEntry {
             data: AtomicU64::new(packed),
         });
@@ -380,7 +374,7 @@ mod test_tt_encodings {
         // (Assuming settings::TRANSPOSITION_TABLE is true during tests or mocked)
 
         let tt = TranspositionTable::new(1); // 1 MB
-        let hash = 0x1234567890ABCDEF;
+        let hash = 0x1234_5678_90AB_CDEF;
         let mv = EncodedMove(42);
 
         // Store exact score
@@ -401,8 +395,8 @@ mod test_tt_encodings {
     #[test]
     fn test_mate_score_adjustment_comprehensive() {
         let tt = TranspositionTable::new(1);
-        let hash_win = 0xAAABBBCCCDDDEEEF;
-        let hash_loss = 0x1112223334445556;
+        let hash_win = 0xAAAB_BBCC_CDDD_EEEF;
+        let hash_loss = 0x1112_2233_3444_5556;
         let mv = EncodedMove(111);
 
         // --- Positive Mate Score (we are winning) ---
@@ -420,12 +414,20 @@ mod test_tt_encodings {
 
         // --- Negative Mate Score (we are being mated) ---
         // A score of -MATE_SCORE + 5 (we are mated in 5 half-moves) at ply 2.
-        let mated_in_5 = -MATE_SCORE + 5;
-        tt.store(hash_loss, Some(mv), mated_in_5, 10, 2, Bound::Exact, false);
+        let getting_mated_in5 = -MATE_SCORE + 5;
+        tt.store(
+            hash_loss,
+            Some(mv),
+            getting_mated_in5,
+            10,
+            2,
+            Bound::Exact,
+            false,
+        );
 
         // Probed at the same depth:
         let probed_loss_same_ply = tt.probe(hash_loss, 2).unwrap();
-        assert_eq!(probed_loss_same_ply.score(), mated_in_5);
+        assert_eq!(probed_loss_same_ply.score(), getting_mated_in5);
 
         // Probed at ply 4 (only 3 half-moves left until we lose):
         let probed_loss_deeper = tt.probe(hash_loss, 4).unwrap();
@@ -435,7 +437,7 @@ mod test_tt_encodings {
     #[test]
     fn test_priority_replacement_same_age() {
         let tt = TranspositionTable::new(1);
-        let hash = 0x5555666677778888;
+        let hash = 0x5555_6666_7777_8888;
         let mv_deep = EncodedMove(10);
         let mv_shallow = EncodedMove(20);
 
@@ -456,7 +458,7 @@ mod test_tt_encodings {
     #[test]
     fn test_priority_replacement_with_aging() {
         let tt = TranspositionTable::new(1);
-        let hash = 0x5555666677778888;
+        let hash = 0x5555_6666_7777_8888;
         let mv_deep = EncodedMove(10);
         let mv_shallow = EncodedMove(20);
 
@@ -483,7 +485,7 @@ mod test_tt_encodings {
     #[test]
     fn test_exact_bound_overrides_non_exact() {
         let tt = TranspositionTable::new(1);
-        let hash = 0x1111222233334444;
+        let hash = 0x1111_2222_3333_4444;
 
         // 1. Store an Upper bound entry at depth 6
         tt.store(hash, Some(EncodedMove(1)), 50, 6, 0, Bound::Upper, false);
@@ -499,10 +501,11 @@ mod test_tt_encodings {
     }
 
     #[test]
+    #[allow(clippy::cast_possible_truncation)]
     fn test_different_position_always_replaced() {
         let tt = TranspositionTable::new(1);
         // Two hashes that map to the same index but have different keys
-        let hash1 = 0x1234567890ABCDEF_u64;
+        let hash1 = 0x1234_5678_90AB_CDEF_u64;
         let idx = (hash1 as usize) & (tt.entries.len() - 1);
         // Construct hash2 with same lower bits (same index) but different upper 16 bits (different key)
         let hash2 = (hash1 & !(0xFFFF << 48)) | (0xAAAA_u64 << 48);
@@ -523,7 +526,7 @@ mod test_tt_encodings {
     #[test]
     fn test_best_move_retained_from_previous_entry() {
         let tt = TranspositionTable::new(1);
-        let hash = 0xAAAABBBBCCCCDDDD;
+        let hash = 0xAAAA_BBBB_CCCC_DDDD;
         let mv = EncodedMove(42);
 
         // Store with a best move

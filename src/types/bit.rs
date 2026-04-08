@@ -117,7 +117,7 @@ impl Bit {
 
     #[inline]
     pub const fn from_xy(x: isize, y: isize) -> Self {
-        Square((x + (y * 8)) as usize).to_bit()
+        Square((x + (y * 8)).cast_unsigned()).to_bit()
     }
 
     #[inline]
@@ -128,6 +128,7 @@ impl Bit {
 
 impl Shl<isize> for Bit {
     type Output = Self;
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     #[inline]
     fn shl(self, shift: isize) -> Self::Output {
         if shift < 0 {
@@ -140,6 +141,7 @@ impl Shl<isize> for Bit {
 
 impl Shr<isize> for Bit {
     type Output = Self;
+    #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
     #[inline]
     fn shr(self, shift: isize) -> Self::Output {
         if shift < 0 {

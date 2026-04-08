@@ -194,18 +194,12 @@ impl Board {
     pub const fn piece_at_position(&self, pos: Square) -> Piece {
         match self.figures[pos.0] {
             Figure::Empty => Empty,
-            Figure::WhitePawn => Pawn,
-            Figure::BlackPawn => Pawn,
-            Figure::WhiteKnight => Knight,
-            Figure::BlackKnight => Knight,
-            Figure::WhiteBishop => Bishop,
-            Figure::BlackBishop => Bishop,
-            Figure::WhiteRook => Rook,
-            Figure::BlackRook => Rook,
-            Figure::WhiteQueen => Queen,
-            Figure::BlackQueen => Queen,
-            Figure::WhiteKing => King,
-            Figure::BlackKing => King,
+            Figure::WhitePawn | Figure::BlackPawn => Pawn,
+            Figure::WhiteKnight | Figure::BlackKnight => Knight,
+            Figure::WhiteBishop | Figure::BlackBishop => Bishop,
+            Figure::WhiteRook | Figure::BlackRook => Rook,
+            Figure::WhiteQueen | Figure::BlackQueen => Queen,
+            Figure::WhiteKing | Figure::BlackKing => King,
         }
     }
 
@@ -226,7 +220,7 @@ impl Board {
             .into_iter()
             .map(|piece| self.figure_bb(Color::White, piece) ^ self.figure_bb(Color::Black, piece))
             .reduce(|a, b| a | b)
-            .is_none_or(|bitboard| bitboard.is_empty()) // REsult of reduce should never be None because map should always yield a non-empty iterator
+            .is_none_or(Bitboard::is_empty) // REsult of reduce should never be None because map should always yield a non-empty iterator
     }
 
     #[inline]
@@ -326,16 +320,17 @@ impl Board {
         mv: &DecodedMove,
         captured: Piece,
     ) {
+        const WHITE_ROOK_QUEEN_POS: Square = Square(0);
+        const WHITE_ROOK_KING_POS: Square = Square(7);
+        const BLACK_ROOK_KING_POS: Square = Square(63);
+        const BLACK_ROOK_QUEEN_POS: Square = Square(56);
+
         if captured != Piece::Rook && from != Piece::Rook && from != Piece::King {
             return; // move not relevant for castling
         }
 
         self.hash ^= zobrist::generate_castling_hash(self); // remove old castling hash
 
-        const WHITE_ROOK_QUEEN_POS: Square = Square(0);
-        const WHITE_ROOK_KING_POS: Square = Square(7);
-        const BLACK_ROOK_KING_POS: Square = Square(63);
-        const BLACK_ROOK_QUEEN_POS: Square = Square(56);
         match from {
             Piece::King => match friendly {
                 White => {
