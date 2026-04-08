@@ -30,7 +30,7 @@ const fn calculate_mvv_lva_score(victim_idx: usize, attacker_idx: usize) -> i32 
     victim_value * ORDERING_MULTIPLIER - attacker_value + ORDERING_OFFSET
 }
 
-/// https://www.chessprogramming.org/MVV-LVA
+/// <https://www.chessprogramming.org/MVV-LVA>
 pub const MVV_LVA_TABLE: [[i32; 6]; 6] = {
     let mut table = [[0i32; 6]; 6];
     let mut attacker_idx = 0;
@@ -56,11 +56,8 @@ mod tests {
     #[test]
     fn print_mvva_lva_table() {
         let mut value_dist: HashMap<i32, usize> = HashMap::new();
-        for i in 0..6 {
-            for ii in 0..6 {
-                let mvv_lva_val = MVV_LVA_TABLE[i][ii];
-                *value_dist.entry(mvv_lva_val).or_insert(0) += 1;
-            }
+        for &mvv_lva_val in MVV_LVA_TABLE.iter().flatten() {
+            *value_dist.entry(mvv_lva_val).or_insert(0) += 1;
         }
         let mut value_dist = value_dist.iter().collect::<Vec<(&i32, &usize)>>();
         value_dist.sort_by_key(|&(key, _)| key);

@@ -1,13 +1,10 @@
 use crate::prelude::*;
 use std::fmt;
-use std::{
-    arch::asm,
-    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, Not, Sub},
-};
+use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, Not, Sub};
 
 /// the bits the are set represent a position on the board with the bit being the index of the chess position
 /// Counting begins bottom left
-#[derive(Copy, Clone, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Bitboard(pub u64);
 
 impl fmt::Debug for Bitboard {
@@ -15,9 +12,10 @@ impl fmt::Debug for Bitboard {
         writeln!(f)?; // Start with a newline for better formatting in some contexts
         let mut y = 7;
         while y >= 0 {
-            write!(f, "{} | ", y)?;
+            write!(f, "{y} | ")?;
             let mut x = 0;
             while x <= 7 {
+                #[allow(clippy::cast_sign_loss)]
                 let idx = (y * 8 + x) as usize;
                 let bit_is_set = (self.0 >> idx) & 1;
                 if bit_is_set == 1 {
@@ -38,52 +36,34 @@ impl fmt::Debug for Bitboard {
 }
 
 impl Bitboard {
-    pub const EMPTY: Bitboard = Bitboard(0);
-    pub const FULL: Bitboard = Bitboard(u64::MAX);
-    pub const UNSET_CHECK_MASK: Bitboard = Bitboard(0);
-    pub const UNSET_ATTACK_MASK: Bitboard = Bitboard(u64::MAX);
-    pub const UNSET_PINMASK: Bitboard = Bitboard(u64::MAX);
+    pub const EMPTY: Self = Self(0);
+    pub const FULL: Self = Self(u64::MAX);
+    pub const UNSET_CHECK_MASK: Self = Self(0);
+    pub const UNSET_ATTACK_MASK: Self = Self(u64::MAX);
+    pub const UNSET_PINMASK: Self = Self(u64::MAX);
 
-    #[inline(always)]
+    #[inline]
     pub fn is_position_set(self, position: Bit) -> bool {
-        (self & position) != Bitboard(0)
+        (self & position) != Self(0)
     }
 
-    pub fn toggle(&mut self, square: Square) {
+    pub const fn toggle(&mut self, square: Square) {
         self.0 ^= 1 << square.i();
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn pop_lsb_position(&mut self) -> Option<Bit> {
-        if *self == Bitboard(0) {
+        if *self == Self(0) {
             None
         } else {
             let pos = Bit::from(*self & self.0.wrapping_neg());
-            *self &= *self - Bitboard(1);
+            *self &= *self - Self(1);
             Some(pos)
         }
     }
 
-    #[inline(always)]
-    pub fn pop_lsb_asm(&mut self) -> Option<Bit> {
-        let mut lsb_index: u64;
-        unsafe {
-            asm!(
-                "bsf {0}, {1}",
-                out(reg) lsb_index,
-                in(reg) self.0,
-            );
-        }
-        if lsb_index != 64 {
-            self.0 &= self.0 - 1;
-            Some(Bit(lsb_index))
-        } else {
-            None
-        }
-    }
-
-    #[inline(always)]
-    pub fn get_count(&self) -> u32 {
+    #[inline]
+    pub const fn get_count(self) -> u32 {
         self.0.count_ones()
     }
 
@@ -92,18 +72,18 @@ impl Bitboard {
         std::iter::from_fn(move || self.pop_lsb_position())
     }
 
-    #[inline(always)]
+    #[inline]
     pub const fn from_idx<const N: usize>(indexes: [usize; N]) -> Self {
-        let mut bitboard = Bitboard(0);
+        let mut bitboard = Self(0);
         let mut i = 0;
         while i < N {
-            bitboard = Bitboard(bitboard.0 | (1u64 << indexes[i]));
+            bitboard = Self(bitboard.0 | (1u64 << indexes[i]));
             i += 1;
         }
         bitboard
     }
 
-    pub const fn is_empty(&self) -> bool {
+    pub const fn is_empty(self) -> bool {
         self.0 == 0
     }
 
@@ -114,29 +94,29 @@ impl Bitboard {
 
 impl Not for Bitboard {
     type Output = Self;
-    #[inline(always)]
+    #[inline]
     fn not(self) -> Self::Output {
-        Bitboard(!self.0)
+        Self(!self.0)
     }
 }
 
 impl BitOr<Bit> for Bitboard {
     type Output = Self;
-    #[inline(always)]
+    #[inline]
     fn bitor(self, rhs: Bit) -> Self::Output {
-        Bitboard(self.0 | rhs.0)
+        Self(self.0 | rhs.0)
     }
 }
 
 impl BitOrAssign<Bit> for Bitboard {
-    #[inline(always)]
+    #[inline]
     fn bitor_assign(&mut self, rhs: Bit) {
         self.0 |= rhs.0;
     }
 }
 
 impl BitOrAssign<u64> for Bitboard {
-    #[inline(always)]
+    #[inline]
     fn bitor_assign(&mut self, rhs: u64) {
         self.0 |= rhs;
     }
@@ -144,69 +124,69 @@ impl BitOrAssign<u64> for Bitboard {
 
 impl BitAnd<Bit> for Bitboard {
     type Output = Self;
-    #[inline(always)]
+    #[inline]
     fn bitand(self, rhs: Bit) -> Self::Output {
-        Bitboard(self.0 & rhs.0)
+        Self(self.0 & rhs.0)
     }
 }
 
-impl BitXor<Bitboard> for Bitboard {
+impl BitXor<Self> for Bitboard {
     type Output = Self;
-    #[inline(always)]
-    fn bitxor(self, rhs: Bitboard) -> Self::Output {
-        Bitboard(self.0 ^ rhs.0)
+    #[inline]
+    fn bitxor(self, rhs: Self) -> Self::Output {
+        Self(self.0 ^ rhs.0)
     }
 }
 
 impl BitAndAssign<Bit> for Bitboard {
-    #[inline(always)]
+    #[inline]
     fn bitand_assign(&mut self, rhs: Bit) {
         self.0 &= rhs.0;
     }
 }
 
-impl BitOr<Bitboard> for Bitboard {
+impl BitOr<Self> for Bitboard {
     type Output = Self;
-    #[inline(always)]
-    fn bitor(self, rhs: Bitboard) -> Self::Output {
-        Bitboard(self.0 | rhs.0)
+    #[inline]
+    fn bitor(self, rhs: Self) -> Self::Output {
+        Self(self.0 | rhs.0)
     }
 }
 
-impl BitOrAssign<Bitboard> for Bitboard {
-    #[inline(always)]
-    fn bitor_assign(&mut self, rhs: Bitboard) {
+impl BitOrAssign<Self> for Bitboard {
+    #[inline]
+    fn bitor_assign(&mut self, rhs: Self) {
         self.0 |= rhs.0;
     }
 }
 
 impl BitAnd for Bitboard {
     type Output = Self;
-    #[inline(always)]
+    #[inline]
     fn bitand(self, rhs: Self) -> Self::Output {
-        Bitboard(self.0 & rhs.0)
+        Self(self.0 & rhs.0)
     }
 }
 
-impl BitAndAssign<Bitboard> for Bitboard {
-    #[inline(always)]
-    fn bitand_assign(&mut self, rhs: Bitboard) {
+impl BitAndAssign<Self> for Bitboard {
+    #[inline]
+    fn bitand_assign(&mut self, rhs: Self) {
         self.0 &= rhs.0;
     }
 }
 
 impl Sub for Bitboard {
     type Output = Self;
-    #[inline(always)]
-    fn sub(self, rhs: Bitboard) -> Self::Output {
-        Bitboard(self.0 - rhs.0)
+    #[inline]
+    fn sub(self, rhs: Self) -> Self::Output {
+        Self(self.0 - rhs.0)
     }
 }
 
 impl BitAnd<u64> for Bitboard {
     type Output = Self;
-    #[inline(always)]
+    #[inline]
     fn bitand(self, rhs: u64) -> Self::Output {
-        Bitboard(self.0 & rhs)
+        Self(self.0 & rhs)
     }
 }

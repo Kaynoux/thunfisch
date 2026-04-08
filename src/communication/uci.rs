@@ -11,10 +11,12 @@ use std::io::{self, BufRead, Write};
 use std::process::exit;
 use std::time::Duration;
 
+#[allow(clippy::too_many_lines)]
 pub fn handle_uci_communication() {
+    const START_POS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+
     let stdin = io::stdin();
     let mut stdout = io::stdout();
-    const START_POS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
     let mut board = Board::from_fen(START_POS);
 
     let args: Vec<String> = env::args().collect();
@@ -34,75 +36,16 @@ pub fn handle_uci_communication() {
     }
 
     for line_res in stdin.lock().lines() {
-        let line = match line_res {
-            Ok(l) => l,
-            Err(_) => break,
-        };
+        let Ok(line) = line_res else { break };
 
         let mut parts = line.split_whitespace();
         match parts.next() {
             Some("help") => {
-                println!("Commands:");
-                println!("  uci                - Identify engine and author");
-                println!("  isready            - Engine readiness check");
-                println!("  ucinewgame         - Start new game (resets engine state)");
-                println!("  position [options] - Set up position (see below)");
-                println!("  go [parameters]    - Start search (see below)");
-                println!("  quit               - Exit engine");
-                println!("  fen                - Print current FEN");
-                println!();
-
-                println!("position options");
-                println!("  startpos           - Set up the standard chess starting position");
-                println!("  fen <FEN>          - Set up a position from a FEN string");
-                println!("  moves <m1> <m2>    - Play moves from the given position");
-                println!();
-
-                println!("go parameters:");
-                println!("  depth <n>          - Search to fixed depth n (plies)");
-                println!("  wtime <ms>         - White time left (ms)");
-                println!("  btime <ms>         - Black time left (ms)");
-                println!("  winc <ms>          - White increment per move (ms)");
-                println!("  binc <ms>          - Black increment per move (ms)");
-                println!("  movestogo <n>      - Moves to next time control");
-                println!("  movetime <ms>      - Search exactly this many ms");
-                println!("  fixtime <ms>.      - Harcoded searchtime");
-                println!();
-
-                println!("perft commands:");
-                println!("  go perft <depth> [--debug|--perftree|--rayon]");
-                println!("    --debug     - Print debug info for perft");
-                println!("    --perftree  - Print perft formatted for perftree");
-                println!("    --rayon     - Use rayon for parallel perft");
-                println!();
-
-                println!("Examples:");
-                println!("  position startpos moves e2e4 e7e5");
-                println!("  go depth 6");
-                println!("  go wtime 60000 btime 60000 winc 0 binc 0");
-                println!("  go perft 7 --rayon");
-                println!();
-
-                println!("Debugging:");
-                println!("  draw               - Print board");
-                println!("  moves              - Print legal moves");
-                println!("  eval               - Prints current Evaluation with Depth of 0");
-                println!("  do <move>          - Play move (e.g. do e2e4)");
-                println!("  islegal <move>     - Check whether move is legal (e.g. islegal e2e4)");
-                println!("  pinmask            - Show pin masks");
-                println!("  checkmask          - Show check mask");
-                println!("  attackmask         - Show attack mask");
-                println!("  empty              - Empty Squares Bitboard");
-                println!("  white              - White Squares Bitboard");
-                println!("  black              - Black Squares Bitboard");
-                println!("  occupied           - Occupied Squares Bitboard");
-                println!("  piece [pbnrqk]     - All squares occupied by the specified pieces");
-                println!("  hash               - Current board hash");
-                println!("  tt <parameters>    - Perform actions with the Transposition table");
+                println!("{HELP_TEXT}");
             }
             Some("uci") => {
                 println!("id name Thunfisch");
-                println!("id author Lukas Piorek");
+                println!("id author Lukas Piorek (Kaynoux), Emil Schläger (heofthetea)");
                 println!("uciok");
             }
             Some("isready") => {
@@ -117,7 +60,7 @@ pub fn handle_uci_communication() {
             }
             Some("go") => {
                 let args: Vec<&str> = parts.collect();
-                bestmove::bestmove(args, &mut board);
+                bestmove::bestmove(&args, &mut board);
             }
             Some("fen") => println!("Current Fen: {}", board.generate_fen()),
             Some("draw") => visualize::print_board(&board, None),
@@ -129,17 +72,17 @@ pub fn handle_uci_communication() {
             Some("do") => {
                 let args: Vec<&str> = parts.collect();
                 let mv_str: &str = args[0];
-                let mv = DecodedMove::from_coords(mv_str.to_string(), &board);
-                board.make_move(&mv);
+                let mv = DecodedMove::from_coords(mv_str, &board);
+                board.make_move(mv.encode());
             }
             Some("islegal") => {
                 let args: Vec<&str> = parts.collect();
                 let mv_str: &str = args[0];
-                let mv = DecodedMove::from_coords(mv_str.to_string(), &board);
+                let mv = DecodedMove::from_coords(mv_str, &board);
                 if board.is_legal(&mv) {
-                    println!("yes")
+                    println!("yes");
                 } else {
-                    println!("no")
+                    println!("no");
                 }
             }
             Some("pinmask") => {
@@ -149,8 +92,8 @@ pub fn handle_uci_communication() {
             Some("checkmask") => {
                 let (check_mask, check_counter) = masks::calc_check_mask(&board);
 
-                println!("Check Counter: {}", check_counter);
-                println!("{:?}", check_mask);
+                println!("Check Counter: {check_counter}");
+                println!("{check_mask:?}");
             }
             Some("attackmask") => {
                 let attackmask = masks::calculate_attackmask(
@@ -159,7 +102,7 @@ pub fn handle_uci_communication() {
                     !board.current_color(),
                     None,
                 );
-                println!("{:?}", attackmask);
+                println!("{attackmask:?}");
             }
             Some("empty") => {
                 println!("{:?}", board.empty());
@@ -174,18 +117,17 @@ pub fn handle_uci_communication() {
                 println!("{:?}", board.occupied());
             }
             Some("piece") => {
-                if let Some(&args) = parts.take(1).collect::<Vec<&str>>().get(0) {
+                if let Some(&args) = parts.take(1).collect::<Vec<&str>>().first() {
                     let mut parse_error_occurred = false;
 
                     let bitboard = args
                         .chars()
-                        .into_iter()
                         .map(|c| c.to_ascii_lowercase())
                         .map_while(|c| {
                             Piece::from_lowercase_char(c)
-                                .inspect_err(|_| {
-                                    println!("invalid character: {}", c);
-                                    parse_error_occurred = true
+                                .inspect_err(|()| {
+                                    println!("invalid character: {c}");
+                                    parse_error_occurred = true;
                                 })
                                 .ok()
                         })
@@ -196,9 +138,9 @@ pub fn handle_uci_communication() {
                         .reduce(|a, b| a | b);
 
                     if !parse_error_occurred && let Some(piece_bb) = bitboard {
-                        println!("{:?}", piece_bb)
+                        println!("{piece_bb:?}");
                     }
-                };
+                }
             }
             Some("hash") => {
                 println!("{:?}", board.hash());
@@ -209,19 +151,19 @@ pub fn handle_uci_communication() {
                     "Hash from Scratch: {:#x} {:?}",
                     board.generate_hash(),
                     board.generate_hash()
-                )
+                );
             }
 
             Some("tt") => {
                 let args: Vec<&str> = parts.collect();
                 match TT.handle_debug(&args, board.hash()) {
-                    Err(e) => eprintln!("{}", e),
-                    Ok(v) => println!("{}", v),
+                    Err(e) => eprintln!("{e}"),
+                    Ok(v) => println!("{v}"),
                 }
             }
             Some("quit") => break,
             Some(cmd) => {
-                eprintln!("Unknown command: {}", cmd);
+                eprintln!("Unknown command: {cmd}");
             }
             None => {}
         }
@@ -229,3 +171,56 @@ pub fn handle_uci_communication() {
         stdout.flush().unwrap();
     }
 }
+
+const HELP_TEXT: &str = r"Commands:
+  uci                - Identify engine and author
+  isready            - Engine readiness check
+  ucinewgame         - Start new game (resets engine state)
+  position [options] - Set up position (see below)
+  go [parameters]    - Start search (see below)
+  quit               - Exit engine
+  fen                - Print current FEN
+
+position options
+  startpos           - Set up the standard chess starting position
+  fen <FEN>          - Set up a position from a FEN string
+  moves <m1> <m2>    - Play moves from the given position
+
+go parameters:
+  depth <n>          - Search to fixed depth n (plies)
+  wtime <ms>         - White time left (ms)
+  btime <ms>         - Black time left (ms)
+  winc <ms>          - White increment per move (ms)
+  binc <ms>          - Black increment per move (ms)
+  movestogo <n>      - Moves to next time control
+  movetime <ms>      - Search exactly this many ms
+  fixtime <ms>.      - Harcoded searchtime
+
+perft commands:
+  go perft <depth> [--debug|--perftree|--rayon]
+    --debug     - Print debug info for perft
+    --perftree  - Print perft formatted for perftree
+    --rayon     - Use rayon for parallel perft
+
+Examples:
+  position startpos moves e2e4 e7e5
+  go depth 6
+  go wtime 60000 btime 60000 winc 0 binc 0
+  go perft 7 --rayon
+
+Debugging:
+  draw               - Print board
+  moves              - Print legal moves
+  eval               - Prints current Evaluation with Depth of 0
+  do <move>          - Play move (e.g. do e2e4)
+  islegal <move>     - Check whether move is legal (e.g. islegal e2e4)
+  pinmask            - Show pin masks
+  checkmask          - Show check mask
+  attackmask         - Show attack mask
+  empty              - Empty Squares Bitboard
+  white              - White Squares Bitboard
+  black              - Black Squares Bitboard
+  occupied           - Occupied Squares Bitboard
+  piece [pbnrqk]     - All squares occupied by the specified pieces
+  hash               - Current board hash
+  tt <parameters>    - Perform actions with the Transposition table";

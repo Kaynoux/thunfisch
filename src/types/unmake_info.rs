@@ -1,6 +1,7 @@
 use crate::prelude::*;
 
 #[derive(Clone, Copy)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct UnmakeInfo {
     pub mv: EncodedMove,
     pub capture: Figure,

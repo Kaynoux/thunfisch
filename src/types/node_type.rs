@@ -1,5 +1,5 @@
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub enum NodeType {
     OnPV,
-    OffPV
+    OffPV,
 }

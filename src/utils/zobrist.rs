@@ -4,7 +4,7 @@
 
 use crate::prelude::*;
 
-pub fn figure_key(figure: Figure, square: Square) -> u64 {
+pub const fn figure_key(figure: Figure, square: Square) -> u64 {
     let figure_idx = figure.to_polyglot();
     POLYGLOT_KEYS[figure_idx * 64 + square.i()]
 }
@@ -13,7 +13,7 @@ pub const fn castling_rights_key(idx: usize) -> u64 {
     POLYGLOT_KEYS[768 + idx]
 }
 
-pub fn ep_key(ep_target: Square) -> u64 {
+pub const fn ep_key(ep_target: Square) -> u64 {
     let x = ep_target.x();
     POLYGLOT_KEYS[772 + x]
 }
@@ -22,7 +22,7 @@ pub const fn white_move_key() -> u64 {
     POLYGLOT_KEYS[780]
 }
 
-pub fn generate_castling_hash(board: &Board) -> u64 {
+pub const fn generate_castling_hash(board: &Board) -> u64 {
     const HASH_WHITE_KING_CASTLE: u64 = castling_rights_key(0);
     const HASH_WHITE_QUEEN_CASTLE: u64 = castling_rights_key(1);
     const HASH_BLACK_KING_CASTLE: u64 = castling_rights_key(2);
@@ -30,23 +30,24 @@ pub fn generate_castling_hash(board: &Board) -> u64 {
     let mut hash = 0;
 
     if board.white_queen_castle() {
-        hash ^= HASH_WHITE_QUEEN_CASTLE
+        hash ^= HASH_WHITE_QUEEN_CASTLE;
     }
     if board.white_king_castle() {
-        hash ^= HASH_WHITE_KING_CASTLE
+        hash ^= HASH_WHITE_KING_CASTLE;
     }
     if board.black_queen_castle() {
-        hash ^= HASH_BLACK_QUEEN_CASTLE
+        hash ^= HASH_BLACK_QUEEN_CASTLE;
     }
     if board.black_king_castle() {
-        hash ^= HASH_BLACK_KING_CASTLE
+        hash ^= HASH_BLACK_KING_CASTLE;
     }
 
     hash
 }
 
-/// Source for these keys: https://python-chess.readthedocs.io/en/latest/_modules/chess/polyglot.html
+/// Source for these keys: <https://python-chess.readthedocs.io/en/latest>/_modules/chess/polyglot.html
 /// This polyglot keys are contain a predefined random numbers to generate the same hashes for boards across different engines
+#[allow(clippy::unreadable_literal)]
 const POLYGLOT_KEYS: [u64; 781] = [
     0x9D39247E33776D41,
     0x2AF7398005AAA5C7,

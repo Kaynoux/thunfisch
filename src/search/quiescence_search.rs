@@ -3,14 +3,15 @@ use crate::search::alpha_beta::MATE_SCORE;
 use crate::search::move_picker::MovePicker;
 use crate::search::transposition_table::Bound;
 use crate::search::transposition_table::TT;
-use crate::settings::settings;
+use crate::settings;
 
 use std::sync::{
     Arc,
     atomic::{AtomicBool, Ordering},
 };
 
-/// https://www.chessprogramming.org/Quiescence_Search
+/// <https://www.chessprogramming.org/Quiescence_Search>
+#[allow(clippy::too_many_lines, clippy::too_many_arguments)]
 pub fn quiescence_search(
     board: &mut Board,
     mut alpha: i32,
@@ -49,6 +50,7 @@ pub fn quiescence_search(
         -MATE_SCORE
     } else if settings::TT_QS {
         // probe tt
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         if let Some(tt_hit) = TT.probe(board.hash(), ply as i32) {
             search_info.total_tt_hits.fetch_add(1, Ordering::Relaxed);
 
@@ -88,6 +90,7 @@ pub fn quiescence_search(
 
     if eval >= beta {
         if settings::TT_QS {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
             TT.store(board.hash(), None, eval, 0, ply as i32, Bound::Lower, false);
         }
         return eval;
@@ -117,7 +120,7 @@ pub fn quiescence_search(
             search_info.timeout_occurred.store(true, Ordering::Relaxed);
             return 0;
         }
-        board.make_move(&mv.decode());
+        board.make_move(mv);
         let score = -quiescence_search(
             board,
             -beta,
@@ -135,18 +138,17 @@ pub fn quiescence_search(
             best_score = score;
             if score > alpha {
                 best_move = Some(mv);
-                alpha = score
+                alpha = score;
             }
 
-            if settings::AB {
-                if alpha >= beta {
-                    break;
-                }
+            if settings::AB && alpha >= beta {
+                break;
             }
         }
     }
 
     if is_check && i == 0 {
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         return -MATE_SCORE + ply as i32;
     }
 
@@ -158,6 +160,7 @@ pub fn quiescence_search(
         Bound::Upper
     };
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     TT.store(
         board.hash(),
         best_move,

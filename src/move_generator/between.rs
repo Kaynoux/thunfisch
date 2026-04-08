@@ -1,7 +1,7 @@
 use crate::prelude::*;
 
 /// Return all Pos between from and to both exclusive
-pub const IN_BETWEEN: [[Bitboard; 64]; 64] = {
+pub static IN_BETWEEN: [[Bitboard; 64]; 64] = {
     let mut arr = [[Bitboard::EMPTY; 64]; 64];
     let mut from = 0;
     while from < 64 {
@@ -17,7 +17,7 @@ pub const IN_BETWEEN: [[Bitboard; 64]; 64] = {
 
 /// Returns all pos on a line between from (incluseive) and to (inclusive)
 #[allow(unused)]
-pub const LINE_THROUGH: [[Bitboard; 64]; 64] = {
+pub static LINE_THROUGH: [[Bitboard; 64]; 64] = {
     let mut arr = [[Bitboard::EMPTY; 64]; 64];
     let mut from = 0;
     while from < 64 {
@@ -31,6 +31,7 @@ pub const LINE_THROUGH: [[Bitboard; 64]; 64] = {
     arr
 };
 
+#[allow(clippy::cast_possible_wrap, clippy::cast_sign_loss)]
 const fn init_in_between(from: Square, to: Square) -> Bitboard {
     if from.0 == to.0 {
         return Bitboard::EMPTY;
@@ -106,6 +107,7 @@ const fn init_in_between(from: Square, to: Square) -> Bitboard {
     Bitboard(result_bb)
 }
 
+#[allow(clippy::cast_possible_wrap, clippy::cast_sign_loss)]
 const fn init_line_through(from: Square, to: Square) -> Bitboard {
     let from_x = from.x();
     let from_y = from.y();

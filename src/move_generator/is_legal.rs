@@ -9,7 +9,7 @@ use crate::{
     prelude::*,
 };
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Eq, Debug)]
 pub enum MoveDirection {
     HV,
     Diag,
@@ -20,24 +20,24 @@ pub enum MoveDirection {
 impl DecodedMove {
     /// Identifies the `MoveDirection` of the move based on where the squares lie relative to
     /// each other on the chess board.
-    pub fn move_direction(&self) -> MoveDirection {
+    pub const fn move_direction(&self) -> MoveDirection {
         match (
             self.to.x().abs_diff(self.from.x()),
             self.to.y().abs_diff(self.from.y()),
         ) {
             // null move
-            (0, 0) => MoveDirection::Teleport,
             (0, 1..=7) | (1..=7, 0) => MoveDirection::HV,
             (1, 1) | (2, 2) | (3, 3) | (4, 4) | (5, 5) | (6, 6) | (7, 7) => MoveDirection::Diag,
             (1, 2) | (2, 1) => MoveDirection::Knight,
-            _ => MoveDirection::Teleport,
+            _ => MoveDirection::Teleport, // Everything else (including (0,0) is considered teleport)
         }
     }
 }
 
 impl Board {
     /// Assumption: Our move generation generates only legal moves but these moves can be now illegal
-    /// Does not handle castles at all atm, they are completly handled in is_legal
+    /// Does not handle castles at all atm, they are completly handled in `is_legal`
+    #[inline]
     pub fn is_pseudo_legal(&self, mv: &DecodedMove) -> bool {
         let mv_direction = mv.move_direction();
         let current_color = self.current_color();
@@ -66,7 +66,7 @@ impl Board {
 
         // See if the move type is now wrong
         // Capture move but not an capture
-        let is_capture = MoveType::is_capture(&mv_type);
+        let is_capture = MoveType::is_capture(mv_type);
         if is_capture && to_is_empty && mv_type != MoveType::EpCapture {
             return false;
         }
@@ -77,7 +77,7 @@ impl Board {
         }
 
         // Ep or promotion but not by a pawn
-        if (mv_type == MoveType::EpCapture || MoveType::is_promotion(&mv_type))
+        if (mv_type == MoveType::EpCapture || MoveType::is_promotion(mv_type))
             && from_piece != Piece::Pawn
         {
             return false;
@@ -88,9 +88,10 @@ impl Board {
             return false;
         }
 
-        return true;
+        true
     }
     /// Checks whether `mv` is legal on `self`.
+    #[allow(clippy::too_many_lines)]
     pub fn is_legal(&mut self, mv: &DecodedMove) -> bool {
         if !self.is_pseudo_legal(mv) {
             return false;
@@ -180,12 +181,12 @@ impl Board {
                         || (PAWN_ATTACK_TARGETS[1][mv.from.i()] & opponents & checkmask)
                             .is_position_set(to_bit)
                 }
-                MoveType::EpCapture => self.ep_target().map_or(false, |target| {
+                MoveType::EpCapture => self.ep_target().is_some_and(|target| {
                     let captured_pawn = pawn_quiet_single_target(target, !self.current_color());
-                    return target == to_bit
+                    target == to_bit
                         && (checkmask.is_position_set(to_bit)
                             || checkmask.is_position_set(captured_pawn))
-                        && !diag_pinmask.is_position_set(captured_pawn);
+                        && !diag_pinmask.is_position_set(captured_pawn)
                 }),
                 _ => false,
             },
@@ -217,7 +218,7 @@ impl Board {
     }
 
     /// Calculate whether castling to `side` is legal. for the given color.
-    /// If MoveType is not a castling move this returns false.
+    /// If `MoveType` is not a castling move this returns false.
     fn is_castling_legal(&mut self, friendly: Color, side: MoveType) -> bool {
         let occupied = self.occupied();
         let attackmask = self.get_attackmask();
@@ -226,6 +227,9 @@ impl Board {
                 const NEED_TO_BE_EMPTY_QUEEN: Bitboard = Bitboard::from_idx([1, 2, 3]);
                 const NEED_TO_BE_NOT_ATTACKED_QUEEN: Bitboard = Bitboard::from_idx([2, 3]);
 
+                const NEED_TO_BE_EMPTY_KING: Bitboard = Bitboard::from_idx([5, 6]);
+                const NEED_TO_BE_NOT_ATTACKED_KING: Bitboard = Bitboard::from_idx([5, 6]);
+
                 if self.white_queen_castle()
                     && side == MoveType::QueenCastle
                     && NEED_TO_BE_EMPTY_QUEEN & occupied == Bitboard::EMPTY
@@ -233,8 +237,6 @@ impl Board {
                 {
                     return true;
                 }
-                const NEED_TO_BE_EMPTY_KING: Bitboard = Bitboard::from_idx([5, 6]);
-                const NEED_TO_BE_NOT_ATTACKED_KING: Bitboard = Bitboard::from_idx([5, 6]);
 
                 if self.white_king_castle()
                     && side == MoveType::KingCastle
@@ -249,6 +251,9 @@ impl Board {
                 const NEED_TO_BE_EMPTY_QUEEN: Bitboard = Bitboard::from_idx([57, 58, 59]);
                 const NEED_TO_BE_NOT_ATTACKED_QUEEN: Bitboard = Bitboard::from_idx([58, 59]);
 
+                const NEED_TO_BE_EMPTY_KING: Bitboard = Bitboard::from_idx([61, 62]);
+                const NEED_TO_BE_NOT_ATTACKED_KING: Bitboard = Bitboard::from_idx([61, 62]);
+
                 if self.black_queen_castle()
                     && side == MoveType::QueenCastle
                     && NEED_TO_BE_EMPTY_QUEEN & occupied == Bitboard::EMPTY
@@ -256,8 +261,6 @@ impl Board {
                 {
                     return true;
                 }
-                const NEED_TO_BE_EMPTY_KING: Bitboard = Bitboard::from_idx([61, 62]);
-                const NEED_TO_BE_NOT_ATTACKED_KING: Bitboard = Bitboard::from_idx([61, 62]);
 
                 if self.black_king_castle()
                     && side == MoveType::KingCastle
@@ -310,7 +313,7 @@ mod tests_perft {
             ("7k/8/8/8/8/8/8/K6B w - - 0 1", "h1"),
         ];
 
-        for (fen, position) in fens.iter() {
+        for (fen, position) in fens {
             let mut board = Board::from_fen(fen);
             let moves = board.generate_all_moves();
 
@@ -339,7 +342,7 @@ mod tests_perft {
             ("7k/8/8/8/8/8/6K1/R7 w - - 0 1", "a1"),
         ];
 
-        for (fen, position) in fens.iter() {
+        for (fen, position) in fens {
             let mut board = Board::from_fen(fen);
             let moves = board.generate_all_moves();
 
@@ -460,7 +463,7 @@ mod tests_perft {
                 "Move from {} to {} (distance {}) should be Teleport",
                 from.to_bit().to_coords(),
                 to.to_bit().to_coords(),
-                (to.0 as isize - from.0 as isize).abs()
+                (to.0.cast_signed() - from.0.cast_signed()).abs()
             );
         }
     }
@@ -534,7 +537,7 @@ mod tests_perft {
                 //     assert!(false, "wrongly classified as legal");
                 // }
                 let mut b2 = board.clone();
-                b2.make_move(&mv.mv.decode());
+                b2.make_move(mv.mv);
                 nodes += is_legal_r_perft(&mut b2, depth - 1);
             } else {
                 // if correct_moves.contains(&mv) {

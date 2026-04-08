@@ -4,7 +4,7 @@ use crate::prelude::*;
 use crate::search::move_picker::MovePicker;
 use crate::search::quiescence_search;
 use crate::search::transposition_table::Bound;
-use crate::settings::settings;
+use crate::settings;
 
 use std::cmp::min;
 use std::sync::{
@@ -18,14 +18,20 @@ const MAX_QUIESCENCE_SEARCH_DEPTH: usize = 12;
 /// There's different approaches to this one as well. CPW suggests 150 * depth, smol.cs does 75 * depth.
 /// Generally: The smaller `rfp_margin`, the more aggressively we prune.
 /// THIS IS TUNABLE.
-#[inline(always)]
+#[inline]
 pub const fn rfp_margin(depth: usize) -> usize {
     50 * depth
 }
 
-/// https://www.chessprogramming.org/Alpha-Beta
+/// <https://www.chessprogramming.org/Alpha-Beta>
 /// Returns the pv, and the associated evaluation
 /// Note that the pv is reversed, i.e. the best move at this depth is at the end of the list
+/// TODO: Reduce number of arguments into a struct
+#[allow(
+    clippy::too_many_arguments,
+    clippy::too_many_lines,
+    clippy::needless_pass_by_value // because node_type should be pass by value because it is a bool essentially 
+)]
 pub fn alpha_beta(
     board: &mut Board,
     depth: usize,
@@ -65,7 +71,7 @@ pub fn alpha_beta(
             return qs_result;
         }
         return board.evaluate();
-    };
+    }
 
     let original_alpha = alpha;
     let eval = board.evaluate();
@@ -78,6 +84,7 @@ pub fn alpha_beta(
 
     if settings::TT_AB {
         // TODO: legal detection to prevent collisions
+        #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
         if let Some(tt_hit) = TT.probe(board.hash(), ply as i32) {
             search_info.total_tt_hits.fetch_add(1, Ordering::Relaxed);
 
@@ -90,17 +97,17 @@ pub fn alpha_beta(
             // TODO: When using pvs add !pv_node as additionell condition
             let depth_req = depth as i32 + i32::from(tt_score >= beta);
 
-            if settings::TT_CUTTOFFS && (node_type != NodeType::OnPV || !settings::PVS) {
-                if tt_hit.depth() >= depth_req as i32
-                    && match bound {
-                        Bound::Lower => tt_score >= beta,
-                        Bound::Upper => tt_score <= alpha,
-                        Bound::Exact => true,
-                        _ => false,
-                    }
-                {
-                    return tt_score;
+            if settings::TT_CUTTOFFS
+                && (node_type != NodeType::OnPV || !settings::PVS)
+                && tt_hit.depth() >= depth_req
+                && match bound {
+                    Bound::Lower => tt_score >= beta,
+                    Bound::Upper => tt_score <= alpha,
+                    Bound::Exact => true,
+                    Bound::None => false,
                 }
+            {
+                return tt_score;
             }
         }
     }
@@ -119,39 +126,41 @@ pub fn alpha_beta(
             //
             // NOTE ON THIS: Higher values for depth limiting crash Thunfisch into oblivion.
             // If we get the branching factor under control and consistently hit depth 13-15 we can probably bump this up to ~4
-            if depth < 4 && !board.is_in_check() && eval >= beta {
-                if eval >= beta + rfp_margin(depth) as i32 {
-                    return eval;
-                }
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+            if depth < 4
+                && !board.is_in_check()
+                && eval >= beta
+                && eval >= beta + rfp_margin(depth) as i32
+            {
+                return eval;
             }
         }
 
         // Do this before move generation to avoid generation costs
-        if settings::NMP {
-            if null_move_allowed
-                && !board.is_in_check()
-                && !board.is_king_pawn_endgame()
-                && eval >= beta
-            {
-                board.make_null_move();
-                let reduction = min(depth, 4);
-                let eval = -alpha_beta(
-                    board,
-                    depth - reduction,
-                    -alpha - 1,
-                    -alpha,
-                    stop,
-                    search_info,
-                    ply + 1,
-                    local_seldepth,
-                    false,
-                    NodeType::OffPV,
-                    killers,
-                );
-                board.unmake_null_move();
-                if eval >= beta {
-                    return beta;
-                }
+        if settings::NMP
+            && null_move_allowed
+            && !board.is_in_check()
+            && !board.is_king_pawn_endgame()
+            && eval >= beta
+        {
+            board.make_null_move();
+            let reduction = min(depth, 4);
+            let eval = -alpha_beta(
+                board,
+                depth - reduction,
+                -alpha - 1,
+                -alpha,
+                stop,
+                search_info,
+                ply + 1,
+                local_seldepth,
+                false,
+                NodeType::OffPV,
+                killers,
+            );
+            board.unmake_null_move();
+            if eval >= beta {
+                return beta;
             }
         }
     }
@@ -174,7 +183,7 @@ pub fn alpha_beta(
             search_info.timeout_occurred.store(true, Ordering::Relaxed);
             return 0;
         }
-        board.make_move(&mv.decode());
+        board.make_move(mv);
         let mut eval;
         if i == 1 || !settings::PVS {
             // Principal Variation Search
@@ -238,13 +247,11 @@ pub fn alpha_beta(
                 alpha = eval;
             }
 
-            if settings::AB {
-                if alpha >= beta {
-                    if mv.decode().is_quiet() {
-                        killers[ply] = mv;
-                    }
-                    break;
+            if settings::AB && alpha >= beta {
+                if mv.decode().is_quiet() {
+                    killers[ply] = mv;
                 }
+                break;
             }
         }
     }
@@ -253,10 +260,10 @@ pub fn alpha_beta(
     // returns the mate score (very low) when in check but adds the ply to give a later check a better eval because the depth is lowers the further you go
     if i == 0 {
         if board.is_in_check() {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
             return -MATE_SCORE + (ply as i32);
-        } else {
-            return 0;
         }
+        return 0;
     }
 
     let bound = if best_eval >= beta {
@@ -267,6 +274,7 @@ pub fn alpha_beta(
         Bound::Upper
     };
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
     TT.store(
         board.hash(),
         best_move,

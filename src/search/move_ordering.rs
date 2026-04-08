@@ -1,31 +1,26 @@
 use crate::prelude::*;
 use crate::search::move_picker::MoveList;
 use crate::search::mvv_lva::MVV_LVA_TABLE;
-use crate::settings::settings;
+use crate::settings;
 
 const CAPTURE_BONUS: i32 = 1024;
 
 /// Score capture moves based on the value of the capturing piece to the captured piece
 /// For example a pawn capturing a queen gets a higher score than a queen capturing a rook
-/// https://www.chessprogramming.org/Move_Ordering
+/// <https://www.chessprogramming.org/Move_Ordering>
 pub fn mvv_lva(move_list: &mut MoveList, board: &Board) {
     if !settings::MVV_LVA {
         return;
     }
-    for entry in move_list.list.iter_mut() {
+    for entry in &mut move_list.list {
         let mv = entry.mv.decode();
         let mv_type = mv.mv_type;
         entry.score = match mv_type {
-            MoveType::Quiet => 0i32,
-
             MoveType::Capture => {
                 let attacker_idx = (board.figures(mv.from) as usize) / 2;
                 let victim_idx = (board.figures(mv.to) as usize) / 2;
                 MVV_LVA_TABLE[attacker_idx][victim_idx] + CAPTURE_BONUS
             }
-            MoveType::DoubleMove => 0i32,
-            MoveType::KingCastle => 0i32,
-            MoveType::QueenCastle => 0i32,
             MoveType::EpCapture => {
                 let attacker_idx = (board.figures(mv.from) as usize) / 2;
                 MVV_LVA_TABLE[attacker_idx][Pawn as usize] + CAPTURE_BONUS
@@ -59,9 +54,10 @@ pub fn mvv_lva(move_list: &mut MoveList, board: &Board) {
                     + MVV_LVA_TABLE[Pawn as usize][Knight as usize]
             }
             MoveType::QueenPromo => MVV_LVA_TABLE[Pawn as usize][Queen as usize],
-            MoveType::RookPromo => MVV_LVA_TABLE[Pawn as usize][Queen as usize],
-            MoveType::BishopPromo => MVV_LVA_TABLE[Pawn as usize][Queen as usize],
-            MoveType::KnightPromo => MVV_LVA_TABLE[Pawn as usize][Queen as usize],
+            MoveType::RookPromo => MVV_LVA_TABLE[Pawn as usize][Rook as usize],
+            MoveType::BishopPromo => MVV_LVA_TABLE[Pawn as usize][Bishop as usize],
+            MoveType::KnightPromo => MVV_LVA_TABLE[Pawn as usize][Knight as usize],
+            _ => 0,
         }
     }
 }

@@ -2,8 +2,10 @@ use crate::{prelude::*, types::board::UNSET_CHECK_COUNTER};
 
 impl Board {
     /// Executes a given move on the board
-    /// https://www.chessprogramming.org/Make_Move
-    pub fn make_move(&mut self, mv: &DecodedMove) {
+    /// <https://www.chessprogramming.org/Make_Move>
+    #[allow(clippy::too_many_lines)]
+    pub fn make_move(&mut self, encoded_move: EncodedMove) {
+        let mv = encoded_move.decode();
         let mv_type = mv.mv_type;
         let friendly = self.current_color();
         let from = mv.from;
@@ -16,8 +18,8 @@ impl Board {
         self.push_unmake_info_stack(mv.encode(), to_figure);
         self.push_repetition_stack();
 
-        self.update_ep(friendly, mv);
-        self.update_castling(friendly, from_figure.piece(), mv, to_figure.piece());
+        self.update_ep(friendly, &mv);
+        self.update_castling(friendly, from_figure.piece(), &mv, to_figure.piece());
         self.toggle_current_color();
         self.increase_halfmove_clock();
         self.set_total_halfmove_counter(self.total_halfmove_counter() + 1);
@@ -141,8 +143,8 @@ mod tests {
         let mut board =
             Board::from_fen("rnbqkbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq - 0 2");
 
-        let mv = DecodedMove::from_coords("d8h4".to_string(), &board);
-        board.make_move(&mv);
+        let mv = DecodedMove::from_coords("d8h4", &board);
+        board.make_move(mv.encode());
 
         assert!(board.is_in_check(), "White should be in check");
         let white_moves = board.generate_all_moves();
@@ -162,7 +164,7 @@ mod tests {
             to: Square::from_coords("d6").unwrap(),
             mv_type: MoveType::EpCapture,
         };
-        board.make_move(&ep_move);
+        board.make_move(ep_move.encode());
 
         assert_eq!(
             board.figures(Square::from_coords("d6").unwrap()),
@@ -228,12 +230,11 @@ mod tests {
         );
 
         // Verify all pieces are in their original positions
-        for i in 0..64 {
+        for (i, initial) in initial_board_state.iter().enumerate().take(64) {
             assert_eq!(
                 board.figures(Square(i)),
-                initial_board_state[i],
-                "Piece at square {} should be restored",
-                i
+                *initial,
+                "Piece at square {i} should be restored",
             );
         }
     }

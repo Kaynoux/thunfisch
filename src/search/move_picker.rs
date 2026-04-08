@@ -2,7 +2,7 @@ use arrayvec::ArrayVec;
 
 use crate::{
     move_generator::generator::MAX_MOVES_COUNT, prelude::*, search::move_ordering::mvv_lva,
-    settings::settings,
+    settings,
 };
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
@@ -27,14 +27,14 @@ pub struct MoveList {
 }
 
 impl MoveList {
-    pub fn new() -> MoveList {
-        MoveList {
+    pub fn new() -> Self {
+        Self {
             list: ArrayVec::<MoveListMove, MAX_MOVES_COUNT>::new(),
         }
     }
 
     pub fn push(&mut self, mv: EncodedMove) {
-        self.list.push(MoveListMove { score: 0, mv: mv });
+        self.list.push(MoveListMove { score: 0, mv });
     }
 }
 
@@ -52,19 +52,19 @@ impl MovePicker {
         tt_move: Option<EncodedMove>,
         killer_mv: Option<EncodedMove>,
         skip_quiets: bool,
-    ) -> MovePicker {
-        MovePicker {
+    ) -> Self {
+        Self {
             tt_move,
             killer_mv,
             move_list: MoveList::new(),
             state: GenerationState::TTMove,
             move_index: 0,
-            skip_quiets: skip_quiets,
+            skip_quiets,
         }
     }
 
     pub fn next(&mut self, board: &mut Board) -> Option<EncodedMove> {
-        let next = match self.state {
+        match self.state {
             GenerationState::TTMove => {
                 self.state = GenerationState::Captures;
                 if settings::ORDER_TT_MV_FIRST
@@ -79,21 +79,19 @@ impl MovePicker {
             GenerationState::Captures => {
                 board.generate_moves::<false>(&mut self.move_list);
 
-                mvv_lva(&mut self.move_list, &board);
+                mvv_lva(&mut self.move_list, board);
                 self.state = GenerationState::YieldCaptures;
                 self.next(board)
             }
             GenerationState::YieldCaptures => {
                 if let Some(mv) = self.yield_next_best_move() {
                     Some(mv)
+                } else if self.skip_quiets {
+                    self.state = GenerationState::Done;
+                    None
                 } else {
-                    if self.skip_quiets {
-                        self.state = GenerationState::Done;
-                        None
-                    } else {
-                        self.state = GenerationState::Killer;
-                        self.next(board)
-                    }
+                    self.state = GenerationState::Killer;
+                    self.next(board)
                 }
             }
             GenerationState::Killer => {
@@ -124,9 +122,7 @@ impl MovePicker {
             }
 
             GenerationState::Done => None,
-        };
-
-        next
+        }
     }
 
     pub fn yield_next_best_move(&mut self) -> Option<EncodedMove> {
@@ -138,17 +134,9 @@ impl MovePicker {
             }
 
             // Find highest score in remaining
-            let mut best_idx = 0;
-            let mut max_score = remaining[0].score;
-            for i in 1..remaining.len() {
-                if remaining[i].score > max_score {
-                    max_score = remaining[i].score;
-                    best_idx = i;
-                }
+            if let Some((best_idx, _)) = remaining.iter().enumerate().max_by_key(|(_, m)| m.score) {
+                remaining.swap(0, best_idx);
             }
-
-            // Swap best move to front
-            remaining.swap(0, best_idx);
 
             // Should we skip this move?
             let best_move = remaining[0].mv;
@@ -173,7 +161,6 @@ mod perft_test_move_picker {
     #[test]
     /// Tests the move generation by checking if it finds the correct amount of moves
     /// Also tests if the hashing works by checking if the incremental hash is the same as a newly calculated one from scratch
-
     fn test_move_picker_perft() {
         // Source: https://www.chessprogramming.org/Perft_Results
         // Position 2 at depth 4 has all types of moves covered
@@ -235,7 +222,7 @@ mod perft_test_move_picker {
             //     println!("{:?}", mv.decode().to_coords());
             //     assert!(false, "move visited twice FUCK");
             // }
-            board.make_move(&mv.decode());
+            board.make_move(mv);
             nodes += move_picker_r_perft(board, depth - 1);
             board.unmake_move();
             // visited.insert(mv);

@@ -5,9 +5,8 @@ use crate::debug::visualize::format_usize;
 use crate::prelude::*;
 use crate::search::alpha_beta::alpha_beta;
 
-use crate::settings::settings;
+use crate::settings;
 
-use std::i32;
 use std::time::Instant;
 use std::{
     sync::{
@@ -18,7 +17,8 @@ use std::{
     time::Duration,
 };
 
-/// https://www.chessprogramming.org/Iterative_Deepening
+/// <https://www.chessprogramming.org/Iterative_Deepening>
+#[allow(clippy::too_many_lines)]
 pub fn iterative_deepening(
     board: &mut Board,
     max_depth: usize,
@@ -44,7 +44,7 @@ pub fn iterative_deepening(
             );
             println!("AB EBF  : Alpha Beta Nodes Only Effective Branch Factor");
             println!("PV      : Sequence of moves that programs consider best");
-            println!()
+            println!();
         }
         println!("{}", settings::repr());
         println!(
@@ -62,7 +62,7 @@ pub fn iterative_deepening(
         }
 
         println!(
-            "{:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {}",
+            "{:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} PV",
             "Depth",
             "Seldepth",
             "Score",
@@ -75,8 +75,7 @@ pub fn iterative_deepening(
             "TT Hits",
             "GlobTime",
             "EBF",
-            "AB EBF",
-            "PV"
+            "AB EBF"
         );
     }
 
@@ -114,7 +113,7 @@ pub fn iterative_deepening(
             &mut seldepth,
             false,
             NodeType::OnPV,
-            &mut killers
+            &mut killers,
         );
 
         if iteration_search_info
@@ -137,7 +136,7 @@ pub fn iterative_deepening(
             && !b.is_threefold_repetition()
         {
             pv_local.push(tt_mv);
-            b.make_move(&tt_mv.decode());
+            b.make_move(tt_mv);
             ply += 1;
         }
 
@@ -160,63 +159,71 @@ pub fn iterative_deepening(
         let iteration_nodes = iteration_not_eval_nodes + iteration_eval_nodes;
 
         let iteration_duration = iteration_start.elapsed();
-        let nodes_per_seconds =
-            (iteration_nodes as f64 / iteration_duration.as_secs_f64()) as usize;
 
-        match debug {
-            false => {
-                println!(
-                    "info  depth {} seldepth {}  score cp {} nodes {} nps {} time {} tt {} pv {}",
-                    depth,
-                    seldepth,
-                    best_eval_overall,
-                    iteration_nodes,
-                    nodes_per_seconds,
-                    iteration_duration.as_millis(),
-                    TT.info().2 as usize,
-                    pv_string,
-                );
-            }
-            true => {
-                let iteration_tt_hits = iteration_search_info.total_tt_hits.load(Ordering::Relaxed);
-                let global_duration = global_start.elapsed();
+        let nodes_per_seconds = if iteration_duration.is_zero() {
+            0
+        } else {
+            (iteration_nodes.saturating_mul(1000))
+                / (iteration_duration.as_millis() as usize).max(1)
+        };
 
-                let ebf = if (previouse_iteration_ab_nodes + previouse_iteration_qs_nodes) > 0 {
-                    iteration_nodes as f64
-                        / (previouse_iteration_ab_nodes + previouse_iteration_qs_nodes) as f64
-                } else {
-                    0.0
-                };
+        #[allow(clippy::cast_precision_loss)]
+        if debug {
+            let iteration_tt_hits = iteration_search_info.total_tt_hits.load(Ordering::Relaxed);
+            let global_duration = global_start.elapsed();
 
-                let ab_ebf = if previouse_iteration_ab_nodes > 0 {
-                    iteration_ab_nodes as f64 / previouse_iteration_ab_nodes as f64
-                } else {
-                    0.0
-                };
+            let current_total_nodes = iteration_nodes as f64;
+            let previous_total_nodes =
+                (previouse_iteration_ab_nodes + previouse_iteration_qs_nodes) as f64;
 
-                println!(
-                    "{:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {}",
-                    depth,
-                    seldepth,
-                    best_eval_overall,
-                    format_usize(iteration_nodes),
-                    format_usize(nodes_per_seconds),
-                    format_usize(iteration_duration.as_millis() as usize),
-                    format_f64(TT.info().2),
-                    format_usize(iteration_ab_nodes),
-                    format_usize(iteration_qs_nodes),
-                    format_usize(iteration_tt_hits),
-                    format_usize(global_duration.as_millis() as usize),
-                    format_f64(ebf),
-                    format_f64(ab_ebf),
-                    pv_string
-                );
-            }
+            let ebf = if previous_total_nodes > 0.0 {
+                current_total_nodes / previous_total_nodes
+            } else {
+                0.0
+            };
+
+            let ab_ebf = if previouse_iteration_ab_nodes > 0 {
+                iteration_ab_nodes as f64 / previouse_iteration_ab_nodes as f64
+            } else {
+                0.0
+            };
+
+            println!(
+                "{:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {}",
+                depth,
+                seldepth,
+                best_eval_overall,
+                format_usize(iteration_nodes),
+                format_usize(nodes_per_seconds),
+                format_usize(iteration_duration.as_millis() as usize),
+                format_f64(TT.info().2),
+                format_usize(iteration_ab_nodes),
+                format_usize(iteration_qs_nodes),
+                format_usize(iteration_tt_hits),
+                format_usize(global_duration.as_millis() as usize),
+                format_f64(ebf),
+                format_f64(ab_ebf),
+                pv_string
+            );
+        } else {
+            #[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
+            let fill_rate = TT.info().2 as usize;
+            println!(
+                "info  depth {} seldepth {}  score cp {} nodes {} nps {} time {} tt {} pv {}",
+                depth,
+                seldepth,
+                best_eval_overall,
+                iteration_nodes,
+                nodes_per_seconds,
+                iteration_duration.as_millis(),
+                fill_rate,
+                pv_string,
+            );
         }
 
         previouse_iteration_ab_nodes = iteration_ab_nodes;
         previouse_iteration_qs_nodes = iteration_qs_nodes;
     }
 
-    best_pv.first().cloned()
+    best_pv.first().copied()
 }

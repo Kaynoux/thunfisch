@@ -9,11 +9,12 @@ pub const UNSET_CHECK_COUNTER: usize = 100;
 
 /// Represents the global game state
 #[derive(Clone)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct Board {
     /// 0 -> white, 1 -> black (see `Color`)
     /// where are pieces
     color_bbs: [Bitboard; 2],
-    /// color_white | color_black
+    /// `color_white` | `color_black`
     /// -> where are pieces (independent of colour)
     occupied: Bitboard,
     /// for individual pieces
@@ -46,7 +47,7 @@ pub struct Board {
 
 impl Board {
     /// WARNING: This does not set the hash correctly
-    pub const EMPTY: Board = Board {
+    pub const EMPTY: Self = Self {
         color_bbs: [Bitboard::EMPTY; 2],
         occupied: Bitboard::EMPTY,
         figure_bbs: [
@@ -83,94 +84,95 @@ impl Board {
         diag_pinmask: Bitboard::UNSET_PINMASK,   // can never be full so unset value
     };
 
-    #[inline(always)]
-    pub fn color_bbs(&self, color: Color) -> Bitboard {
+    #[inline]
+    pub const fn color_bbs(&self, color: Color) -> Bitboard {
         self.color_bbs[color as usize]
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn color_bbs_without_king(&self, color: Color) -> Bitboard {
         self.color_bbs(color) & !self.king(color)
     }
 
-    #[inline(always)]
-    pub fn empty(&self) -> Bitboard {
+    #[inline]
+    pub const fn empty(&self) -> Bitboard {
         self.figure_bbs[Figure::Empty as usize]
     }
 
-    pub fn occupied(&self) -> Bitboard {
+    pub const fn occupied(&self) -> Bitboard {
         self.occupied
     }
 
-    pub fn current_color(&self) -> Color {
+    pub const fn current_color(&self) -> Color {
         self.current_color
     }
 
-    pub fn figures(&self, square: Square) -> Figure {
+    pub const fn figures(&self, square: Square) -> Figure {
         self.figures[square.i()]
     }
 
-    pub fn all_figures(&self) -> [Figure; 64] {
+    pub const fn all_figures(&self) -> [Figure; 64] {
         self.figures
     }
 
-    pub fn ep_target(&self) -> Option<Bit> {
+    pub const fn ep_target(&self) -> Option<Bit> {
         self.ep_target
     }
 
-    pub fn white_queen_castle(&self) -> bool {
+    pub const fn white_queen_castle(&self) -> bool {
         self.white_queen_castle
     }
 
-    pub fn white_king_castle(&self) -> bool {
+    pub const fn white_king_castle(&self) -> bool {
         self.white_king_castle
     }
 
-    pub fn black_queen_castle(&self) -> bool {
+    pub const fn black_queen_castle(&self) -> bool {
         self.black_queen_castle
     }
 
-    pub fn black_king_castle(&self) -> bool {
+    pub const fn black_king_castle(&self) -> bool {
         self.black_king_castle
     }
 
-    pub fn halfmove_clock(&self) -> usize {
+    pub const fn halfmove_clock(&self) -> usize {
         self.halfmove_clock
     }
 
-    pub fn total_halfmove_counter(&self) -> usize {
+    pub const fn total_halfmove_counter(&self) -> usize {
         self.total_halfmove_counter
     }
 
-    pub fn set_halfmove_clock(&mut self, clock: usize) {
-        self.halfmove_clock = clock
+    pub const fn set_halfmove_clock(&mut self, clock: usize) {
+        self.halfmove_clock = clock;
     }
 
-    pub fn increase_halfmove_clock(&mut self) {
-        self.halfmove_clock += 1
+    pub const fn increase_halfmove_clock(&mut self) {
+        self.halfmove_clock += 1;
     }
 
-    pub fn is_50_move_rule(&self) -> bool {
+    pub const fn is_50_move_rule(&self) -> bool {
         // 50 move rule refers to moves, but the halfmove clock counts ply
         self.halfmove_clock() >= 100
     }
 
-    pub fn set_total_halfmove_counter(&mut self, counter: usize) {
-        self.total_halfmove_counter = counter
+    pub const fn set_total_halfmove_counter(&mut self, counter: usize) {
+        self.total_halfmove_counter = counter;
     }
 
     /// Attention: Does not update hash
-    pub fn set_ep_target(&mut self, target: Option<Bit>) {
+    pub const fn set_ep_target(&mut self, target: Option<Bit>) {
         self.ep_target = target;
     }
 
     /// Attention: Does not update hash
-    pub fn set_current_color(&mut self, color: Color) {
+    pub const fn set_current_color(&mut self, color: Color) {
         self.current_color = color;
     }
 
     /// Attention: Does not update hash
-    pub fn set_castling_rights(
+    #[allow(clippy::fn_params_excessive_bools)]
+    pub const fn set_castling_rights(
         &mut self,
         white_queen: bool,
         white_king: bool,
@@ -183,36 +185,30 @@ impl Board {
         self.black_king_castle = black_king;
     }
 
-    #[inline(always)]
+    #[inline]
     pub fn piece_and_color_at_position(&self, pos: Bit) -> (Piece, Color) {
         self.figures[pos.to_square()].piece_and_color()
     }
 
-    #[inline(always)]
-    pub fn piece_at_position(&self, pos: Square) -> Piece {
+    #[inline]
+    pub const fn piece_at_position(&self, pos: Square) -> Piece {
         match self.figures[pos.0] {
             Figure::Empty => Empty,
-            Figure::WhitePawn => Pawn,
-            Figure::BlackPawn => Pawn,
-            Figure::WhiteKnight => Knight,
-            Figure::BlackKnight => Knight,
-            Figure::WhiteBishop => Bishop,
-            Figure::BlackBishop => Bishop,
-            Figure::WhiteRook => Rook,
-            Figure::BlackRook => Rook,
-            Figure::WhiteQueen => Queen,
-            Figure::BlackQueen => Queen,
-            Figure::WhiteKing => King,
-            Figure::BlackKing => King,
+            Figure::WhitePawn | Figure::BlackPawn => Pawn,
+            Figure::WhiteKnight | Figure::BlackKnight => Knight,
+            Figure::WhiteBishop | Figure::BlackBishop => Bishop,
+            Figure::WhiteRook | Figure::BlackRook => Rook,
+            Figure::WhiteQueen | Figure::BlackQueen => Queen,
+            Figure::WhiteKing | Figure::BlackKing => King,
         }
     }
 
-    #[inline(always)]
+    #[inline]
     pub const fn figure_bb(&self, color: Color, piece: Piece) -> Bitboard {
         self.figure_bbs[Figure::from_piece_and_color(piece, color) as usize]
     }
 
-    #[inline(always)]
+    #[inline]
     pub const fn figure_bb_by_index(&self, idx: usize) -> Bitboard {
         self.figure_bbs[idx]
     }
@@ -220,16 +216,15 @@ impl Board {
     /// Determines whether there are only Kings and Pawns left on the board.
     /// This is used to avoid null move pruning in Zugzwang positions in a King-Pawn endgame.
     pub fn is_king_pawn_endgame(&self) -> bool {
-        return vec![Knight, Bishop, Rook, Queen]
+        vec![Knight, Bishop, Rook, Queen]
             .into_iter()
             .map(|piece| self.figure_bb(Color::White, piece) ^ self.figure_bb(Color::Black, piece))
             .reduce(|a, b| a | b)
-            .map(|bitboard| bitboard.is_empty())
-            .unwrap_or(true); // REsult of reduce should never be None because map should always yield a non-empty iterator
+            .is_none_or(Bitboard::is_empty) // REsult of reduce should never be None because map should always yield a non-empty iterator
     }
 
-    #[inline(always)]
-    pub fn king(&self, color: Color) -> Bit {
+    #[inline]
+    pub const fn king(&self, color: Color) -> Bit {
         match color {
             Black => Bit(self.figure_bbs[Figure::BlackKing as usize].0),
             White => Bit(self.figure_bbs[Figure::WhiteKing as usize].0),
@@ -238,10 +233,10 @@ impl Board {
 
     pub fn toggle_current_color(&mut self) {
         self.current_color = !self.current_color;
-        self.hash ^= zobrist::white_move_key()
+        self.hash ^= zobrist::white_move_key();
     }
 
-    pub fn toggle(&mut self, color: Color, figure: Figure, square: Square) {
+    pub const fn toggle(&mut self, color: Color, figure: Figure, square: Square) {
         self.color_bbs[color as usize].toggle(square);
         self.figure_bbs[Figure::Empty as usize].toggle(square);
         self.figure_bbs[figure as usize].toggle(square);
@@ -260,7 +255,7 @@ impl Board {
         let check_counter = self.get_check_counter();
         let (hv_pinmask, diag_pinmask) = self.get_pinmasks();
         self.unmake_info_stack.push(UnmakeInfo {
-            mv: mv,
+            mv,
             white_queen_castle: self.white_queen_castle(),
             white_king_castle: self.white_king_castle(),
             black_queen_castle: self.black_queen_castle(),
@@ -269,11 +264,11 @@ impl Board {
             ep_target: self.ep_target(),
             halfmove_clock: self.halfmove_clock(),
             hash: self.hash,
-            attackmask: attackmask,
-            checkmask: checkmask,
-            check_counter: check_counter,
-            hv_pinmask: hv_pinmask,
-            diag_pinmask: diag_pinmask,
+            attackmask,
+            checkmask,
+            check_counter,
+            hv_pinmask,
+            diag_pinmask,
         });
 
         // capture seems wrong at first because if ep than the target piece is a pawn
@@ -286,14 +281,14 @@ impl Board {
     }
 
     pub fn push_repetition_stack(&mut self) {
-        self.repetition_stack.push(self.hash)
+        self.repetition_stack.push(self.hash);
     }
 
     pub fn pop_repetition_stack(&mut self) {
         self.repetition_stack.pop();
     }
 
-    pub fn repetition_stack<'a>(&'a self) -> &'a Vec<u64> {
+    pub const fn repetition_stack(&self) -> &Vec<u64> {
         &self.repetition_stack
     }
 
@@ -325,25 +320,26 @@ impl Board {
         mv: &DecodedMove,
         captured: Piece,
     ) {
+        const WHITE_ROOK_QUEEN_POS: Square = Square(0);
+        const WHITE_ROOK_KING_POS: Square = Square(7);
+        const BLACK_ROOK_KING_POS: Square = Square(63);
+        const BLACK_ROOK_QUEEN_POS: Square = Square(56);
+
         if captured != Piece::Rook && from != Piece::Rook && from != Piece::King {
             return; // move not relevant for castling
         }
 
         self.hash ^= zobrist::generate_castling_hash(self); // remove old castling hash
 
-        const WHITE_ROOK_QUEEN_POS: Square = Square(0);
-        const WHITE_ROOK_KING_POS: Square = Square(7);
-        const BLACK_ROOK_KING_POS: Square = Square(63);
-        const BLACK_ROOK_QUEEN_POS: Square = Square(56);
         match from {
             Piece::King => match friendly {
                 White => {
                     self.white_queen_castle = false;
-                    self.white_king_castle = false
+                    self.white_king_castle = false;
                 }
                 Black => {
                     self.black_queen_castle = false;
-                    self.black_king_castle = false
+                    self.black_king_castle = false;
                 }
             },
             Piece::Rook => match mv.from {
@@ -385,11 +381,11 @@ impl Board {
         }
     }
 
-    pub fn set_hash(&mut self, hash: u64) {
+    pub const fn set_hash(&mut self, hash: u64) {
         self.hash = hash;
     }
 
-    pub fn hash(&self) -> u64 {
+    pub const fn hash(&self) -> u64 {
         self.hash
     }
 
@@ -401,31 +397,31 @@ impl Board {
             if *figure == Figure::Empty {
                 continue;
             }
-            hash ^= zobrist::figure_key(*figure, Square(idx))
+            hash ^= zobrist::figure_key(*figure, Square(idx));
         }
 
         hash ^= zobrist::generate_castling_hash(self);
 
         if self.current_color() == Color::White {
-            hash ^= zobrist::white_move_key()
+            hash ^= zobrist::white_move_key();
         }
 
         if let Some(ep) = self.ep_target() {
-            hash ^= zobrist::ep_key(ep.to_square())
+            hash ^= zobrist::ep_key(ep.to_square());
         }
         hash
     }
 
-    pub fn set_attackmask(&mut self, attackmask: Bitboard) {
+    pub const fn set_attackmask(&mut self, attackmask: Bitboard) {
         self.attackmask = attackmask;
     }
 
-    pub fn set_checkmask(&mut self, checkmask: Bitboard, check_counter: usize) {
+    pub const fn set_checkmask(&mut self, checkmask: Bitboard, check_counter: usize) {
         self.checkmask = checkmask;
         self.check_counter = check_counter;
     }
 
-    pub fn set_pinmasks(&mut self, hv_pinmask: Bitboard, diag_pinmask: Bitboard) {
+    pub const fn set_pinmasks(&mut self, hv_pinmask: Bitboard, diag_pinmask: Bitboard) {
         self.hv_pinmask = hv_pinmask;
         self.diag_pinmask = diag_pinmask;
     }
@@ -463,19 +459,19 @@ impl Board {
         (self.hv_pinmask, self.diag_pinmask)
     }
 
-    pub fn get_attackmask_without_gen(&self) -> Bitboard {
+    pub const fn get_attackmask_without_gen(&self) -> Bitboard {
         self.attackmask
     }
 
-    pub fn get_checkmask_without_gen(&self) -> Bitboard {
+    pub const fn get_checkmask_without_gen(&self) -> Bitboard {
         self.checkmask
     }
 
-    pub fn get_check_counter_without_gen(&self) -> usize {
+    pub const fn get_check_counter_without_gen(&self) -> usize {
         self.check_counter
     }
 
-    pub fn get_pinmasks_without_gen(&self) -> (Bitboard, Bitboard) {
+    pub const fn get_pinmasks_without_gen(&self) -> (Bitboard, Bitboard) {
         (self.hv_pinmask, self.diag_pinmask)
     }
 }

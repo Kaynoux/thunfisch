@@ -59,7 +59,7 @@ impl Board {
             fen.push_str(&ep.to_coords());
         } else {
             fen.push('-');
-        };
+        }
         fen.push(' ');
 
         fen.push_str(&self.halfmove_clock().to_string());

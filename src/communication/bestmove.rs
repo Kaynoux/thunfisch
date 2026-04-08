@@ -7,26 +7,24 @@ use crate::search::transposition_table::TT;
 
 pub const MAX_DEPTH: usize = 128;
 
-pub fn bestmove(args: Vec<&str>, board: &mut Board) {
+#[allow(clippy::too_many_lines)]
+pub fn bestmove(args: &[&str], board: &mut Board) {
     // Both just relevant for printing debug information
-    let debug = args.iter().any(|&flag| flag == "--debug"); // Debug does not work with uci
-    let help = args.iter().any(|&flag| flag == "--help");
+    let debug = args.contains(&"--debug"); // Debug does not work with uci
+    let help = args.contains(&"--help");
 
     // Handle perft
     if args.len() >= 2 && args[0] == "perft" {
-        let depth: usize = match args[1].parse() {
-            Ok(d) => d,
-            Err(_) => 0,
-        };
+        let depth = args[1].parse().unwrap_or_default();
 
-        let perftree = args.iter().any(|&flag| flag == "--perftree");
-        let rayon = args.iter().any(|&flag| flag == "--rayon");
+        let perftree = args.contains(&"--perftree");
+        let rayon = args.contains(&"--rayon");
 
-        if debug == true {
+        if debug {
             perft::perft_debug(board, depth);
-        } else if rayon == true {
+        } else if rayon {
             perft::perft_rayon(board, depth);
-        } else if perftree == true {
+        } else if perftree {
             perft::perft_perftree_format(board, depth);
         } else {
             perft::perft(board, depth);
@@ -41,10 +39,7 @@ pub fn bestmove(args: Vec<&str>, board: &mut Board) {
 
     // Fixed Depth
     if args.len() >= 2 && args[0] == "depth" {
-        depth = match args[1].parse() {
-            Ok(d) => d,
-            Err(_) => 0,
-        };
+        depth = args[1].parse().unwrap_or_default();
     // Time control
     } else {
         let mut wtime: u64 = 0;
@@ -61,37 +56,37 @@ pub fn bestmove(args: Vec<&str>, board: &mut Board) {
             match tok {
                 "wtime" => {
                     if let Some(&val) = iter.next() {
-                        wtime = val.parse().unwrap_or(0)
+                        wtime = val.parse().unwrap_or(0);
                     }
                 }
                 "btime" => {
                     if let Some(&val) = iter.next() {
-                        btime = val.parse().unwrap_or(0)
+                        btime = val.parse().unwrap_or(0);
                     }
                 }
                 "winc" => {
                     if let Some(&val) = iter.next() {
-                        winc = val.parse().unwrap_or(0)
+                        winc = val.parse().unwrap_or(0);
                     }
                 }
                 "binc" => {
                     if let Some(&val) = iter.next() {
-                        binc = val.parse().unwrap_or(0)
+                        binc = val.parse().unwrap_or(0);
                     }
                 }
                 "movestogo" => {
                     if let Some(&val) = iter.next() {
-                        movestogo = val.parse().unwrap_or(0)
+                        movestogo = val.parse().unwrap_or(0);
                     }
                 }
                 "movetime" => {
                     if let Some(&val) = iter.next() {
-                        movetime = val.parse().unwrap_or(0)
+                        movetime = val.parse().unwrap_or(0);
                     }
                 }
                 "fixtime" => {
                     if let Some(&val) = iter.next() {
-                        fixtime = val.parse().unwrap_or(0)
+                        fixtime = val.parse().unwrap_or(0);
                     }
                 }
                 _ => {}

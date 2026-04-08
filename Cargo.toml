@@ -1,12 +1,41 @@
 [package]
 name = "thunfisch"
+description = "Thunfisch is a UCI-compatible chess engine written from scratch in Rust. It uses magic‐bitboard move generation, iterative deepening with alpha-beta and quiescence search and a transposition table."
 version = "0.1.0"
 edition = "2024"
+license = "GPL-3.0-only"
+repository = "https://github.com/Kaynoux/thunfisch"
+authors = ["Lukas Piorek (Kaynoux)", "Emil Schläger (heofthetea)"]
+keywords = ["chess"]
+categories = ["games"]
 
 [features]
 default = ["all"]
-all = ["ab", "qs", "tt-ab", "tt-qs", "mvv-lva", "order-tt-mv-first", "tt-cuttoffs", "nmp", "rfp", "pvs", "killers"]
-all-no-killers = ["ab", "qs", "tt-ab", "tt-qs", "mvv-lva", "order-tt-mv-first", "tt-cuttoffs", "nmp", "rfp", "pvs"]
+all = [
+    "ab",
+    "qs",
+    "tt-ab",
+    "tt-qs",
+    "mvv-lva",
+    "order-tt-mv-first",
+    "tt-cuttoffs",
+    "nmp",
+    "rfp",
+    "pvs",
+    "killers",
+]
+all-no-killers = [
+    "ab",
+    "qs",
+    "tt-ab",
+    "tt-qs",
+    "mvv-lva",
+    "order-tt-mv-first",
+    "tt-cuttoffs",
+    "nmp",
+    "rfp",
+    "pvs",
+]
 ab = []
 qs = []
 tt-ab = []
@@ -20,8 +49,5 @@ pvs = []
 killers = []
 
 [dependencies]
-colored = "2"
-rayon = "1.10.0"
-num-format = "0.4.4"
+rayon = "1.11.0"
 arrayvec = "0.7.6"
-once_cell = "1.21.3"

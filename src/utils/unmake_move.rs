@@ -2,15 +2,12 @@ use crate::prelude::*;
 
 impl Board {
     /// Unmakes the last move by using unmake info from the stack
-    /// https://www.chessprogramming.org/Unmake_Move
+    /// <https://www.chessprogramming.org/Unmake_Move>
+    #[allow(clippy::too_many_lines)]
     pub fn unmake_move(&mut self) {
-        let prev = match self.pop_unmake_info_stack() {
-            Some(info) => info,
-            None => {
-                println!("info: Could not undo move because there was no previous move");
-                return;
-            }
-        };
+        let prev = self
+            .pop_unmake_info_stack()
+            .expect("unmake_move called on empty unmake info stack");
         self.pop_repetition_stack();
 
         let mv = prev.mv.decode();
@@ -130,13 +127,9 @@ impl Board {
     }
 
     pub fn unmake_null_move(&mut self) {
-        let prev = match self.pop_unmake_info_stack() {
-            Some(info) => info,
-            None => {
-                println!("info: Could not undo move because there was no previous move");
-                return;
-            }
-        };
+        let prev = self
+            .pop_unmake_info_stack()
+            .expect("unmake_move called on empty unmake info stack while unmaking a null move");
         self.pop_repetition_stack();
 
         self.toggle_current_color();
@@ -158,7 +151,7 @@ mod tests {
         let mut board =
             Board::from_fen("r3k2r/Pppp1ppp/1b3nbN/nP6/BBP1P3/q4N2/Pp1P2PP/R2Q1R1K b kq - 0 1");
         let before = board.hash();
-        board.make_move(&DecodedMove::from_coords("a8b8".to_owned(), &board));
+        board.make_move(DecodedMove::from_coords("a8b8", &board).encode());
         board.toggle_current_color();
         board.toggle_current_color();
         board.unmake_move();
