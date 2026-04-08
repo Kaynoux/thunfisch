@@ -49,15 +49,5 @@ pvs = []
 killers = []
 
 [dependencies]
-colored = "2"
-rayon = "1.10.0"
-num-format = "0.4.4"
+rayon = "1.11.0"
 arrayvec = "0.7.6"
-once_cell = "1.21.3"
-
-[profile.release]
-lto = true
-codegen-units = 1
-panic = "abort"
-strip = true
-debug = true      # for flamegraphs
