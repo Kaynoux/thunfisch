@@ -1,9 +1,8 @@
 use std::time::Instant;
 
-use num_format::{Locale, ToFormattedString};
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
-use crate::prelude::*;
+use crate::{debug::visualize::format_usize, prelude::*};
 
 #[derive(Default)]
 struct PerftLogs {
@@ -112,9 +111,9 @@ pub fn perft_debug(board: &mut Board, depth: usize) {
     println!(
         "Perft: Depth={} Nodes={} Time={:.3}s Nodes/sec={}",
         depth,
-        total_nodes.to_formatted_string(&Locale::en),
+        format_usize(total_nodes),
         elapsed.as_secs_f64(),
-        nodes_per_seconds.to_formatted_string(&Locale::en)
+        format_usize(nodes_per_seconds)
     );
 
     println!("Captures: {0}", perft_logs.captures);
@@ -148,9 +147,9 @@ pub fn perft(board: &mut Board, depth: usize) {
     println!(
         "Perft: Depth={} Nodes={} Time={:.3}s Nodes/sec={}",
         depth,
-        total_nodes.to_formatted_string(&Locale::en),
+        format_usize(total_nodes),
         elapsed.as_secs_f64(),
-        nodes_per_seconds.to_formatted_string(&Locale::en)
+        format_usize(nodes_per_seconds)
     );
 }
 
@@ -168,9 +167,9 @@ pub fn perft_rayon(board: &mut Board, depth: usize) {
     println!(
         "Perft: Depth={} Nodes={} Time={:.3}s Nodes/sec={}",
         depth,
-        total_nodes.to_formatted_string(&Locale::en),
+        format_usize(total_nodes),
         elapsed.as_secs_f64(),
-        nodes_per_seconds.to_formatted_string(&Locale::en)
+        format_usize(nodes_per_seconds)
     );
 }
 

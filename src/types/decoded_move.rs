@@ -54,7 +54,7 @@ impl DecodedMove {
         {
             mv_type = MoveType::QueenCastle;
         } else if from_piece == King
-            && (to_pos.to_x() - from_pos.to_x()) == 2
+            && (from_pos.to_x().abs_diff(to_pos.to_x())) == 2
             && (from_pos.to_y() == to_pos.to_y())
         {
             mv_type = MoveType::KingCastle;

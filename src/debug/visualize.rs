@@ -1,7 +1,5 @@
 use crate::prelude::*;
 use crate::search::move_picker::MoveList;
-use colored;
-use colored::Colorize;
 use std::collections::HashMap;
 
 pub fn print_board(board: &Board, moves: Option<&MoveList>) {
@@ -29,14 +27,14 @@ pub fn print_board(board: &Board, moves: Option<&MoveList>) {
         print_moves(mv);
     }
 
-    let char_board: [(char, &str); 64] = get_char_board(board, moves);
+    let char_board: [char; 64] = get_char_board(board);
 
     for y in (0..8).rev() {
         print!("{} | ", y + 1);
         for x in 0..8 {
             let idx = y * 8 + x;
-            let (c, color) = char_board[idx];
-            print!("{} ", c.to_string().color(color));
+            let c = char_board[idx];
+            print!("{c:?} ");
         }
         println!();
     }
@@ -44,23 +42,16 @@ pub fn print_board(board: &Board, moves: Option<&MoveList>) {
     println!("-------------------");
 }
 
-fn get_char_board(board: &Board, moves: Option<&MoveList>) -> [(char, &'static str); 64] {
-    let mut char_board = [(' ', "white"); 64];
+fn get_char_board(board: &Board) -> [char; 64] {
+    let mut char_board = [' '; 64];
     for y in 0usize..=7usize {
         for x in 0usize..=7usize {
             let idx = y * 8 + x;
             let pos = Square(idx);
 
             let (piece, color) = board.piece_and_color_at_position(pos.to_bit());
-            let text_color =
-                if moves.is_some_and(|m| m.list.iter().any(|cm| cm.mv.decode().from == pos)) {
-                    "green"
-                } else if moves.is_some_and(|m| m.list.iter().any(|cm| cm.mv.decode().to == pos)) {
-                    "red"
-                } else {
-                    "white"
-                };
-            char_board[idx] = (Piece::to_unicode_char(piece, color), text_color);
+
+            char_board[idx] = Piece::to_unicode_char(piece, color);
         }
     }
     char_board
