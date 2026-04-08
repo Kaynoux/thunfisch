@@ -20,7 +20,7 @@ const GAMEPHASE_INC: [i32; 12] = [
 // Flips square index to flip rows but keep columns the same
 // e.g. a1 becomes a8; e4 -> e5
 const fn flip(sq: usize) -> usize {
-    sq ^ 56
+    sq ^ 0x38
 }
 
 /// Construct one evaluation table individual for each piece.
