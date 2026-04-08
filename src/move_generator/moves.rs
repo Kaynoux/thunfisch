@@ -148,13 +148,13 @@ pub fn generate_pawn_moves<const QUIETS: bool>(
 
         if quiet_target_1 != Bit(0) {
             let to_1 = quiet_target_1.to_square();
-            if !QUIETS {
-                moves.push(EncodedMove::encode(from, to_1, MoveType::QueenPromo));
-            } else {
+            if QUIETS {
                 // We consider underpromotions quiet
                 moves.push(EncodedMove::encode(from, to_1, MoveType::RookPromo));
                 moves.push(EncodedMove::encode(from, to_1, MoveType::BishopPromo));
                 moves.push(EncodedMove::encode(from, to_1, MoveType::KnightPromo));
+            } else {
+                moves.push(EncodedMove::encode(from, to_1, MoveType::QueenPromo));
             }
         }
 
@@ -162,13 +162,13 @@ pub fn generate_pawn_moves<const QUIETS: bool>(
             normal_targets::PAWN_ATTACK_TARGETS[friendly as usize][from] & enemy & check_mask;
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
-            if !QUIETS {
-                moves.push(EncodedMove::encode(from, to, MoveType::QueenPromoCapture));
-            } else {
+            if QUIETS {
                 // We consider underpromotions quiet
                 moves.push(EncodedMove::encode(from, to, MoveType::RookPromoCapture));
                 moves.push(EncodedMove::encode(from, to, MoveType::BishopPromoCapture));
                 moves.push(EncodedMove::encode(from, to, MoveType::KnightPromoCapture));
+            } else {
+                moves.push(EncodedMove::encode(from, to, MoveType::QueenPromoCapture));
             }
         }
     }
@@ -181,13 +181,13 @@ pub fn generate_pawn_moves<const QUIETS: bool>(
 
         if target_1 != Bit(0) {
             let to_1 = target_1.to_square();
-            if !QUIETS {
-                moves.push(EncodedMove::encode(from, to_1, MoveType::QueenPromo));
-            } else {
+            if QUIETS {
                 // We consider underpromotions quiet
                 moves.push(EncodedMove::encode(from, to_1, MoveType::RookPromo));
                 moves.push(EncodedMove::encode(from, to_1, MoveType::BishopPromo));
                 moves.push(EncodedMove::encode(from, to_1, MoveType::KnightPromo));
+            } else {
+                moves.push(EncodedMove::encode(from, to_1, MoveType::QueenPromo));
             }
         }
     }
@@ -200,13 +200,13 @@ pub fn generate_pawn_moves<const QUIETS: bool>(
             & diag_pinmask;
         for to_bit in capture_targets.iter_mut() {
             let to = to_bit.to_square();
-            if !QUIETS {
-                moves.push(EncodedMove::encode(from, to, MoveType::QueenPromoCapture));
-            } else {
+            if QUIETS {
                 // We consider underpromotions quiet (even captures)
                 moves.push(EncodedMove::encode(from, to, MoveType::RookPromoCapture));
                 moves.push(EncodedMove::encode(from, to, MoveType::BishopPromoCapture));
                 moves.push(EncodedMove::encode(from, to, MoveType::KnightPromoCapture));
+            } else {
+                moves.push(EncodedMove::encode(from, to, MoveType::QueenPromoCapture));
             }
         }
     }

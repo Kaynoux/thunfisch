@@ -51,3 +51,11 @@ killers = []
 [dependencies]
 rayon = "1.11.0"
 arrayvec = "0.7.6"
+
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+#debug = true      # for flamegraphs
