@@ -40,6 +40,7 @@ Thunfisch is a command-line application that implements the Universal Chess Inte
 - `python-debugging/`: Python scripts for advanced visualization, depth/time plotting, and log analysis.
 - `testing/`: Scripts for engine match testing (SPRT).
 
+
 ## Commands
 ```
 Basic commands

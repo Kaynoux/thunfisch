@@ -1,9 +1,9 @@
 use super::transposition_table::TT;
-use crate::communication::bestmove::MAX_DEPTH;
+use crate::alpha_beta::alpha_beta;
 use crate::debug::visualize::format_f64;
 use crate::debug::visualize::format_usize;
 use crate::prelude::*;
-use crate::search::alpha_beta::alpha_beta;
+use crate::time_management::MAX_DEPTH;
 
 use crate::settings;
 

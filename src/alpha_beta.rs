@@ -1,10 +1,10 @@
 use super::transposition_table::TT;
-use crate::communication::bestmove::MAX_DEPTH;
+use crate::move_picker::MovePicker;
 use crate::prelude::*;
-use crate::search::move_picker::MovePicker;
-use crate::search::quiescence_search;
-use crate::search::transposition_table::Bound;
+use crate::quiescence_search;
 use crate::settings;
+use crate::time_management::MAX_DEPTH;
+use crate::transposition_table::Bound;
 
 use std::cmp::min;
 use std::sync::{

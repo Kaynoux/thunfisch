@@ -128,7 +128,7 @@ mod tests {
 
         let fen = "r3k2r/p1Ppqpb1/bn2pnp1/4N3/1p2P3/2N2Q2/PPPBBPpP/R3K2R w KQkq - 0 1";
 
-        let board = Board::from_fen(fen);
+        let board = Board::new(fen);
 
         for mv in moves {
             let decoded = DecodedMove::from_coords(mv, &board);

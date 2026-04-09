@@ -1,6 +1,6 @@
 use super::moves;
+use crate::move_picker::MoveList;
 use crate::prelude::*;
-use crate::search::move_picker::MoveList;
 
 // 218 is the limit: https://www.chessprogramming.org/Chess_Position
 pub const MAX_MOVES_COUNT: usize = 218;
@@ -209,7 +209,7 @@ mod test {
         for (fen_idx, fen) in fens.iter().enumerate() {
             // Use take(5) to only test the first 5 depths for example
             for (depth_idx, correct_node_count) in perft_results[fen_idx].iter().enumerate() {
-                let mut board = Board::from_fen(fen);
+                let mut board = Board::new(fen);
                 let calculated_node_count = perft::hash_test_perft(&mut board, depth_idx + 1);
                 assert_eq!(
                     *correct_node_count,

@@ -277,7 +277,7 @@ impl Board {
 
 #[cfg(test)]
 mod tests_perft {
-    use crate::search::move_picker::MoveList;
+    use crate::move_picker::MoveList;
 
     use super::*;
 
@@ -285,7 +285,7 @@ mod tests_perft {
     fn test_knight_move_direction() {
         // FEN: White king on a1, white knight on e4, black king on h8
         let fen = "7k/8/8/8/4N3/8/8/K7 w - - 0 1";
-        let mut board = Board::from_fen(fen);
+        let mut board = Board::new(fen);
         let moves = board.generate_all_moves();
 
         for mv in moves.list {
@@ -314,7 +314,7 @@ mod tests_perft {
         ];
 
         for (fen, position) in fens {
-            let mut board = Board::from_fen(fen);
+            let mut board = Board::new(fen);
             let moves = board.generate_all_moves();
 
             for mv in moves.list {
@@ -343,7 +343,7 @@ mod tests_perft {
         ];
 
         for (fen, position) in fens {
-            let mut board = Board::from_fen(fen);
+            let mut board = Board::new(fen);
             let moves = board.generate_all_moves();
 
             for mv in moves.list {
@@ -367,7 +367,7 @@ mod tests_perft {
     fn test_pawn_quiet_move_direction() {
         // FEN: White king on a1, white pawn on e4 (position allows quiet moves), black king on h8
         let fen = "7k/8/8/8/4P3/8/8/K7 w - - 0 1";
-        let mut board = Board::from_fen(fen);
+        let mut board = Board::new(fen);
         let moves = board.generate_all_moves();
 
         for mv in moves.list {
@@ -392,7 +392,7 @@ mod tests_perft {
     fn test_pawn_capture_move_direction() {
         // FEN: White king on a1, white pawn on e4, black pawns on d5 and f5 to test captures
         let fen = "7k/8/8/3p1p2/4P3/8/8/K7 w - - 0 1";
-        let mut board = Board::from_fen(fen);
+        let mut board = Board::new(fen);
         let moves = board.generate_all_moves();
 
         for mv in moves.list {
@@ -417,7 +417,7 @@ mod tests_perft {
     fn test_king_move_direction() {
         // FEN: Black king on a8 (far away), white king on e4 (empty board otherwise)
         let fen = "k7/8/8/8/4K3/8/8/8 w - - 0 1";
-        let mut board = Board::from_fen(fen);
+        let mut board = Board::new(fen);
         let moves = board.generate_all_moves();
 
         for mv in moves.list {
@@ -504,7 +504,7 @@ mod tests_perft {
         for (fen_idx, fen) in fens.iter().enumerate() {
             for (depth_idx, correct_node_count) in perft_results[fen_idx].iter().take(4).enumerate()
             {
-                let mut board = Board::from_fen(fen);
+                let mut board = Board::new(fen);
                 let calculated_node_count = is_legal_r_perft(&mut board, depth_idx + 1);
                 assert_eq!(
                     *correct_node_count,
