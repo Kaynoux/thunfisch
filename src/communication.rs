@@ -1,13 +1,13 @@
-use crate::debug::custom_commands::handle_custom_commands;
-use crate::iterative_deepening::iterative_deepening;
-use crate::prelude::*;
-use crate::time_management::calc_search_time;
-use crate::transposition_table::TT;
-use crate::types::board::START_POS;
-use std::io::{self, BufRead, Write};
-use std::process::exit;
+use crate::{
+    debug::custom_commands::handle_custom_commands, iterative_deepening::iterative_deepening,
+    prelude::*, time_management::calc_search_time, transposition_table::TT,
+    types::board::START_POS,
+};
+use std::{
+    io::{self, BufRead, Write},
+    process::exit,
+};
 
-#[allow(clippy::too_many_lines)]
 pub fn handle_communication(board: &mut Board) {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
@@ -61,7 +61,7 @@ fn handle_uci_commands(board: &mut Board, command: &str, args: &[&str]) -> bool 
             set_position(board, args);
         }
         "go" => {
-            handle_go(args, board);
+            handle_go(board, args, false, false);
         }
         "stop" => {
             // This will not work in search atm because it will not read this line because it will be stuck in search
@@ -146,13 +146,9 @@ fn set_position(board: &mut Board, args: &[&str]) {
     }
 }
 
-#[allow(clippy::too_many_lines)]
-fn handle_go(args: &[&str], board: &mut Board) {
-    // Both just relevant for printing debug information
-    let help = args.contains(&"--help");
-
+pub fn handle_go(board: &mut Board, args: &[&str], debug: bool, help: bool) {
     let (max_depth, time_limit) = calc_search_time(args, board);
-    let best_move = iterative_deepening(board, max_depth, time_limit, false, help);
+    let best_move = iterative_deepening(board, max_depth, time_limit, debug, help);
 
     if let Some(mv) = best_move {
         println!("info pv {}", mv.decode().to_coords());

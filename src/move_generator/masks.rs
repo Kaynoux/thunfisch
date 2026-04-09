@@ -1,10 +1,11 @@
-use super::between::IN_BETWEEN;
-use super::normal_targets::KING_TARGETS;
-use super::normal_targets::KNIGHT_TARGETS;
-use super::normal_targets::PAWN_ATTACK_TARGETS;
-use super::sliding_targets::get_bishop_targets;
-use super::sliding_targets::get_rook_targets;
-use crate::prelude::*;
+use crate::{
+    move_generator::{
+        between::IN_BETWEEN,
+        normal_targets::{KING_TARGETS, KNIGHT_TARGETS, PAWN_ATTACK_TARGETS},
+        sliding_targets::{get_bishop_targets, get_rook_targets},
+    },
+    prelude::*,
+};
 
 /// NOTE: is all ones when there are no checks
 pub fn calc_check_mask(board: &Board) -> (Bitboard, usize) {

@@ -1,7 +1,7 @@
 use arrayvec::ArrayVec;
 
 use crate::{
-    move_generator::generator::MAX_MOVES_COUNT, move_ordering::mvv_lva, prelude::*, settings,
+    move_generator::generator::MAX_MOVES_COUNT, move_scoring::mvv_lva, prelude::*, settings,
 };
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]

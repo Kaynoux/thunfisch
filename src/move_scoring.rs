@@ -1,6 +1,4 @@
-use crate::move_picker::MoveList;
-use crate::prelude::*;
-use crate::settings;
+use crate::{move_picker::MoveList, prelude::*, settings};
 
 // These values or known to perform well
 const PAWN_VALUE: i32 = 100;
@@ -35,7 +33,7 @@ const fn calculate_mvv_lva_score(victim_idx: usize, attacker_idx: usize) -> i32 
 }
 
 /// <https://www.chessprogramming.org/MVV-LVA>
-pub const MVV_LVA_TABLE: [[i32; 6]; 6] = {
+const MVV_LVA_TABLE: [[i32; 6]; 6] = {
     let mut table = [[0i32; 6]; 6];
     let mut attacker_idx = 0;
     while attacker_idx < 6 {
@@ -111,9 +109,8 @@ pub fn mvv_lva(move_list: &mut MoveList, board: &Board) {
 
 #[cfg(test)]
 mod tests {
-    use crate::move_picker::MovePicker;
-
     use super::*;
+    use crate::{move_picker::MovePicker, settings};
 
     #[test]
     fn test_mvv_lva_captures() {
@@ -147,8 +144,6 @@ mod tests {
     }
 
     use std::collections::HashMap;
-
-    use super::*;
 
     #[test]
     fn print_mvva_lva_table() {

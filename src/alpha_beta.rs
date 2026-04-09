@@ -1,26 +1,26 @@
-use super::transposition_table::TT;
-use crate::move_picker::MovePicker;
-use crate::prelude::*;
-use crate::quiescence_search;
-use crate::settings;
-use crate::time_management::MAX_DEPTH;
-use crate::transposition_table::Bound;
-
-use std::cmp::min;
-use std::sync::{
-    Arc,
-    atomic::{AtomicBool, Ordering},
+use crate::{
+    evaluation::MATE_SCORE,
+    move_picker::MovePicker,
+    prelude::*,
+    quiescence_search,
+    settings::{self, MAX_AB_DEPTH, RFP_MARGIN},
+    transposition_table::{Bound, TT},
 };
 
-pub const MATE_SCORE: i32 = 30_000;
-const MAX_QUIESCENCE_SEARCH_DEPTH: usize = 12;
+use std::{
+    cmp::min,
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+};
 
 /// There's different approaches to this one as well. CPW suggests 150 * depth, smol.cs does 75 * depth.
 /// Generally: The smaller `rfp_margin`, the more aggressively we prune.
 /// THIS IS TUNABLE.
 #[inline]
 pub const fn rfp_margin(depth: usize) -> usize {
-    50 * depth
+    RFP_MARGIN * depth
 }
 
 /// <https://www.chessprogramming.org/Alpha-Beta>
@@ -43,7 +43,7 @@ pub fn alpha_beta(
     local_seldepth: &mut usize,
     null_move_allowed: bool,
     node_type: NodeType,
-    killers: &mut [EncodedMove; MAX_DEPTH],
+    killers: &mut [EncodedMove; MAX_AB_DEPTH],
 ) -> i32 {
     *local_seldepth = (*local_seldepth).max(ply);
     search_info
@@ -55,12 +55,12 @@ pub fn alpha_beta(
     }
 
     if depth == 0 {
-        if settings::QS && ply < MAX_DEPTH - 1 {
+        if settings::QS && ply < MAX_AB_DEPTH - 1 {
             let qs_result = quiescence_search::quiescence_search(
                 board,
                 alpha,
                 beta,
-                MAX_QUIESCENCE_SEARCH_DEPTH,
+                settings::MAX_QS_DEPTH,
                 stop,
                 search_info,
                 ply,
@@ -261,7 +261,7 @@ pub fn alpha_beta(
     if i == 0 {
         if board.is_in_check() {
             #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-            return -MATE_SCORE + (ply as i32);
+            return MATE_SCORE + (ply as i32);
         }
         return 0;
     }

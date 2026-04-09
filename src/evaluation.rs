@@ -1,5 +1,7 @@
 use crate::prelude::*;
 
+pub const MATE_SCORE: i32 = 30_000;
+
 const KNIGHT: i32 = 1;
 const BISHOP: i32 = 1;
 const ROOK: i32 = 2;

@@ -1,20 +1,19 @@
-use super::transposition_table::TT;
-use crate::alpha_beta::alpha_beta;
-use crate::debug::visualize::format_f64;
-use crate::debug::visualize::format_usize;
-use crate::prelude::*;
-use crate::time_management::MAX_DEPTH;
+use crate::{
+    alpha_beta::alpha_beta,
+    debug::visualize::{format_f64, format_usize},
+    prelude::*,
+    transposition_table::TT,
+};
 
-use crate::settings;
+use crate::{settings, settings::MAX_AB_DEPTH};
 
-use std::time::Instant;
 use std::{
     sync::{
         Arc,
         atomic::{AtomicBool, Ordering},
     },
     thread,
-    time::Duration,
+    time::{Duration, Instant},
 };
 
 /// <https://www.chessprogramming.org/Iterative_Deepening>
@@ -95,7 +94,7 @@ pub fn iterative_deepening(
     let global_start = Instant::now();
     let mut previouse_iteration_ab_nodes: usize = 0;
     let mut previouse_iteration_qs_nodes: usize = 0;
-    let mut killers = [EncodedMove(0); MAX_DEPTH];
+    let mut killers = [EncodedMove(0); MAX_AB_DEPTH];
 
     for depth in 1..=max_depth {
         let iteration_start = Instant::now();

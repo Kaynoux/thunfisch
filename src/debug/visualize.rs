@@ -1,5 +1,4 @@
-use crate::move_picker::MoveList;
-use crate::prelude::*;
+use crate::{move_picker::MoveList, prelude::*};
 use std::collections::HashMap;
 
 pub fn print_board(board: &Board, moves: Option<&MoveList>) {

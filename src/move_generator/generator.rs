@@ -1,6 +1,4 @@
-use super::moves;
-use crate::move_picker::MoveList;
-use crate::prelude::*;
+use crate::{move_generator::moves, move_picker::MoveList, prelude::*};
 
 // 218 is the limit: https://www.chessprogramming.org/Chess_Position
 pub const MAX_MOVES_COUNT: usize = 218;
@@ -180,8 +178,7 @@ impl Board {
 
 #[cfg(test)]
 mod test {
-    use crate::debug::perft;
-    use crate::prelude::*;
+    use crate::{debug::perft, prelude::*};
 
     #[test]
     /// Tests the move generation by checking if it finds the correct amount of moves

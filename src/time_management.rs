@@ -1,11 +1,9 @@
 use std::time::Duration;
 
-use crate::prelude::*;
-
-pub const MAX_DEPTH: usize = 128;
+use crate::{prelude::*, settings::MAX_AB_DEPTH};
 
 #[allow(clippy::too_many_lines)]
-pub fn calc_search_time(args: &[&str], board: Board) -> (usize, Duration) {
+pub fn calc_search_time(args: &[&str], board: &Board) -> (usize, Duration) {
     // Fixed Depth
     if args.len() >= 2 && args[0] == "depth" {
         return (
@@ -100,5 +98,5 @@ pub fn calc_search_time(args: &[&str], board: Board) -> (usize, Duration) {
 
         Duration::from_millis(time_per_move)
     };
-    return (MAX_DEPTH, time_limit);
+    (MAX_AB_DEPTH, time_limit)
 }

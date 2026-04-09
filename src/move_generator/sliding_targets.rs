@@ -1,6 +1,7 @@
-use crate::move_generator::magics::BISHOP_MAGICS;
-use crate::move_generator::magics::ROOK_MAGICS;
-use crate::prelude::*;
+use crate::{
+    move_generator::magics::{BISHOP_MAGICS, ROOK_MAGICS},
+    prelude::*,
+};
 
 /// Precalculates Black Magic Bitboards which are indexed with a hash key and return the possible sliding target positions
 /// <https://www.chessprogramming.org/Magic_Bitboards>

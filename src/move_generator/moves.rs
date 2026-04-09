@@ -1,8 +1,8 @@
-use super::masks;
-use super::normal_targets;
-use super::sliding_targets;
-use crate::move_picker::MoveList;
-use crate::prelude::*;
+use crate::{
+    move_generator::{masks, normal_targets, sliding_targets},
+    move_picker::MoveList,
+    prelude::*,
+};
 
 // Approach for legal move generation is inspired by https://www.codeproject.com/Articles/5313417/Worlds-fastest-Bitboard-Chess-Movegenerator
 #[allow(clippy::too_many_lines)]

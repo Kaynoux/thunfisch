@@ -1,6 +1,8 @@
 use crate::prelude::*;
-use std::fmt;
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, Not, Sub};
+use std::{
+    fmt,
+    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, BitXor, Not, Sub},
+};
 
 /// the bits the are set represent a position on the board with the bit being the index of the chess position
 /// Counting begins bottom left

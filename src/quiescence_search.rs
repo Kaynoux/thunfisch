@@ -1,9 +1,10 @@
-use crate::alpha_beta::MATE_SCORE;
-use crate::move_picker::MovePicker;
-use crate::prelude::*;
-use crate::settings;
-use crate::transposition_table::Bound;
-use crate::transposition_table::TT;
+use crate::{
+    evaluation::MATE_SCORE,
+    move_picker::MovePicker,
+    prelude::*,
+    settings,
+    transposition_table::{Bound, TT},
+};
 
 use std::sync::{
     Arc,

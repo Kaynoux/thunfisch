@@ -1,6 +1,8 @@
 use crate::prelude::*;
-use std::fmt;
-use std::ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not, Shl, Shr};
+use std::{
+    fmt,
+    ops::{BitAnd, BitAndAssign, BitOr, BitOrAssign, Not, Shl, Shr},
+};
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct Bit(pub u64);
@@ -103,7 +105,7 @@ impl Bit {
 
     #[inline]
     pub fn from_coords(coords: &str) -> Option<Self> {
-        Square::from_coords(coords).map(super::square::Square::to_bit)
+        Square::from_coords(coords).map(Square::to_bit)
     }
 
     #[inline]
