@@ -1,8 +1,8 @@
 <p align="center">
-  <img src="./media/logo.png" alt="logo" width="300"/>
+  <img src="./docs/media/logo.png" alt="logo" width="300"/>
 </p>
 
-# thunfisch [![Thunfisch](https://github.com/Kaynoux/thunfisch/actions/workflows/thunfisch.yml/badge.svg)](https://github.com/Kaynoux/thunfisch/actions/workflows/thunfisch.yml)
+# thunfisch [![Thunfisch](https://github.com/Kaynoux/thunfisch/actions/workflows/ci.yml/badge.svg)](https://github.com/Kaynoux/thunfisch/actions/workflows/ci.yml)
 Thunfisch is a UCI-compatible chess engine written from scratch in Rust. It uses magic‐bitboard move generation, iterative deepening with alpha-beta and quiescence search and a transposition table. For evaluation, Piece-Square Tables are used.
 
 It is a listed Bot-Account on Lichess. If it is online you can challenge it [here](https://lichess.org/@/thunfisch-bot).
@@ -82,7 +82,7 @@ cargo build --no-default-features --features "ab,qs,mvv-lva"
 - Thanks to [Perftree](https://github.com/agausmann/perftree) for debugging the move generation
 - Thanks to [Fastchess](https://github.com/Disservin/fastchess) for allowing the testing of changes with SPRT tests
 - Thanks to all other open source engines but especially these ones in no particular order:
-  - [Viriditha](https://github.com/cosmobobak/viridithas)
+  - [Viridithas](https://github.com/cosmobobak/viridithas)
   - [Stockfish](https://github.com/official-stockfish/Stockfish)
   - [Akimbo](https://github.com/jw1912/akimbo)
   - [Princhess](https://github.com/princesslana/princhess)
