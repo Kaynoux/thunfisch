@@ -3,9 +3,34 @@
 </p>
 
 # thunfisch [![Thunfisch](https://github.com/Kaynoux/thunfisch/actions/workflows/ci.yml/badge.svg)](https://github.com/Kaynoux/thunfisch/actions/workflows/ci.yml)
-Thunfisch is a UCI-compatible chess engine written from scratch in Rust. It uses magic‐bitboard move generation, iterative deepening with alpha-beta and quiescence search and a transposition table. For evaluation, Piece-Square Tables are used.
+Thunfisch is a UCI-compatible chess engine written from scratch in Rust. It is a listed Bot-Account on Lichess. If it is online you can challenge it [here](https://lichess.org/@/thunfisch-bot).
 
-It is a listed Bot-Account on Lichess. If it is online you can challenge it [here](https://lichess.org/@/thunfisch-bot).
+Estimated Strength: ~2400 Elo
+
+## Features
+- Direct legal move generation with [Fixed Shift White Magic Bitboards](https://www.chessprogramming.org/Magic_Bitboards)
+- [Piece Square Table](https://www.chessprogramming.org/Piece-Square_Tables) only evaluation using [PeSTO's Evaluation Function](https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function)
+- Basic [Time Management](https://www.chessprogramming.org/Time_Management)
+- **Search**:
+  - [Minimax Search](https://www.chessprogramming.org/Minimax)
+  - [Iterative Deepening](https://www.chessprogramming.org/Iterative_Deepening)
+  - [Alpha Beta Pruning](https://www.chessprogramming.org/Alpha-Beta)
+  - [Principal Variation Search](https://www.chessprogramming.org/Principal_Variation_Search) 
+  - [Null Move Pruning](https://www.chessprogramming.org/Null_Move_Pruning)
+  - [Transposition Table](https://www.chessprogramming.org/Transposition_Table) for Cuttoffs
+  - [Reverse Futility Pruning](https://www.chessprogramming.org/Reverse_Futility_Pruning)
+- **Move Ordering**:
+  - Staged Move Picker with incremental move generation
+  - [Transposition Table](https://www.chessprogramming.org/Transposition_Table) for move ordering
+  - [MVV-LVA Move Ordering](https://www.chessprogramming.org/MVV-LVA)
+  - [Killer Heuristic](https://www.chessprogramming.org/Killer_Heuristic)
+- **Planned**
+  - [Butterfly History Heuristic](https://www.chessprogramming.org/History_Heuristic)
+  - [Late Move Reductions](https://www.chessprogramming.org/Late_Move_Reductions)
+  - [Lazy SMP](https://www.chessprogramming.org/Lazy_SMP)
+
+
+
 
 
 ## How to play against it locally
@@ -13,7 +38,7 @@ Thunfisch is a command-line application that implements the Universal Chess Inte
 
 **General Setup Steps:**
 1. Build the engine using `cargo build --release`.
-2. Locate the compiled executable at `target/release/thunfisch` (or `thunfisch.exe` on Windows).
+2. Locate the compiled executable at `target/release/thunfisch`.
 3. Open your preferred chess GUI and look for an "Add Engine" or "Manage Engines" option in the settings.
 4. Point the GUI to the executable file. You can then start a new game and select Thunfisch as your opponent.
 
