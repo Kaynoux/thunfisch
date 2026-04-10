@@ -261,7 +261,7 @@ pub fn alpha_beta(
     if i == 0 {
         if board.is_in_check() {
             #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-            return MATE_SCORE + (ply as i32);
+            return -MATE_SCORE + (ply as i32);
         }
         return 0;
     }
