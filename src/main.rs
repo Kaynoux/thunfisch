@@ -9,24 +9,29 @@
 #![warn(missing_docs)]
 
 //! Thunfisch is a UCI chess engine
-use crate::search::transposition_table::TT;
+mod alpha_beta;
 mod communication;
 mod debug;
+mod evaluation;
+mod iterative_deepening;
 mod move_generator;
+mod move_picker;
+mod move_scoring;
 mod prelude;
-mod search;
+mod quiescence_search;
 mod settings;
+mod time_management;
+mod transposition_table;
 mod types;
 mod utils;
-
-#[cfg(not(target_pointer_width = "64"))]
-compile_error!("Dieses Projekt unterstützt nur 64-Bit-Systeme.");
-
+use crate::{prelude::*, types::board::START_POS};
 fn main() {
     // trigger lazy initialization before we do anything to avoid
     // paying that cost during a game
-    TT.clear();
+    transposition_table::TT.clear();
+
+    let mut board = Board::new(START_POS);
 
     // Starts UCI Communication via std in and out
-    communication::uci::handle_uci_communication();
+    communication::handle_communication(&mut board);
 }

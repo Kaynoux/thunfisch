@@ -2,7 +2,10 @@ use std::time::Instant;
 
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
-use crate::{debug::visualize::format_usize, prelude::*};
+use crate::{
+    debug::visualize::{format_f64, format_usize},
+    prelude::*,
+};
 
 #[derive(Default)]
 struct PerftLogs {
@@ -107,12 +110,14 @@ pub fn perft_debug(board: &mut Board, depth: usize) {
     let elapsed = start.elapsed();
 
     #[allow(clippy::cast_possible_truncation)]
-    let nodes_per_seconds = total_nodes / elapsed.as_secs() as usize;
+    let nodes_per_seconds = total_nodes / elapsed.as_millis() as usize * 1000;
+    #[allow(clippy::cast_precision_loss)]
+    let elapsed_str = format_f64(elapsed.as_millis() as f64);
     println!(
-        "Perft: Depth={} Nodes={} Time={:.3}s Nodes/sec={}",
+        "Perft: Depth={} Nodes={} Time={}ms Nodes/sec={}",
         depth,
         format_usize(total_nodes),
-        elapsed.as_secs_f64(),
+        elapsed_str,
         format_usize(nodes_per_seconds)
     );
 
@@ -135,7 +140,7 @@ pub fn perft_debug(board: &mut Board, depth: usize) {
 
 pub fn perft(board: &mut Board, depth: usize) {
     if depth == 0 {
-        println!("Perft: Depth=0 Nodes=0 Time=0s Nodes/sec=0");
+        println!("Perft: Depth=0 Nodes=0 Time=0ms Nodes/sec=0");
         return;
     }
     let start = Instant::now();
@@ -143,19 +148,21 @@ pub fn perft(board: &mut Board, depth: usize) {
     let elapsed = start.elapsed();
 
     #[allow(clippy::cast_possible_truncation)]
-    let nodes_per_seconds = total_nodes / elapsed.as_secs() as usize;
+    let nodes_per_seconds = total_nodes / elapsed.as_millis() as usize * 1000;
+    #[allow(clippy::cast_precision_loss)]
+    let elapsed_str = format_f64(elapsed.as_millis() as f64);
     println!(
-        "Perft: Depth={} Nodes={} Time={:.3}s Nodes/sec={}",
+        "Perft: Depth={} Nodes={} Time={}ms Nodes/sec={}",
         depth,
         format_usize(total_nodes),
-        elapsed.as_secs_f64(),
+        elapsed_str,
         format_usize(nodes_per_seconds)
     );
 }
 
 pub fn perft_rayon(board: &mut Board, depth: usize) {
     if depth == 0 {
-        println!("Perft: Depth=0 Nodes=0 Time=0s Nodes/sec=0");
+        println!("Perft: Depth=0 Nodes=0 Time=0ms Nodes/sec=0");
         return;
     }
     let start = Instant::now();
@@ -163,12 +170,14 @@ pub fn perft_rayon(board: &mut Board, depth: usize) {
     let elapsed = start.elapsed();
 
     #[allow(clippy::cast_possible_truncation)]
-    let nodes_per_seconds = total_nodes / elapsed.as_secs() as usize;
+    let nodes_per_seconds = total_nodes / elapsed.as_millis() as usize * 1000;
+    #[allow(clippy::cast_precision_loss)]
+    let elapsed_str = format_f64(elapsed.as_millis() as f64);
     println!(
-        "Perft: Depth={} Nodes={} Time={:.3}s Nodes/sec={}",
+        "Perft: Depth={} Nodes={} Time={}ms Nodes/sec={}",
         depth,
         format_usize(total_nodes),
-        elapsed.as_secs_f64(),
+        elapsed_str,
         format_usize(nodes_per_seconds)
     );
 }

@@ -1,5 +1,4 @@
-use crate::prelude::*;
-use crate::search::move_picker::MoveList;
+use crate::{move_picker::MoveList, prelude::*};
 use std::collections::HashMap;
 
 pub fn print_board(board: &Board, moves: Option<&MoveList>) {
@@ -21,7 +20,7 @@ pub fn print_board(board: &Board, moves: Option<&MoveList>) {
             .map(|&h| h.to_string().chars().take(4).collect())
             .collect::<Vec<String>>()
     );
-    println!("FEN: {}", board.generate_fen());
+    println!("FEN: {}", board.fen());
     // println!("Phase: {}", board.get_game_phase());
     if let Some(mv) = moves {
         print_moves(mv);

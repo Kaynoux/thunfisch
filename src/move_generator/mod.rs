@@ -1,9 +1,9 @@
-pub mod between;
+mod between;
 pub mod generator;
-pub mod is_legal;
-pub mod magics;
+mod is_legal;
+mod magics;
 pub mod masks;
-pub mod moves;
-pub mod normal_targets;
+mod moves;
+mod normal_targets;
 pub mod pinmask;
-pub mod sliding_targets;
+mod sliding_targets;

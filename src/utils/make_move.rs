@@ -140,8 +140,7 @@ mod tests {
 
     #[test]
     fn test_checkmate() {
-        let mut board =
-            Board::from_fen("rnbqkbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq - 0 2");
+        let mut board = Board::new("rnbqkbnr/pppp1ppp/8/4p3/6P1/5P2/PPPPP2P/RNBQKBNR b KQkq - 0 2");
 
         let mv = DecodedMove::from_coords("d8h4", &board);
         board.make_move(mv.encode());
@@ -156,8 +155,7 @@ mod tests {
 
     #[test]
     fn test_en_passant_execution() {
-        let mut board =
-            Board::from_fen("rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2");
+        let mut board = Board::new("rnbqkbnr/ppp1pppp/8/3pP3/8/8/PPPP1PPP/RNBQKBNR w KQkq d6 0 2");
 
         let ep_move = DecodedMove {
             from: Square::from_coords("e5").unwrap(),
@@ -195,7 +193,7 @@ mod tests {
 
     #[test]
     fn test_null_move_reversibility() {
-        let mut board = Board::from_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+        let mut board = Board::new("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
 
         // Store initial state
         let initial_color = board.current_color();

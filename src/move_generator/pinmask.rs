@@ -1,6 +1,10 @@
-use crate::move_generator::between::IN_BETWEEN;
-use crate::move_generator::sliding_targets::{get_bishop_targets, get_rook_targets};
-use crate::prelude::*;
+use crate::{
+    move_generator::{
+        between::IN_BETWEEN,
+        sliding_targets::{get_bishop_targets, get_rook_targets},
+    },
+    prelude::*,
+};
 
 /// Calculates two Pin mask one for horizotal and vertical (hv) and one for diagnoals (diag)
 /// Explained here unter section pinmask: <https://www.codeproject.com/Articles/5313417/Worlds-fastest-Bitboard-Chess-Movegenerator>

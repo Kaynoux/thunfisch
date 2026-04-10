@@ -1,6 +1,4 @@
-use super::moves;
-use crate::prelude::*;
-use crate::search::move_picker::MoveList;
+use crate::{move_generator::moves, move_picker::MoveList, prelude::*};
 
 // 218 is the limit: https://www.chessprogramming.org/Chess_Position
 pub const MAX_MOVES_COUNT: usize = 218;
@@ -180,8 +178,7 @@ impl Board {
 
 #[cfg(test)]
 mod test {
-    use crate::debug::perft;
-    use crate::prelude::*;
+    use crate::{debug::perft, prelude::*};
 
     #[test]
     /// Tests the move generation by checking if it finds the correct amount of moves
@@ -209,7 +206,7 @@ mod test {
         for (fen_idx, fen) in fens.iter().enumerate() {
             // Use take(5) to only test the first 5 depths for example
             for (depth_idx, correct_node_count) in perft_results[fen_idx].iter().enumerate() {
-                let mut board = Board::from_fen(fen);
+                let mut board = Board::new(fen);
                 let calculated_node_count = perft::hash_test_perft(&mut board, depth_idx + 1);
                 assert_eq!(
                     *correct_node_count,

@@ -1,8 +1,7 @@
 use arrayvec::ArrayVec;
 
 use crate::{
-    move_generator::generator::MAX_MOVES_COUNT, prelude::*, search::move_ordering::mvv_lva,
-    settings,
+    move_generator::generator::MAX_MOVES_COUNT, move_scoring::mvv_lva, prelude::*, settings,
 };
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
@@ -184,7 +183,7 @@ mod perft_test_move_picker {
         for (fen_idx, fen) in fens.iter().enumerate() {
             for (depth_idx, correct_node_count) in perft_results[fen_idx].iter().take(4).enumerate()
             {
-                let mut board = Board::from_fen(fen);
+                let mut board = Board::new(fen);
                 let calculated_node_count = move_picker_r_perft(&mut board, depth_idx + 1);
                 assert_eq!(
                     *correct_node_count,

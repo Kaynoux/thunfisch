@@ -1,7 +1,81 @@
-use crate::prelude::*;
+use crate::{
+    debug::custom_commands::handle_custom_commands, iterative_deepening::iterative_deepening,
+    prelude::*, time_management::calc_search_time, transposition_table::TT,
+    types::board::START_POS,
+};
+use std::{
+    io::{self, BufRead, Write},
+    process::exit,
+};
 
-pub fn handle_input(board: &mut Board, args: &[&str]) {
-    const START_POS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
+pub fn handle_communication(board: &mut Board) {
+    let stdin = io::stdin();
+    let mut stdout = io::stdout();
+
+    for line_res in stdin.lock().lines() {
+        let Ok(line) = line_res else { break };
+        let mut parts = line.split_whitespace();
+
+        if let Some(command) = parts.next() {
+            let args: Vec<&str> = parts.collect();
+
+            // Try to handle UCI commands first
+            if !handle_uci_commands(board, command, &args) {
+                // If no uci command matched, then try matching a custom command
+                handle_custom_commands(board, command, &args);
+            }
+        }
+
+        stdout.flush().unwrap();
+    }
+}
+
+// UCI Commands: needed to comply with UCI protocoll
+fn handle_uci_commands(board: &mut Board, command: &str, args: &[&str]) -> bool {
+    #[allow(clippy::match_same_arms)]
+    match command {
+        "uci" => {
+            println!("id name Thunfisch");
+            println!("id author Lukas Piorek (Kaynoux), Emil Schläger (heofthetea)");
+            println!("uciok");
+        }
+        "debug" => {
+            println!("info currently no dynamic debug mode, use compiletime features instead");
+        }
+        "isready" => {
+            // We are always ready
+            println!("readyok");
+        }
+        "setoption" => {
+            // TODO: we need to be able to change TT size atleast here
+            println!("info currently no options, use compiletime features instead");
+        }
+        "register" => {
+            // This is probably a legacy UCI feature
+            println!("info register not implemented");
+        }
+        "ucinewgame" => {
+            *board = Board::new(START_POS);
+        }
+        "position" => {
+            set_position(board, args);
+        }
+        "go" => {
+            handle_go(board, args, false, false);
+        }
+        "stop" => {
+            // This will not work in search atm because it will not read this line because it will be stuck in search
+        }
+        "ponderhit" => {
+            // Pondering is not implemented at all atm
+        }
+        "quit" => exit(0),
+        _ => return false,
+    }
+    true
+}
+
+fn set_position(board: &mut Board, args: &[&str]) {
     let mut iter = args.iter().peekable();
 
     if let Some(&&token) = iter.peek() {
@@ -19,11 +93,11 @@ pub fn handle_input(board: &mut Board, args: &[&str]) {
                 }
                 //joins them back together and creates board with them
                 let fen = fen_parts.join(" ");
-                *board = Board::from_fen(&fen);
+                *board = Board::new(&fen);
             }
             "startpos" => {
                 iter.next();
-                *board = Board::from_fen(START_POS);
+                *board = Board::new(START_POS);
             }
             "index" => {
                 // usesd for debugging only positions from here https://www.codeproject.com/Articles/5313417/Worlds-fastest-Bitboard-Chess-Movegenerator
@@ -49,7 +123,7 @@ pub fn handle_input(board: &mut Board, args: &[&str]) {
                             if index_val >= fens.len() {
                                 eprintln!("Index to large, FEN not found");
                             } else {
-                                *board = Board::from_fen(fens[index_val]);
+                                *board = Board::new(fens[index_val]);
                             }
                         }
                         Err(err) => eprintln!("Could not parse index `{idx_str}`: {err}"),
@@ -70,4 +144,20 @@ pub fn handle_input(board: &mut Board, args: &[&str]) {
             board.make_move(mv.encode());
         }
     }
+}
+
+pub fn handle_go(board: &mut Board, args: &[&str], debug: bool, help: bool) {
+    let (max_depth, time_limit) = calc_search_time(args, board);
+    let best_move = iterative_deepening(board, max_depth, time_limit, debug, help);
+
+    if let Some(mv) = best_move {
+        println!("info pv {}", mv.decode().to_coords());
+        println!("bestmove {}", mv.decode().to_coords());
+    } else if board.is_in_check() {
+        println!("Game over: Checkmate!");
+    } else {
+        println!("Game over: Stalemate!");
+    }
+
+    TT.increase_age();
 }

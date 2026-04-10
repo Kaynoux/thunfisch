@@ -2,10 +2,10 @@ use crate::{
     move_generator::{masks, pinmask},
     prelude::*,
     types::unmake_info::UnmakeInfo,
-    utils::zobrist,
+    utils::{generate_fen::generate_fen, parse_fen::generate_board, zobrist},
 };
-
 pub const UNSET_CHECK_COUNTER: usize = 100;
+pub const START_POS: &str = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1";
 
 /// Represents the global game state
 #[derive(Clone)]
@@ -46,6 +46,12 @@ pub struct Board {
 }
 
 impl Board {
+    pub fn new(fen: &str) -> Self {
+        generate_board(fen)
+    }
+    pub fn fen(&self) -> String {
+        generate_fen(self)
+    }
     /// WARNING: This does not set the hash correctly
     pub const EMPTY: Self = Self {
         color_bbs: [Bitboard::EMPTY; 2],
@@ -482,7 +488,7 @@ mod tests {
 
     #[test]
     fn test_is_king_pawn_endgame_true() {
-        let board = Board::from_fen("8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - - 0 1");
+        let board = Board::new("8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - - 0 1");
         assert!(
             board.is_king_pawn_endgame(),
             "Position with only kings and pawns should return true"
@@ -492,7 +498,7 @@ mod tests {
     #[test]
     fn test_is_king_pawn_endgame_false_complex_position() {
         let board =
-            Board::from_fen("r1b1k2r/1pqp1ppp/p2bpnn1/6Q1/2BNP3/2N1B3/PPP2PPP/2KR3R w kq - 8 12");
+            Board::new("r1b1k2r/1pqp1ppp/p2bpnn1/6Q1/2BNP3/2N1B3/PPP2PPP/2KR3R w kq - 8 12");
         assert!(
             !board.is_king_pawn_endgame(),
             "Position with multiple pieces should return false"
@@ -501,7 +507,7 @@ mod tests {
 
     #[test]
     fn test_is_king_pawn_endgame_false_with_knight() {
-        let board = Board::from_fen("8/k7/3p4/p2P1p2/P2P1P2/1N6/8/K7 w - - 0 1");
+        let board = Board::new("8/k7/3p4/p2P1p2/P2P1P2/1N6/8/K7 w - - 0 1");
         assert!(
             !board.is_king_pawn_endgame(),
             "King-pawn endgame with a white knight should return false"

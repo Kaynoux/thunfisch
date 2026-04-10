@@ -1,4 +1,4 @@
-use crate::{prelude::*, search::alpha_beta::MATE_SCORE};
+use crate::{evaluation::MATE_SCORE, prelude::*};
 use std::sync::atomic::{AtomicU8, AtomicU64, Ordering};
 
 const MAX_AGE: i32 = 1 << 5; // needs to match TTInfo layout
