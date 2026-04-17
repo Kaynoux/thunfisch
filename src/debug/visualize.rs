@@ -33,7 +33,7 @@ pub fn print_board(board: &Board, moves: Option<&MoveList>) {
         for x in 0..8 {
             let idx = y * 8 + x;
             let c = char_board[idx];
-            print!("{c:?} ");
+            print!("{c} ");
         }
         println!();
     }

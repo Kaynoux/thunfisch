@@ -154,9 +154,11 @@ pub fn handle_go(board: &mut Board, args: &[&str], debug: bool, help: bool) {
         println!("info pv {}", mv.decode().to_coords());
         println!("bestmove {}", mv.decode().to_coords());
     } else if board.is_in_check() {
-        println!("Game over: Checkmate!");
+        println!("info Game over: Checkmate!");
+        println!("bestmove ");
     } else {
-        println!("Game over: Stalemate!");
+        println!("info Game over: Draw!");
+        println!("bestmove ");
     }
 
     TT.increase_age();
