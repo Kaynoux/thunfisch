@@ -127,28 +127,28 @@ pub fn score_quiets(move_list: &mut MoveList, board: &Board, histories: &History
     move_list
         .list
         .iter_mut()
-        .for_each(|m| m.score = histories.get_score(m.mv.decode(), current_color) as i32);
+        .for_each(|m| m.score = i32::from(histories.get_score(m.mv.decode(), current_color)));
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-/// Histories
+// Histories
 
 const MAX_HISTORY_VALUE: i16 = i16::MAX;
 
-/// vectors are two-dimensional arrays indexed by [from_square][to_square]
+/// vectors are two-dimensional arrays indexed by `[from_square][to_square]`
 #[derive(Clone)]
 pub struct HistoryBoard([[i16; 64]; 64], [[i16; 64]; 64]);
 
 impl HistoryBoard {
-    pub fn new() -> Self {
-        HistoryBoard(
+    pub const fn new() -> Self {
+        Self(
             [[-MAX_HISTORY_VALUE; 64]; 64],
             [[-MAX_HISTORY_VALUE; 64]; 64],
         )
     }
 
     /// Update the history value for `mv` at `depth` for `color` by `bonus`.
-    /// The bonus should be calculated by either history_bonus for bonuses, and
-    /// history_maluse for history maluse punishments.
+    /// The bonus should be calculated by either `history_bonus` for bonuses, and
+    /// `history_maluse` for history maluse punishments.
     pub fn update_history(&mut self, color: Color, mv: DecodedMove, bonus: i16) {
         let fro = mv.from.0;
         let to = mv.to.0;
@@ -156,16 +156,16 @@ impl HistoryBoard {
         match color {
             White => self.0[fro][to] = gravity(self.0[fro][to], bonus),
             Black => self.1[fro][to] = gravity(self.0[fro][to], bonus),
-        };
+        }
     }
 
-    pub fn get_score(&self, mv: DecodedMove, color: Color) -> i16 {
+    pub const fn get_score(&self, mv: DecodedMove, color: Color) -> i16 {
         let fro = mv.from.0;
         let to = mv.to.0;
-        return match color {
+        match color {
             White => self.0[fro][to],
             Black => self.1[fro][to],
-        };
+        }
     }
 
     pub fn get_relative_history(&self, mv: DecodedMove, color: Color) -> i16 {
@@ -178,10 +178,10 @@ impl HistoryBoard {
     pub fn age_histories(&mut self) {
         self.0
             .iter_mut()
-            .for_each(|inner| inner.iter_mut().for_each(|h| *h = *h / 2));
+            .for_each(|inner| inner.iter_mut().for_each(|h| *h /= 2));
         self.1
             .iter_mut()
-            .for_each(|inner| inner.iter_mut().for_each(|h| *h = *h / 2));
+            .for_each(|inner| inner.iter_mut().for_each(|h| *h /= 2));
     }
 }
 

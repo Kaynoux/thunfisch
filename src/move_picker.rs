@@ -66,7 +66,7 @@ impl MovePicker {
     }
 
     pub fn is_yielding_quiets(&self) -> bool {
-        return self.state == GenerationState::YieldQuiets;
+        self.state == GenerationState::YieldQuiets
     }
 
     pub fn next(&mut self, board: &mut Board) -> Option<EncodedMove> {
