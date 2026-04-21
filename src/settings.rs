@@ -13,8 +13,22 @@ pub const KILLERS: bool = cfg!(feature = "killers");
 // Can be tweaked, hava an effect on elo
 pub const QS_CHECK_EVASION_LIMIT: usize = 2;
 pub const MAX_QS_DEPTH: usize = 12;
+// Maximum search depth. In practice likely never reached, but has an effect on memory usage of the program
 pub const MAX_AB_DEPTH: usize = 128;
+// How far a static eval needs to be over beta to initiate an RFP cutoff
 pub const RFP_MARGIN: usize = 50;
+
+/// Constants for the gravity history increase.
+/// See history.rs for details on usage.
+/// Values are inspired by viridithas.
+pub const HISTORY_BONUS_MUL: i16 = 355;
+pub const HISTORY_BONUS_OFFS: i16 = 230;
+pub const HISTORY_BONUS_MAX: i16 = 2222;
+// TODO: use these
+pub const HISTORY_MALUSE_MUL: i16 = 110;
+pub const HISTORY_MALUSE_OFFS: i16 = 515;
+pub const HISTORY_MALUSE_MAX: i16 = 900;
+
 
 #[inline]
 pub fn repr() -> String {

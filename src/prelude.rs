@@ -8,8 +8,7 @@ pub use crate::types::{
     encoded_move::EncodedMove,
     figure::Figure,
     move_type::MoveType,
-    node_type::NodeType,
     piece::{Piece, Piece::*},
-    search_info::SearchInfo,
+    search_data::SharedSearchData,
     square::Square,
 };

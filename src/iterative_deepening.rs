@@ -98,24 +98,20 @@ pub fn iterative_deepening(
 
     for depth in 1..=max_depth {
         let iteration_start = Instant::now();
-        let iteration_search_info = SearchInfo::new();
-
         let mut seldepth = 0;
-        let best_eval_local = alpha_beta(
-            board,
+
+        let mut iteration_search_data = SharedSearchData::new(board, &stop, &mut seldepth, &mut killers);
+
+        let best_eval_local = alpha_beta::<true>(
             depth,
             -i32::MAX,
             i32::MAX,
-            &stop,
-            &iteration_search_info,
+            &mut iteration_search_data,
             0,
-            &mut seldepth,
-            false,
-            NodeType::OnPV,
-            &mut killers,
+            false
         );
 
-        if iteration_search_info
+        if iteration_search_data
             .timeout_occurred
             .load(Ordering::Relaxed)
         {
@@ -126,7 +122,7 @@ pub fn iterative_deepening(
         let mut pv_local: Vec<EncodedMove> = Vec::new();
 
         // TT-Walk to obtain the PV
-        let mut b = board.clone();
+        let mut b = iteration_search_data.board.clone();
         let mut ply: i32 = 0;
         while pv_local.len() < depth
             && let Some(tt_entry) = TT.probe(b.hash(), ply)
@@ -147,11 +143,11 @@ pub fn iterative_deepening(
             .collect::<Vec<_>>()
             .join(" ");
 
-        let iteration_ab_nodes = iteration_search_info
+        let iteration_ab_nodes = iteration_search_data
             .total_alpha_beta_nodes
             .load(Ordering::Relaxed);
-        let iteration_qs_nodes = iteration_search_info.total_qs_nodes.load(Ordering::Relaxed);
-        let iteration_eval_nodes = iteration_search_info
+        let iteration_qs_nodes = iteration_search_data.total_qs_nodes.load(Ordering::Relaxed);
+        let iteration_eval_nodes = iteration_search_data
             .total_eval_nodes
             .load(Ordering::Relaxed);
         let iteration_not_eval_nodes = iteration_ab_nodes + iteration_qs_nodes;
@@ -168,7 +164,7 @@ pub fn iterative_deepening(
 
         #[allow(clippy::cast_precision_loss)]
         if debug {
-            let iteration_tt_hits = iteration_search_info.total_tt_hits.load(Ordering::Relaxed);
+            let iteration_tt_hits = iteration_search_data.total_tt_hits.load(Ordering::Relaxed);
             let global_duration = global_start.elapsed();
 
             let current_total_nodes = iteration_nodes as f64;
