@@ -37,6 +37,19 @@ impl MoveList {
     }
 }
 
+impl std::fmt::Debug for MoveList {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let mut sorted_moves: Vec<_> = self.list.iter().collect();
+        sorted_moves.sort_by(|a, b| b.score.cmp(&a.score)); // Sort descending by score
+
+        writeln!(f, "MoveList {{")?;
+        for (i, mv_entry) in sorted_moves.iter().enumerate() {
+            writeln!(f, "  [{}] {} (score: {})", i, mv_entry.mv.decode().to_coords(), mv_entry.score)?;
+        }
+        write!(f, "}}")
+    }
+}
+
 pub struct MovePicker {
     tt_move: Option<EncodedMove>,
     killer_mv: Option<EncodedMove>,

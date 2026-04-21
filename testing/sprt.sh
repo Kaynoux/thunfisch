@@ -14,10 +14,10 @@ run_sprt() {
     echo "base: $2"
     fastchess \
         -engine cmd=$1 name=dev -engine cmd=$2 name=base \
-        -each proto=uci tc=8+0.8 \
+        -each proto=uci tc=4+0.4 \
         -pgnout file=sprt.pgn \
         -openings file=8moves_v3.pgn format=pgn order=random \
-        -concurrency 4 \
+        -concurrency 8 \
         -rounds 5000 \
         -recover \
         -sprt elo0=0 elo1=10 alpha=0.05 beta=0.05

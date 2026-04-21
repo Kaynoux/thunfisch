@@ -1,16 +1,31 @@
 use crate::{
-    debug::custom_commands::handle_custom_commands, iterative_deepening::iterative_deepening,
+    debug::custom_commands::handle_custom_commands, iterative_deepening::{self, iterative_deepening},
     move_scoring::HISTORY_TABLE, prelude::*, time_management::calc_search_time,
     transposition_table::TT, types::board::START_POS,
 };
 use std::{
-    io::{self, BufRead, Write},
-    process::exit,
+    env, io::{self, BufRead, Write}, process::exit, time::Duration
 };
 
 pub fn handle_communication(board: &mut Board) {
     let stdin = io::stdin();
     let mut stdout = io::stdout();
+
+    let args: Vec<String> = env::args().collect();
+    if args.iter().any(|arg| arg.contains("flamegraph")) {
+        let best_move = iterative_deepening::iterative_deepening(
+            board,
+            100,
+            Duration::from_millis(1000),
+            false,
+            false,
+        );
+        if let Some(mv) = best_move {
+            println!("info pv {}", mv.decode().to_coords());
+            println!("bestmove {}", mv.decode().to_coords());
+        }
+        exit(0);
+    }
 
     for line_res in stdin.lock().lines() {
         let Ok(line) = line_res else { break };

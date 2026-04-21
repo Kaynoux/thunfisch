@@ -187,7 +187,7 @@ pub fn alpha_beta<const PV_NODE: bool>(
         }
         // TODO try whether it gains to punish ALL quiet moves (including TT and killers)
         // instead of just the one generated
-        if movepicker.is_yielding_quiets() {
+        if mv.decode().is_quiet() {
             quiets_tried.push(mv);
         }
     }
