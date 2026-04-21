@@ -23,13 +23,13 @@ const PIECE_VALUES: [i32; 6] = [
 /// Constants for the gravity history increase.
 /// See history.rs for details on usage.
 /// Values are inspired by viridithas.
-pub const HISTORY_BONUS_MUL: i16 = 355;
-pub const HISTORY_BONUS_OFFS: i16 = 230;
-pub const HISTORY_BONUS_MAX: i16 = 2222;
+pub const HISTORY_BONUS_MUL: i32 = 355;
+pub const HISTORY_BONUS_OFFS: i32 = 230;
+pub const HISTORY_BONUS_MAX: i32 = 2222;
 // TODO: use these
-pub const HISTORY_MALUSE_MUL: i16 = 110;
-pub const HISTORY_MALUSE_OFFS: i16 = 515;
-pub const HISTORY_MALUSE_MAX: i16 = 900;
+pub const HISTORY_MALUSE_MUL: i32 = 110;
+pub const HISTORY_MALUSE_OFFS: i32 = 515;
+pub const HISTORY_MALUSE_MAX: i32 = 900;
 
 const fn calculate_mvv_lva_score(victim_idx: usize, attacker_idx: usize) -> i32 {
     // King cannot be captured
@@ -127,39 +127,38 @@ pub fn score_quiets(move_list: &mut MoveList, board: &Board, histories: &History
     move_list
         .list
         .iter_mut()
-        .for_each(|m| m.score = i32::from(histories.get_score(m.mv.decode(), current_color)));
+        .for_each(|m| m.score = histories.get_score(m.mv.decode(), current_color));
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Histories
 
-const MAX_HISTORY_VALUE: i16 = i16::MAX;
+const MAX_HISTORY_VALUE: i32 = i16::MAX as i32;
 
 /// vectors are two-dimensional arrays indexed by `[from_square][to_square]`
 #[derive(Clone)]
-pub struct HistoryBoard([[i16; 64]; 64], [[i16; 64]; 64]);
+pub struct HistoryBoard([[i32; 64]; 64], [[i32; 64]; 64]);
 
 impl HistoryBoard {
     pub const fn new() -> Self {
         Self(
-            [[-MAX_HISTORY_VALUE; 64]; 64],
-            [[-MAX_HISTORY_VALUE; 64]; 64],
+            [[0; 64]; 64],
+            [[0; 64]; 64],
         )
     }
 
     /// Update the history value for `mv` at `depth` for `color` by `bonus`.
     /// The bonus should be calculated by either `history_bonus` for bonuses, and
     /// `history_maluse` for history maluse punishments.
-    pub fn update_history(&mut self, color: Color, mv: DecodedMove, bonus: i16) {
+    pub fn update_history(&mut self, color: Color, mv: DecodedMove, bonus: i32) {
         let fro = mv.from.0;
         let to = mv.to.0;
-        // let bonus = history_bonus(depth);
         match color {
             White => self.0[fro][to] = gravity(self.0[fro][to], bonus),
             Black => self.1[fro][to] = gravity(self.0[fro][to], bonus),
         }
     }
 
-    pub const fn get_score(&self, mv: DecodedMove, color: Color) -> i16 {
+    pub const fn get_score(&self, mv: DecodedMove, color: Color) -> i32 {
         let fro = mv.from.0;
         let to = mv.to.0;
         match color {
@@ -168,13 +167,13 @@ impl HistoryBoard {
         }
     }
 
-    pub fn get_relative_history(&self, mv: DecodedMove, color: Color) -> i16 {
+    pub fn get_relative_history(&self, mv: DecodedMove, color: Color) -> i32 {
         todo!()
     }
 
-    /// TODO: The Relative History paper suggests this "aging" of histories,
-    /// however I have not found such a practice in both the CPW and viridithas so
-    /// it may not be necessary
+    /// Age history values between search iterations
+    /// I have no idea why this is useful, but the Relative History Paper (Winands et. al.) suggests it
+    /// and apparently Histories lose ELO without it
     pub fn age_histories(&mut self) {
         self.0
             .iter_mut()
@@ -186,8 +185,8 @@ impl HistoryBoard {
 }
 
 #[inline]
-fn gravity(val: i16, bonus: i16) -> i16 {
-    i16::clamp(
+fn gravity(val: i32, bonus: i32) -> i32 {
+    i32::clamp(
         val + bonus - val * bonus.abs() / MAX_HISTORY_VALUE,
         -MAX_HISTORY_VALUE,
         MAX_HISTORY_VALUE,
@@ -195,19 +194,19 @@ fn gravity(val: i16, bonus: i16) -> i16 {
 }
 
 #[inline]
-pub fn history_bonus(depth: usize) -> i16 {
+pub fn history_bonus(depth: usize) -> i32 {
     #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-    i16::min(
-        HISTORY_BONUS_MUL * depth as i16 + HISTORY_BONUS_OFFS,
+    i32::min(
+        HISTORY_BONUS_MUL * depth as i32 + HISTORY_BONUS_OFFS,
         HISTORY_BONUS_MAX,
     )
 }
 
 #[inline]
-pub fn history_maluse(depth: usize) -> i16 {
+pub fn history_maluse(depth: usize) -> i32 {
     #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-    -i16::min(
-        HISTORY_MALUSE_MUL * depth as i16 + HISTORY_MALUSE_OFFS,
+    -i32::min(
+        HISTORY_MALUSE_MUL * depth as i32 + HISTORY_MALUSE_OFFS,
         HISTORY_MALUSE_MAX,
     )
 }

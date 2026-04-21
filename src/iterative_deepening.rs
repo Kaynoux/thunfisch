@@ -100,7 +100,7 @@ pub fn iterative_deepening(
     for depth in 1..=max_depth {
         let iteration_start = Instant::now();
         let mut seldepth = 0;
-
+        histories.age_histories();
         let mut iteration_search_data = SharedSearchData::new(board, &stop, &mut seldepth, &mut killers, &mut histories);
 
         let best_eval_local = alpha_beta::<true>(

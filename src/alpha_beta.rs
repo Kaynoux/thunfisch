@@ -26,11 +26,7 @@ pub const fn rfp_margin(depth: usize) -> usize {
 ///
 /// Shared data is extracted to a struct, to keep the number of arguments <= 6. This should, in theory,
 /// optimize the function as all arguments can be passed through registers
-#[allow(
-    clippy::too_many_arguments,
-    clippy::too_many_lines,
-    clippy::needless_pass_by_value // because node_type should be pass by value because it is a bool essentially
-)]
+#[allow(clippy::too_many_lines)]
 pub fn alpha_beta<const PV_NODE: bool>(
     depth: usize,
     mut alpha: i32,
@@ -107,9 +103,6 @@ pub fn alpha_beta<const PV_NODE: bool>(
             // apparently RFP should only be done in the later parts of the tree. CPW explicitly mentions
             // pre-frontier nodes, i.e. those nodes where depth == 1. However viridithias, smol.cs and akimbo
             // use higher values, so this is likely tunable. Stockfish from what I can tell does depth < 2.
-            //
-            // NOTE ON THIS: Higher values for depth limiting crash Thunfisch into oblivion.
-            // If we get the branching factor under control and consistently hit depth 13-15 we can probably bump this up to ~4
             #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
             if depth < 4
                 && !sd.board.is_in_check()
@@ -150,7 +143,6 @@ pub fn alpha_beta<const PV_NODE: bool>(
     let mut movepicker = MovePicker::new(tt_move, killer_mv, sd.histories.clone(), false);
     let mut i = 0;
 
-    // let initial_hash = board.hash();
     while let Some(mv) = movepicker.next(sd.board) {
         i += 1;
         // cancels search if time is over
@@ -193,7 +185,7 @@ pub fn alpha_beta<const PV_NODE: bool>(
                 break;
             }
         }
-        // TODO try whether it gains to punsh ALL quiet moves (including TT and killers)
+        // TODO try whether it gains to punish ALL quiet moves (including TT and killers)
         // instead of just the one generated
         if movepicker.is_yielding_quiets() {
             quiets_tried.push(mv);
