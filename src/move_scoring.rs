@@ -1,4 +1,5 @@
 use crate::{move_picker::MoveList, prelude::*, settings};
+use std::sync::atomic::{AtomicI32, Ordering};
 
 // These values or known to perform well
 const PAWN_VALUE: i32 = 100;
@@ -26,10 +27,13 @@ const PIECE_VALUES: [i32; 6] = [
 pub const HISTORY_BONUS_MUL: i32 = 355;
 pub const HISTORY_BONUS_OFFS: i32 = 230;
 pub const HISTORY_BONUS_MAX: i32 = 2222;
-// TODO: use these
 pub const HISTORY_MALUSE_MUL: i32 = 110;
 pub const HISTORY_MALUSE_OFFS: i32 = 515;
 pub const HISTORY_MALUSE_MAX: i32 = 900;
+
+/// Transposition Table shared between all search threads
+pub static HISTORY_TABLE: std::sync::LazyLock<HistoryTable> =
+    std::sync::LazyLock::new(HistoryTable::new);
 
 const fn calculate_mvv_lva_score(victim_idx: usize, attacker_idx: usize) -> i32 {
     // King cannot be captured
@@ -119,15 +123,14 @@ pub fn mvv_lva(move_list: &mut MoveList, board: &Board) {
 }
 
 /// Score quiet moves using history heuristics (and in the future potentially more)
-pub fn score_quiets(move_list: &mut MoveList, board: &Board, histories: &HistoryBoard) {
+pub fn score_quiets(move_list: &mut MoveList, board: &Board) {
     if !settings::HISTORIES {
         return;
     }
     let current_color = board.current_color();
-    move_list
-        .list
-        .iter_mut()
-        .for_each(|m| m.score = histories.get_score(m.mv.decode(), current_color));
+    for m in &mut move_list.list {
+        m.score = HISTORY_TABLE.get_score(m.mv.decode(), current_color);
+    }
 }
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 // Histories
@@ -135,52 +138,85 @@ pub fn score_quiets(move_list: &mut MoveList, board: &Board, histories: &History
 const MAX_HISTORY_VALUE: i32 = i16::MAX as i32;
 
 /// vectors are two-dimensional arrays indexed by `[from_square][to_square]`
-#[derive(Clone)]
-pub struct HistoryBoard([[i32; 64]; 64], [[i32; 64]; 64]);
+pub struct HistoryTable([[AtomicI32; 64]; 64], [[AtomicI32; 64]; 64]);
 
-impl HistoryBoard {
-    pub const fn new() -> Self {
+// impl Default for HistoryTable {
+//     fn default() -> Self {
+//         Self::new()
+//     }
+// }
+
+impl HistoryTable {
+    pub fn new() -> Self {
         Self(
-            [[0; 64]; 64],
-            [[0; 64]; 64],
+            std::array::from_fn(|_| std::array::from_fn(|_| AtomicI32::new(0))),
+            std::array::from_fn(|_| std::array::from_fn(|_| AtomicI32::new(0))),
         )
     }
 
     /// Update the history value for `mv` at `depth` for `color` by `bonus`.
     /// The bonus should be calculated by either `history_bonus` for bonuses, and
     /// `history_maluse` for history maluse punishments.
-    pub fn update_history(&mut self, color: Color, mv: DecodedMove, bonus: i32) {
+    pub fn update_history(&self, color: Color, mv: DecodedMove, bonus: i32) {
         let fro = mv.from.0;
         let to = mv.to.0;
         match color {
-            White => self.0[fro][to] = gravity(self.0[fro][to], bonus),
-            Black => self.1[fro][to] = gravity(self.0[fro][to], bonus),
+            White => {
+                let old = self.0[fro][to].load(Ordering::Relaxed);
+                let new = gravity(old, bonus);
+                self.0[fro][to].store(new, Ordering::Relaxed);
+            }
+            Black => {
+                let old = self.1[fro][to].load(Ordering::Relaxed);
+                let new = gravity(old, bonus);
+                self.1[fro][to].store(new, Ordering::Relaxed);
+            }
         }
     }
 
-    pub const fn get_score(&self, mv: DecodedMove, color: Color) -> i32 {
+    pub fn get_score(&self, mv: DecodedMove, color: Color) -> i32 {
         let fro = mv.from.0;
         let to = mv.to.0;
         match color {
-            White => self.0[fro][to],
-            Black => self.1[fro][to],
+            White => self.0[fro][to].load(Ordering::Relaxed),
+            Black => self.1[fro][to].load(Ordering::Relaxed),
         }
     }
 
-    pub fn get_relative_history(&self, mv: DecodedMove, color: Color) -> i32 {
+    #[allow(dead_code)]
+    pub fn get_relative_history(&self, _mv: DecodedMove, _color: Color) -> i32 {
         todo!()
     }
 
     /// Age history values between search iterations
     /// I have no idea why this is useful, but the Relative History Paper (Winands et. al.) suggests it
     /// and apparently Histories lose ELO without it
-    pub fn age_histories(&mut self) {
-        self.0
-            .iter_mut()
-            .for_each(|inner| inner.iter_mut().for_each(|h| *h /= 2));
-        self.1
-            .iter_mut()
-            .for_each(|inner| inner.iter_mut().for_each(|h| *h /= 2));
+    pub fn age(&self) {
+        for inner in &self.0 {
+            for h in inner {
+                let old = h.load(Ordering::Relaxed);
+                h.store(old / 2, Ordering::Relaxed);
+            }
+        }
+        for inner in &self.1 {
+            for h in inner {
+                let old = h.load(Ordering::Relaxed);
+                h.store(old / 2, Ordering::Relaxed);
+            }
+        }
+    }
+
+    pub fn clear(&self) {
+        for inner in &self.0 {
+            for h in inner {
+                h.store(0, Ordering::Relaxed);
+            }
+        }
+        for inner in &self.1 {
+            for h in inner {
+                h.store(0, Ordering::Relaxed);
+            }
+        }
     }
 }
 
@@ -227,7 +263,7 @@ mod tests {
         // 1. Pawn on d3 can capture Queen on e4 (PxQ - high priority)
         // 2. Rook on e2 can capture Queen on e4 (RxQ - lower priority)
         let mut board = Board::new("4k3/8/8/8/4q3/3P4/4R3/4K3 w - - 0 1");
-        let mut move_picker = MovePicker::new(None, None, HistoryBoard::new(), false);
+        let mut move_picker = MovePicker::new(None, None, false);
         let best_move = move_picker.next(&mut board).unwrap().decode();
         let second_best = move_picker.next(&mut board).unwrap().decode();
 

@@ -1,8 +1,5 @@
 use crate::{
-    alpha_beta::alpha_beta,
-    debug::visualize::{format_f64, format_usize},
-    prelude::*,
-    transposition_table::TT, move_scoring::HistoryBoard,
+    alpha_beta::alpha_beta, debug::visualize::{format_f64, format_usize}, move_scoring::{HISTORY_TABLE, HistoryTable}, prelude::*, settings::HISTORIES, transposition_table::TT
 };
 
 use crate::{settings, settings::MAX_AB_DEPTH};
@@ -95,13 +92,12 @@ pub fn iterative_deepening(
     let mut previouse_iteration_ab_nodes: usize = 0;
     let mut previouse_iteration_qs_nodes: usize = 0;
     let mut killers = [EncodedMove(0); MAX_AB_DEPTH];
-    let mut histories = HistoryBoard::new();
 
     for depth in 1..=max_depth {
         let iteration_start = Instant::now();
         let mut seldepth = 0;
-        histories.age_histories();
-        let mut iteration_search_data = SharedSearchData::new(board, &stop, &mut seldepth, &mut killers, &mut histories);
+        HISTORY_TABLE.age();
+        let mut iteration_search_data = SharedSearchData::new(board, &stop, &mut seldepth, &mut killers);
 
         let best_eval_local = alpha_beta::<true>(
             depth,

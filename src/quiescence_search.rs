@@ -1,5 +1,5 @@
 use crate::{
-    evaluation::MATE_SCORE, move_picker::MovePicker, move_scoring::HistoryBoard, prelude::*, settings, transposition_table::{Bound, TT}
+    evaluation::MATE_SCORE, move_picker::MovePicker, prelude::*, settings, transposition_table::{Bound, TT}
 };
 
 use std::sync::{
@@ -99,9 +99,9 @@ pub fn quiescence_search(
 
     let mut movepicker = if sd.board.is_in_check() && (ply - sd.ab_ply) < settings::QS_CHECK_EVASION_LIMIT
     {
-        MovePicker::new(tt_move, None, HistoryBoard::new(), false)
+        MovePicker::new(tt_move, None, false)
     } else {
-        MovePicker::new(tt_move, None, sd.histories.clone(), true)
+        MovePicker::new(tt_move, None, true)
     };
 
     // let initial_hash = board.hash();

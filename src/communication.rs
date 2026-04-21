@@ -1,7 +1,7 @@
 use crate::{
     debug::custom_commands::handle_custom_commands, iterative_deepening::iterative_deepening,
-    prelude::*, time_management::calc_search_time, transposition_table::TT,
-    types::board::START_POS,
+    move_scoring::HISTORY_TABLE, prelude::*, time_management::calc_search_time,
+    transposition_table::TT, types::board::START_POS,
 };
 use std::{
     io::{self, BufRead, Write},
@@ -56,6 +56,7 @@ fn handle_uci_commands(board: &mut Board, command: &str, args: &[&str]) -> bool 
         }
         "ucinewgame" => {
             *board = Board::new(START_POS);
+            HISTORY_TABLE.clear();
         }
         "position" => {
             set_position(board, args);

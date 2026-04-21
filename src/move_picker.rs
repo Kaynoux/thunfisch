@@ -1,7 +1,7 @@
 use arrayvec::ArrayVec;
 
 use crate::{
-    move_generator::generator::MAX_MOVES_COUNT, move_scoring::{self, HistoryBoard, mvv_lva}, prelude::*, settings,
+    move_generator::generator::MAX_MOVES_COUNT, move_scoring::{self, mvv_lva}, prelude::*, settings,
 };
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
@@ -40,7 +40,6 @@ impl MoveList {
 pub struct MovePicker {
     tt_move: Option<EncodedMove>,
     killer_mv: Option<EncodedMove>,
-    histories: HistoryBoard,
     move_list: MoveList,
     state: GenerationState,
     move_index: usize,
@@ -51,13 +50,11 @@ impl MovePicker {
     pub fn new(
         tt_move: Option<EncodedMove>,
         killer_mv: Option<EncodedMove>,
-        histories: HistoryBoard,
         skip_quiets: bool,
     ) -> Self {
         Self {
             tt_move,
             killer_mv,
-            histories,
             move_list: MoveList::new(),
             state: GenerationState::TTMove,
             move_index: 0,
@@ -114,7 +111,7 @@ impl MovePicker {
             }
             GenerationState::Quiets => {
                 board.generate_moves::<true>(&mut self.move_list);
-                move_scoring::score_quiets(&mut self.move_list, board, &self.histories);
+                move_scoring::score_quiets(&mut self.move_list, board);
                 self.state = GenerationState::YieldQuiets;
                 self.next(board)
             }
@@ -211,7 +208,7 @@ mod perft_test_move_picker {
             return 1;
         }
         let mut nodes = 0;
-        let mut mvp = MovePicker::new(None, None, HistoryBoard::new(), false);
+        let mut mvp = MovePicker::new(None, None, false);
         // let correct_moves = board.generate_moves_legacy::<false>(board);
         // let mut moves: ArrayVec<EncodedMove, 256> = ArrayVec::new();
         // while let Some(next) = mvp.next::<false>(board) {

@@ -3,7 +3,7 @@ use arrayvec::ArrayVec;
 use crate::{
     evaluation::MATE_SCORE,
     move_picker::MovePicker,
-    move_scoring::{history_bonus, history_maluse},
+    move_scoring::{HISTORY_TABLE, history_bonus, history_maluse},
     prelude::*,
     quiescence_search,
     settings::{self, MAX_AB_DEPTH, RFP_MARGIN},
@@ -140,7 +140,7 @@ pub fn alpha_beta<const PV_NODE: bool>(
         .and_then(|&mv| if mv == EncodedMove(0) { None } else { Some(mv) });
 
     let mut quiets_tried: ArrayVec<EncodedMove, 256> = ArrayVec::new();
-    let mut movepicker = MovePicker::new(tt_move, killer_mv, sd.histories.clone(), false);
+    let mut movepicker = MovePicker::new(tt_move, killer_mv, false);
     let mut i = 0;
 
     while let Some(mv) = movepicker.next(sd.board) {
@@ -208,7 +208,7 @@ pub fn alpha_beta<const PV_NODE: bool>(
         && best_move.decode().is_quiet()
     {
         // Give bonus to best move
-        sd.histories.update_history(
+        HISTORY_TABLE.update_history(
             sd.board.current_color(),
             best_move.decode(),
             history_bonus(depth),
@@ -219,7 +219,7 @@ pub fn alpha_beta<const PV_NODE: bool>(
             if mv == best_move {
                 break;
             }
-            sd.histories.update_history(
+            HISTORY_TABLE.update_history(
                 sd.board.current_color(),
                 mv.decode(),
                 history_maluse(depth),
