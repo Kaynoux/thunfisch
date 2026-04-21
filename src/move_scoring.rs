@@ -20,6 +20,17 @@ const PIECE_VALUES: [i32; 6] = [
     KING_VALUE,
 ];
 
+/// Constants for the gravity history increase.
+/// See history.rs for details on usage.
+/// Values are inspired by viridithas.
+pub const HISTORY_BONUS_MUL: i16 = 355;
+pub const HISTORY_BONUS_OFFS: i16 = 230;
+pub const HISTORY_BONUS_MAX: i16 = 2222;
+// TODO: use these
+pub const HISTORY_MALUSE_MUL: i16 = 110;
+pub const HISTORY_MALUSE_OFFS: i16 = 515;
+pub const HISTORY_MALUSE_MAX: i16 = 900;
+
 const fn calculate_mvv_lva_score(victim_idx: usize, attacker_idx: usize) -> i32 {
     // King cannot be captured
     if victim_idx >= 5 {
@@ -107,6 +118,100 @@ pub fn mvv_lva(move_list: &mut MoveList, board: &Board) {
     }
 }
 
+/// Score quiet moves using history heuristics (and in the future potentially more)
+pub fn score_quiets(move_list: &mut MoveList, board: &Board, histories: &HistoryBoard) {
+    if !settings::HISTORIES {
+        return;
+    }
+    let current_color = board.current_color();
+    move_list
+        .list
+        .iter_mut()
+        .for_each(|m| m.score = histories.get_score(m.mv.decode(), current_color) as i32);
+}
+///////////////////////////////////////////////////////////////////////////////////////////////////
+/// Histories
+
+const MAX_HISTORY_VALUE: i16 = i16::MAX;
+
+/// vectors are two-dimensional arrays indexed by [from_square][to_square]
+#[derive(Clone)]
+pub struct HistoryBoard([[i16; 64]; 64], [[i16; 64]; 64]);
+
+impl HistoryBoard {
+    pub fn new() -> Self {
+        HistoryBoard(
+            [[-MAX_HISTORY_VALUE; 64]; 64],
+            [[-MAX_HISTORY_VALUE; 64]; 64],
+        )
+    }
+
+    /// Update the history value for `mv` at `depth` for `color` by `bonus`.
+    /// The bonus should be calculated by either history_bonus for bonuses, and
+    /// history_maluse for history maluse punishments.
+    pub fn update_history(&mut self, color: Color, mv: DecodedMove, bonus: i16) {
+        let fro = mv.from.0;
+        let to = mv.to.0;
+        // let bonus = history_bonus(depth);
+        match color {
+            White => self.0[fro][to] = gravity(self.0[fro][to], bonus),
+            Black => self.1[fro][to] = gravity(self.0[fro][to], bonus),
+        };
+    }
+
+    pub fn get_score(&self, mv: DecodedMove, color: Color) -> i16 {
+        let fro = mv.from.0;
+        let to = mv.to.0;
+        return match color {
+            White => self.0[fro][to],
+            Black => self.1[fro][to],
+        };
+    }
+
+    pub fn get_relative_history(&self, mv: DecodedMove, color: Color) -> i16 {
+        todo!()
+    }
+
+    /// TODO: The Relative History paper suggests this "aging" of histories,
+    /// however I have not found such a practice in both the CPW and viridithas so
+    /// it may not be necessary
+    pub fn age_histories(&mut self) {
+        self.0
+            .iter_mut()
+            .for_each(|inner| inner.iter_mut().for_each(|h| *h = *h / 2));
+        self.1
+            .iter_mut()
+            .for_each(|inner| inner.iter_mut().for_each(|h| *h = *h / 2));
+    }
+}
+
+#[inline]
+fn gravity(val: i16, bonus: i16) -> i16 {
+    i16::clamp(
+        val + bonus - val * bonus.abs() / MAX_HISTORY_VALUE,
+        -MAX_HISTORY_VALUE,
+        MAX_HISTORY_VALUE,
+    )
+}
+
+#[inline]
+pub fn history_bonus(depth: usize) -> i16 {
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+    i16::min(
+        HISTORY_BONUS_MUL * depth as i16 + HISTORY_BONUS_OFFS,
+        HISTORY_BONUS_MAX,
+    )
+}
+
+#[inline]
+pub fn history_maluse(depth: usize) -> i16 {
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+    -i16::min(
+        HISTORY_MALUSE_MUL * depth as i16 + HISTORY_MALUSE_OFFS,
+        HISTORY_MALUSE_MAX,
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -123,7 +228,7 @@ mod tests {
         // 1. Pawn on d3 can capture Queen on e4 (PxQ - high priority)
         // 2. Rook on e2 can capture Queen on e4 (RxQ - lower priority)
         let mut board = Board::new("4k3/8/8/8/4q3/3P4/4R3/4K3 w - - 0 1");
-        let mut move_picker = MovePicker::new(None, None, false);
+        let mut move_picker = MovePicker::new(None, None, HistoryBoard::new(), false);
         let best_move = move_picker.next(&mut board).unwrap().decode();
         let second_best = move_picker.next(&mut board).unwrap().decode();
 

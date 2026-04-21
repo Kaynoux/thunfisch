@@ -23,6 +23,7 @@ all = [
     "rfp",
     "pvs",
     "killers",
+    "histories"
 ]
 all-no-killers = [
     "ab",
@@ -47,6 +48,7 @@ nmp = []
 rfp = []
 pvs = []
 killers = []
+histories = []
 
 [dependencies]
 rayon = "1.11.0"

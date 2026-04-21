@@ -10,4 +10,3 @@ pub mod piece;
 pub mod search_data;
 pub mod square;
 pub mod unmake_info;
-pub mod history;

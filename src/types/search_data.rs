@@ -3,21 +3,7 @@ use std::sync::{
     atomic::{AtomicBool, AtomicUsize},
 };
 
-use crate::{prelude::*, settings::MAX_AB_DEPTH};
-
-// pub struct SearchData {
-//     pub ply: usize,
-//     pub null_move_allowed: bool,
-// }
-
-// impl SearchData {
-//     pub const fn new(ply: usize, null_move_allowed: bool) -> Self {
-//         Self {
-//             ply,
-//             null_move_allowed,
-//         }
-//     }
-// }
+use crate::{prelude::*, settings::MAX_AB_DEPTH, move_scoring::HistoryBoard};
 
 /// Contains shared search data in one place, as well as debugging metadata.
 /// 'Shared' in this context means that this struct is shared (read and mutated)
@@ -29,6 +15,7 @@ pub struct SharedSearchData<'sd> {
     pub stop: &'sd Arc<AtomicBool>,
     pub local_seldepth: &'sd mut usize,
     pub killers: &'sd mut [EncodedMove; MAX_AB_DEPTH],
+    pub histories: &'sd mut HistoryBoard,
     pub ab_ply: usize,
 
     // From here these are only used for additional info collection
@@ -47,12 +34,14 @@ impl<'sd> SharedSearchData<'sd> {
         stop: &'sd Arc<AtomicBool>,
         local_seldepth: &'sd mut usize,
         killers: &'sd mut [EncodedMove; MAX_AB_DEPTH],
+        histories: &'sd mut HistoryBoard
     ) -> Self {
         Self {
             board,
             stop,
             local_seldepth,
             killers,
+            histories,
             ab_ply: 0,
             timeout_occurred: AtomicBool::new(false),
             total_alpha_beta_nodes: AtomicUsize::new(0),
