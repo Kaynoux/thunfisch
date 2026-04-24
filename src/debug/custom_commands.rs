@@ -2,6 +2,8 @@ use crate::{
     communication::handle_go,
     debug::{perft, visualize},
     move_generator::{masks, pinmask},
+    move_picker::MoveList,
+    move_scoring::{mvv_lva, score_quiets},
     prelude::*,
     transposition_table::TT,
 };
@@ -21,6 +23,17 @@ pub fn handle_custom_commands(board: &mut Board, command: &str, args: &[&str]) {
         "moves" => {
             let moves = board.generate_all_moves();
             visualize::print_board(board, Some(&moves));
+        }
+        "score" => {
+            let mut quiets = MoveList::new();
+            board.generate_moves::<true>(&mut quiets);
+            score_quiets(&mut quiets, board);
+
+            let mut captures = MoveList::new();
+            board.generate_moves::<false>(&mut captures);
+            mvv_lva(&mut captures, board);
+            println!("Quiets: {quiets:?}");
+            println!("Captures: {captures:?}");
         }
         "eval" => println!("Depth 0 Board Evaluation: {}", board.evaluate()),
         "do" => {

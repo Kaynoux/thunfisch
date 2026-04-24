@@ -24,11 +24,12 @@ mod time_management;
 mod transposition_table;
 mod types;
 mod utils;
-use crate::{prelude::*, types::board::START_POS};
+use crate::{move_scoring::HISTORY_TABLE, prelude::*, types::board::START_POS};
 fn main() {
     // trigger lazy initialization before we do anything to avoid
     // paying that cost during a game
     transposition_table::TT.clear();
+    HISTORY_TABLE.clear();
 
     let mut board = Board::new(START_POS);
 

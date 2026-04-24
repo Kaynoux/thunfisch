@@ -5,20 +5,6 @@ use std::sync::{
 
 use crate::{prelude::*, settings::MAX_AB_DEPTH};
 
-// pub struct SearchData {
-//     pub ply: usize,
-//     pub null_move_allowed: bool,
-// }
-
-// impl SearchData {
-//     pub const fn new(ply: usize, null_move_allowed: bool) -> Self {
-//         Self {
-//             ply,
-//             null_move_allowed,
-//         }
-//     }
-// }
-
 /// Contains shared search data in one place, as well as debugging metadata.
 /// 'Shared' in this context means that this struct is shared (read and mutated)
 /// by multiple nodes at different depths of the search tree

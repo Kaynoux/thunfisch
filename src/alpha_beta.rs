@@ -1,18 +1,16 @@
+use arrayvec::ArrayVec;
+
 use crate::{
     evaluation::MATE_SCORE,
     move_picker::MovePicker,
+    move_scoring::{HISTORY_TABLE, history_bonus, history_maluse},
     prelude::*,
     quiescence_search,
     settings::{self, MAX_AB_DEPTH, RFP_MARGIN},
     transposition_table::{Bound, TT},
 };
 
-use std::{
-    cmp::min,
-    sync::{
-        atomic::{Ordering},
-    },
-};
+use std::{cmp::min, sync::atomic::Ordering};
 
 /// There's different approaches to this one as well. CPW suggests 150 * depth, smol.cs does 75 * depth.
 /// Generally: The smaller `rfp_margin`, the more aggressively we prune.
@@ -28,23 +26,17 @@ pub const fn rfp_margin(depth: usize) -> usize {
 ///
 /// Shared data is extracted to a struct, to keep the number of arguments <= 6. This should, in theory,
 /// optimize the function as all arguments can be passed through registers
-#[allow(
-    clippy::too_many_arguments,
-    clippy::too_many_lines,
-    clippy::needless_pass_by_value // because node_type should be pass by value because it is a bool essentially
-)]
+#[allow(clippy::too_many_lines)]
 pub fn alpha_beta<const PV_NODE: bool>(
     depth: usize,
     mut alpha: i32,
     beta: i32,
     sd: &mut SharedSearchData,
     ply: usize,
-    null_move_allowed: bool
+    null_move_allowed: bool,
 ) -> i32 {
     *sd.local_seldepth = (*sd.local_seldepth).max(ply);
-    sd
-        .total_alpha_beta_nodes
-        .fetch_add(1, Ordering::Relaxed);
+    sd.total_alpha_beta_nodes.fetch_add(1, Ordering::Relaxed);
 
     if sd.board.is_threefold_repetition() || sd.board.is_50_move_rule() {
         return 0;
@@ -53,13 +45,8 @@ pub fn alpha_beta<const PV_NODE: bool>(
     if depth == 0 {
         if settings::QS && ply < MAX_AB_DEPTH - 1 {
             sd.ab_ply = ply;
-            let qs_result = quiescence_search::quiescence_search(
-                settings::MAX_QS_DEPTH,
-                alpha,
-                beta,
-                sd,
-                ply,
-            );
+            let qs_result =
+                quiescence_search::quiescence_search(settings::MAX_QS_DEPTH, alpha, beta, sd, ply);
 
             return qs_result;
         }
@@ -116,9 +103,6 @@ pub fn alpha_beta<const PV_NODE: bool>(
             // apparently RFP should only be done in the later parts of the tree. CPW explicitly mentions
             // pre-frontier nodes, i.e. those nodes where depth == 1. However viridithias, smol.cs and akimbo
             // use higher values, so this is likely tunable. Stockfish from what I can tell does depth < 2.
-            //
-            // NOTE ON THIS: Higher values for depth limiting crash Thunfisch into oblivion.
-            // If we get the branching factor under control and consistently hit depth 13-15 we can probably bump this up to ~4
             #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
             if depth < 4
                 && !sd.board.is_in_check()
@@ -138,14 +122,8 @@ pub fn alpha_beta<const PV_NODE: bool>(
         {
             sd.board.make_null_move();
             let reduction = min(depth, 4);
-            let eval = -alpha_beta::<false>(
-                depth - reduction,
-                -alpha - 1,
-                -alpha,
-                sd,
-                ply + 1,
-                false
-            );
+            let eval =
+                -alpha_beta::<false>(depth - reduction, -alpha - 1, -alpha, sd, ply + 1, false);
             sd.board.unmake_null_move();
             if eval >= beta {
                 return beta;
@@ -156,14 +134,15 @@ pub fn alpha_beta<const PV_NODE: bool>(
     let mut best_eval = i32::MIN + 1;
     let mut best_move: Option<EncodedMove> = None;
 
-    let killer_mv: Option<EncodedMove> = sd.killers
+    let killer_mv: Option<EncodedMove> = sd
+        .killers
         .get(ply)
         .and_then(|&mv| if mv == EncodedMove(0) { None } else { Some(mv) });
 
+    let mut quiets_tried: ArrayVec<EncodedMove, 256> = ArrayVec::new();
     let mut movepicker = MovePicker::new(tt_move, killer_mv, false);
     let mut i = 0;
 
-    // let initial_hash = board.hash();
     while let Some(mv) = movepicker.next(sd.board) {
         i += 1;
         // cancels search if time is over
@@ -178,36 +157,15 @@ pub fn alpha_beta<const PV_NODE: bool>(
             // We assume that the first move from the move ordering is the PV move;
             // Since the TT move, if existant, is in first place anyway this automatically includes information from shallower search depths
 
-            eval = -alpha_beta::<true>(
-                depth - 1,
-                -beta,
-                -alpha,
-                sd,
-                ply + 1,
-                true
-            );
+            eval = -alpha_beta::<true>(depth - 1, -beta, -alpha, sd, ply + 1, true);
         } else {
             // Search non-PV moves with null window
-            eval = -alpha_beta::<false>(
-                depth - 1,
-                -alpha - 1,
-                -alpha,
-                sd,
-                ply + 1,
-                true
-            );
+            eval = -alpha_beta::<false>(depth - 1, -alpha - 1, -alpha, sd, ply + 1, true);
             // Re-search if non-PV move raised Alpha
             // ONLY do re-searching if the current Node is on PV - we don't care for re-searching OffPV nodes
             // (if they actually improve over the PV that variation will be searched again at the last PV node anyway)
             if eval > alpha && PV_NODE {
-                eval = -alpha_beta::<true>(
-                    depth - 1,
-                    -beta,
-                    -alpha,
-                    sd,
-                    ply + 1,
-                    true
-                );
+                eval = -alpha_beta::<true>(depth - 1, -beta, -alpha, sd, ply + 1, true);
             }
         }
 
@@ -227,6 +185,11 @@ pub fn alpha_beta<const PV_NODE: bool>(
                 break;
             }
         }
+        // TODO try whether it gains to punish ALL quiet moves (including TT and killers)
+        // instead of just the one generated
+        if mv.decode().is_quiet() {
+            quiets_tried.push(mv);
+        }
     }
 
     // When i still 0 than no move found
@@ -237,6 +200,31 @@ pub fn alpha_beta<const PV_NODE: bool>(
             return -MATE_SCORE + (ply as i32);
         }
         return 0;
+    }
+
+    // If the best move is quiet, adjust the history values
+    if settings::HISTORIES
+        && let Some(best_move) = best_move
+        && best_move.decode().is_quiet()
+    {
+        // Give bonus to best move
+        HISTORY_TABLE.update_history(
+            sd.board.current_color(),
+            best_move.decode(),
+            history_bonus(depth),
+        );
+
+        // Punish quiet moves ordered before the best quiet move (maluse)
+        for mv in quiets_tried {
+            if mv == best_move {
+                break;
+            }
+            HISTORY_TABLE.update_history(
+                sd.board.current_color(),
+                mv.decode(),
+                history_maluse(depth),
+            );
+        }
     }
 
     let bound = if best_eval >= beta {

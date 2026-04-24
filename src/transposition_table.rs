@@ -4,6 +4,10 @@ use std::sync::atomic::{AtomicU8, AtomicU64, Ordering};
 const MAX_AGE: i32 = 1 << 5; // needs to match TTInfo layout
 const AGE_MASK: i32 = MAX_AGE - 1;
 
+/// Transposition Table shared between all search threads
+pub static TT: std::sync::LazyLock<TranspositionTable> =
+    std::sync::LazyLock::new(|| TranspositionTable::new(512));
+
 // Inspired by Viridithas
 /// Holds the age, pv flag, and bound type packed into a single byte.
 ///
@@ -119,10 +123,6 @@ pub struct TranspositionTable {
     entries: Vec<EncodedHashEntry>,
     age: AtomicU8,
 }
-
-/// Transposition Table shared between all search threads
-pub static TT: std::sync::LazyLock<TranspositionTable> =
-    std::sync::LazyLock::new(|| TranspositionTable::new(512));
 
 impl TranspositionTable {
     pub fn new(mb: usize) -> Self {
