@@ -1,10 +1,12 @@
 use crate::{
-    evaluation::MATE_SCORE, move_picker::MovePicker, prelude::*, settings, transposition_table::{Bound, TT}
+    evaluation::MATE_SCORE,
+    move_picker::MovePicker,
+    prelude::*,
+    settings,
+    transposition_table::{Bound, TT},
 };
 
-use std::sync::{
-    atomic::{Ordering},
-};
+use std::sync::atomic::Ordering;
 
 /// <https://www.chessprogramming.org/Quiescence_Search>
 #[allow(clippy::too_many_lines, clippy::too_many_arguments)]
@@ -13,7 +15,7 @@ pub fn quiescence_search(
     mut alpha: i32,
     beta: i32,
     sd: &mut SharedSearchData,
-    ply: usize
+    ply: usize,
 ) -> i32 {
     *sd.local_seldepth = (*sd.local_seldepth).max(ply);
 
@@ -83,7 +85,15 @@ pub fn quiescence_search(
     if eval >= beta {
         if settings::TT_QS {
             #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-            TT.store(sd.board.hash(), None, eval, 0, ply as i32, Bound::Lower, false);
+            TT.store(
+                sd.board.hash(),
+                None,
+                eval,
+                0,
+                ply as i32,
+                Bound::Lower,
+                false,
+            );
         }
         return eval;
     }
@@ -97,12 +107,12 @@ pub fn quiescence_search(
 
     let mut i = 0;
 
-    let mut movepicker = if sd.board.is_in_check() && (ply - sd.ab_ply) < settings::QS_CHECK_EVASION_LIMIT
-    {
-        MovePicker::new(tt_move, None, false)
-    } else {
-        MovePicker::new(tt_move, None, true)
-    };
+    let mut movepicker =
+        if sd.board.is_in_check() && (ply - sd.ab_ply) < settings::QS_CHECK_EVASION_LIMIT {
+            MovePicker::new(tt_move, None, false)
+        } else {
+            MovePicker::new(tt_move, None, true)
+        };
 
     // let initial_hash = board.hash();
     while let Some(mv) = movepicker.next(sd.board) {
@@ -113,13 +123,7 @@ pub fn quiescence_search(
             return 0;
         }
         sd.board.make_move(mv);
-        let score = -quiescence_search(
-            depth - 1,
-            -beta,
-            -alpha,
-            sd,
-            ply
-        );
+        let score = -quiescence_search(depth - 1, -beta, -alpha, sd, ply);
         sd.board.unmake_move();
 
         if score > best_score {

@@ -1,5 +1,11 @@
 use crate::{
-    communication::handle_go, debug::{perft, visualize}, move_generator::{masks, pinmask}, move_picker::MoveList, move_scoring::{mvv_lva, score_quiets}, prelude::*, transposition_table::TT
+    communication::handle_go,
+    debug::{perft, visualize},
+    move_generator::{masks, pinmask},
+    move_picker::MoveList,
+    move_scoring::{mvv_lva, score_quiets},
+    prelude::*,
+    transposition_table::TT,
 };
 
 pub fn handle_custom_commands(board: &mut Board, command: &str, args: &[&str]) {

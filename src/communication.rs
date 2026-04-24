@@ -1,10 +1,17 @@
 use crate::{
-    debug::custom_commands::handle_custom_commands, iterative_deepening::{self, iterative_deepening},
-    move_scoring::HISTORY_TABLE, prelude::*, time_management::calc_search_time,
-    transposition_table::TT, types::board::START_POS,
+    debug::custom_commands::handle_custom_commands,
+    iterative_deepening::{self, iterative_deepening},
+    move_scoring::HISTORY_TABLE,
+    prelude::*,
+    time_management::calc_search_time,
+    transposition_table::TT,
+    types::board::START_POS,
 };
 use std::{
-    env, io::{self, BufRead, Write}, process::exit, time::Duration
+    env,
+    io::{self, BufRead, Write},
+    process::exit,
+    time::Duration,
 };
 
 pub fn handle_communication(board: &mut Board) {

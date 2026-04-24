@@ -1,7 +1,10 @@
 use arrayvec::ArrayVec;
 
 use crate::{
-    move_generator::generator::MAX_MOVES_COUNT, move_scoring::{self, mvv_lva}, prelude::*, settings,
+    move_generator::generator::MAX_MOVES_COUNT,
+    move_scoring::{self, mvv_lva},
+    prelude::*,
+    settings,
 };
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
@@ -44,7 +47,13 @@ impl std::fmt::Debug for MoveList {
 
         writeln!(f, "MoveList {{")?;
         for (i, mv_entry) in sorted_moves.iter().enumerate() {
-            writeln!(f, "  [{}] {} (score: {})", i, mv_entry.mv.decode().to_coords(), mv_entry.score)?;
+            writeln!(
+                f,
+                "  [{}] {} (score: {})",
+                i,
+                mv_entry.mv.decode().to_coords(),
+                mv_entry.score
+            )?;
         }
         write!(f, "}}")
     }
@@ -74,11 +83,6 @@ impl MovePicker {
             skip_quiets,
         }
     }
-
-    pub fn is_yielding_quiets(&self) -> bool {
-        self.state == GenerationState::YieldQuiets
-    }
-
     pub fn next(&mut self, board: &mut Board) -> Option<EncodedMove> {
         match self.state {
             GenerationState::TTMove => {
