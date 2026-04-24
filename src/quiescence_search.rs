@@ -123,7 +123,7 @@ pub fn quiescence_search(
             return 0;
         }
         sd.board.make_move(mv);
-        let score = -quiescence_search(depth - 1, -beta, -alpha, sd, ply);
+        let score = -quiescence_search(depth - 1, -beta, -alpha, sd, ply + 1);
         sd.board.unmake_move();
 
         if score > best_score {
