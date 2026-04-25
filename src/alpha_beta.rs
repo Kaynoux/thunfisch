@@ -160,7 +160,7 @@ pub fn alpha_beta<const PV_NODE: bool>(
         } else {
             #[allow(clippy::useless_let_if_seq)]
             let mut reduction = 1;
-            if settings::LMR && moves_visited >= settings::MOVES_BEFORE_LMR && depth > 2 {
+            if settings::LMR && moves_visited >= settings::MOVES_BEFORE_LMR && depth > 3 {
                 // ensure we always reduce less than `depth`, otherwise we run into overflows and search until the end of the universe
                 reduction += LMP_REDUCTION[depth][moves_visited.clamp(0, 63)].min(depth as u32);
             }
@@ -210,8 +210,6 @@ pub fn alpha_beta<const PV_NODE: bool>(
                 break;
             }
         }
-        // TODO try whether it gains to punish ALL quiet moves (including TT and killers)
-        // instead of just the one generated
         if mv.decode().is_quiet() {
             quiets_tried.push(mv);
         }
@@ -285,7 +283,6 @@ const LMP_REDUCTION: [[u32; 64]; 64] = {
         let mut moves_visited = 1;
         while moves_visited < 64 {
             out[depth][moves_visited] = lmr_reduction(depth, moves_visited);
-            // assert!(lmr_reduction(depth, moves_visited) != 0, "we have a non-zero value");
             moves_visited += 1;
         }
         depth += 1;
@@ -299,7 +296,7 @@ const fn lmr_reduction(depth: usize, moves_visited: usize) -> u32 {
     //     false => 20 * int_ln(depth) * int_ln(moves_visited) / 335,
     //     true => 135 * int_ln(depth) * int_ln(moves_visited) / 275
     // };
-    135 * int_ln(depth) * int_ln(moves_visited) / 275
+    99 * int_ln(depth) * int_ln(moves_visited) / 260
 }
 
 #[allow(
