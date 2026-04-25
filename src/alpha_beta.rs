@@ -160,9 +160,16 @@ pub fn alpha_beta<const PV_NODE: bool>(
         } else {
             #[allow(clippy::useless_let_if_seq)]
             let mut reduction = 1;
-            if settings::LMR && moves_visited >= settings::MOVES_BEFORE_LMR {
-                reduction = LMP_REDUCTION[depth][moves_visited.clamp(0, 63)];
+            if settings::LMR && moves_visited >= settings::MOVES_BEFORE_LMR && depth > 2 {
+                // ensure we always reduce less than `depth`, otherwise we run into overflows and search until the end of the universe
+                reduction += LMP_REDUCTION[depth][moves_visited.clamp(0, 63)].min(depth as u32);
             }
+
+            debug_assert!(
+                reduction as usize <= depth,
+                "have fun at the end of the universe"
+            );
+
             eval = -alpha_beta::<false>(
                 depth - reduction as usize,
                 -alpha - 1,
@@ -267,20 +274,22 @@ pub fn alpha_beta<const PV_NODE: bool>(
     best_eval
 }
 
+// const LMP_LAZYLOCK = s
+
 // store the base LMP reductions statically
 const LMP_REDUCTION: [[u32; 64]; 64] = {
     let mut out = [[0u32; 64]; 64];
 
     let mut depth = 1;
-    let mut moves_visited = 1;
     while depth < 64 {
+        let mut moves_visited = 1;
         while moves_visited < 64 {
             out[depth][moves_visited] = lmr_reduction(depth, moves_visited);
+            // assert!(lmr_reduction(depth, moves_visited) != 0, "we have a non-zero value");
             moves_visited += 1;
         }
         depth += 1;
     }
-
     out
 };
 
@@ -300,4 +309,14 @@ const fn lmr_reduction(depth: usize, moves_visited: usize) -> u32 {
 )]
 const fn int_ln(n: usize) -> u32 {
     (1.0 / f64::consts::LOG2_E * n.ilog2() as f64) as u32
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn print_lmp_board() {
+        println!("{LMP_REDUCTION:?}");
+    }
 }
