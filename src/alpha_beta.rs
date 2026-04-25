@@ -10,7 +10,7 @@ use crate::{
     transposition_table::{Bound, TT},
 };
 
-use std::{cmp::min, sync::atomic::Ordering};
+use std::{cmp::min, f64, sync::atomic::Ordering};
 
 /// There's different approaches to this one as well. CPW suggests 150 * depth, smol.cs does 75 * depth.
 /// Generally: The smaller `rfp_margin`, the more aggressively we prune.
@@ -69,12 +69,10 @@ pub fn alpha_beta<const PV_NODE: bool>(
             sd.total_tt_hits.fetch_add(1, Ordering::Relaxed);
 
             let bound = tt_hit.bound();
-            // let depth_cond = tt_hit.depth() >= depth as i32 - 3;
 
             tt_move = tt_hit.best_move();
             tt_score = tt_hit.score();
 
-            // TODO: When using pvs add !pv_node as additionell condition
             let depth_req = depth as i32 + i32::from(tt_score >= beta);
 
             if settings::TT_CUTTOFFS
@@ -130,6 +128,7 @@ pub fn alpha_beta<const PV_NODE: bool>(
             }
         }
     }
+
     // set the best evaluation very low to begin with
     let mut best_eval = i32::MIN + 1;
     let mut best_move: Option<EncodedMove> = None;
@@ -141,10 +140,10 @@ pub fn alpha_beta<const PV_NODE: bool>(
 
     let mut quiets_tried: ArrayVec<EncodedMove, 256> = ArrayVec::new();
     let mut movepicker = MovePicker::new(tt_move, killer_mv, false);
-    let mut i = 0;
+    let mut moves_visited = 0;
 
     while let Some(mv) = movepicker.next(sd.board) {
-        i += 1;
+        moves_visited += 1;
         // cancels search if time is over
         if sd.stop.load(Ordering::Relaxed) {
             sd.timeout_occurred.store(true, Ordering::Relaxed);
@@ -152,20 +151,39 @@ pub fn alpha_beta<const PV_NODE: bool>(
         }
         sd.board.make_move(mv);
         let mut eval;
-        if i == 1 || !settings::PVS {
+        if moves_visited == 1 || !settings::PVS {
             // Principal Variation Search
             // We assume that the first move from the move ordering is the PV move;
             // Since the TT move, if existant, is in first place anyway this automatically includes information from shallower search depths
 
             eval = -alpha_beta::<true>(depth - 1, -beta, -alpha, sd, ply + 1, true);
         } else {
-            // Search non-PV moves with null window
-            eval = -alpha_beta::<false>(depth - 1, -alpha - 1, -alpha, sd, ply + 1, true);
-            // Re-search if non-PV move raised Alpha
-            // ONLY do re-searching if the current Node is on PV - we don't care for re-searching OffPV nodes
-            // (if they actually improve over the PV that variation will be searched again at the last PV node anyway)
-            if eval > alpha && PV_NODE {
-                eval = -alpha_beta::<true>(depth - 1, -beta, -alpha, sd, ply + 1, true);
+            #[allow(clippy::useless_let_if_seq)]
+            let mut reduction = 1;
+            if settings::LMR && moves_visited >= settings::MOVES_BEFORE_LMR {
+                reduction = LMP_REDUCTION[depth][moves_visited.clamp(0, 63)];
+            }
+            eval = -alpha_beta::<false>(
+                depth - reduction as usize,
+                -alpha - 1,
+                -alpha,
+                sd,
+                ply + 1,
+                true,
+            );
+
+            if eval > alpha {
+                // If our shallow-depth search raised alpha, we perform a search at full depth but still with a null window
+                // in hopes that we can avoid a full search
+                if reduction > 1 {
+                    // Search non-PV moves with null window
+                    eval = -alpha_beta::<false>(depth - 1, -alpha - 1, -alpha, sd, ply + 1, true);
+                }
+                // ONLY do full-window full-depth re-searching if the current Node is on PV - we don't care for re-searching OffPV nodes
+                // (if they actually improve over the PV that variation will be searched again at the last PV node anyway)
+                if eval > alpha && PV_NODE {
+                    eval = -alpha_beta::<true>(depth - 1, -beta, -alpha, sd, ply + 1, true);
+                }
             }
         }
 
@@ -194,7 +212,7 @@ pub fn alpha_beta<const PV_NODE: bool>(
 
     // When i still 0 than no move found
     // returns the mate score (very low) when in check but adds the ply to give a later check a better eval because the depth is lowers the further you go
-    if i == 0 {
+    if moves_visited == 0 {
         if sd.board.is_in_check() {
             #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
             return -MATE_SCORE + (ply as i32);
@@ -247,4 +265,39 @@ pub fn alpha_beta<const PV_NODE: bool>(
     );
 
     best_eval
+}
+
+// store the base LMP reductions statically
+const LMP_REDUCTION: [[u32; 64]; 64] = {
+    let mut out = [[0u32; 64]; 64];
+
+    let mut depth = 1;
+    let mut moves_visited = 1;
+    while depth < 64 {
+        while moves_visited < 64 {
+            out[depth][moves_visited] = lmr_reduction(depth, moves_visited);
+            moves_visited += 1;
+        }
+        depth += 1;
+    }
+
+    out
+};
+
+// TODO const-memoize this for O(1) lookup
+const fn lmr_reduction(depth: usize, moves_visited: usize) -> u32 {
+    // let r: u32 = match is_quiet {
+    //     false => 20 * int_ln(depth) * int_ln(moves_visited) / 335,
+    //     true => 135 * int_ln(depth) * int_ln(moves_visited) / 275
+    // };
+    135 * int_ln(depth) * int_ln(moves_visited) / 275
+}
+
+#[allow(
+    clippy::cast_sign_loss,
+    clippy::cast_precision_loss,
+    clippy::cast_possible_truncation
+)]
+const fn int_ln(n: usize) -> u32 {
+    (1.0 / f64::consts::LOG2_E * n.ilog2() as f64) as u32
 }
