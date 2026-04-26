@@ -157,11 +157,18 @@ pub fn alpha_beta<const PV_NODE: bool>(
             // Since the TT move, if existant, is in first place anyway this automatically includes information from shallower search depths
             eval = -alpha_beta::<true>(depth - 1, -beta, -alpha, sd, ply + 1, true);
         } else {
-            #[allow(clippy::useless_let_if_seq)]
             let mut reduction = 1;
             if settings::LMR && moves_visited >= settings::MOVES_BEFORE_LMR && depth > 2 {
+                reduction += LMR_REDUCTION[depth.clamp(0, 63)][moves_visited.clamp(0, 63)] >> 10;
+
+                // reduce less when in check
+                // reduce less on killers
+                // reduce less when OnPV
+                // reduce more on quiets
+                // reduce based on history score
+
                 // ensure we always reduce less than `depth`, otherwise we run into overflows and search until the end of the universe
-                reduction += LMR_REDUCTION[depth][moves_visited.clamp(0, 63)].min(depth as u32);
+                reduction = reduction.min(depth as u32);
             }
 
             debug_assert!(
@@ -179,13 +186,6 @@ pub fn alpha_beta<const PV_NODE: bool>(
             );
 
             if eval > alpha {
-                // If our shallow-depth search raised alpha, we perform a search at full depth but still with a null window
-                // in hopes that we can still avoid a full search
-                if reduction > 1 {
-                    // Search non-PV moves with null window
-                    sd.total_lmr_researches.fetch_add(1, Ordering::Relaxed);
-                    eval = -alpha_beta::<false>(depth - 1, -alpha - 1, -alpha, sd, ply + 1, true);
-                }
                 // ONLY do full-window full-depth re-searching if the current Node is on PV - we don't care for re-searching OffPV nodes
                 // (if they actually improve over the PV that variation will be searched again at the last PV node anyway)
                 if eval > alpha && PV_NODE {
@@ -294,13 +294,15 @@ const LMR_REDUCTION: [[u32; 64]; 64] = {
     out
 };
 
-// TODO const-memoize this for O(1) lookup
+/// Calculate the base reduction for LMR
+/// The output is multiplied by 1024 so that later, domain-dependant changes to the depth reduction can be applied
+/// with integer arithmetic
 const fn lmr_reduction(depth: usize, moves_visited: usize) -> u32 {
     // let r: u32 = match is_quiet {
     //     false => 20 * int_ln(depth) * int_ln(moves_visited) / 335,
     //     true => 135 * int_ln(depth) * int_ln(moves_visited) / 275
     // };
-    135 * int_ln(depth) * int_ln(moves_visited) / 275
+    (135 * int_ln(depth) * int_ln(moves_visited) / 275) << 10
 }
 
 #[allow(
