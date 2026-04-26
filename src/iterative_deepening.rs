@@ -171,8 +171,12 @@ pub fn iterative_deepening(
         #[allow(clippy::cast_precision_loss)]
         if debug {
             let iteration_tt_hits = iteration_search_data.total_tt_hits.load(Ordering::Relaxed);
-            let iteration_lmr_researches = iteration_search_data.total_lmr_researches.load(Ordering::Relaxed);
-            let iteration_pvs_researches = iteration_search_data.total_pvs_researches.load(Ordering::Relaxed);
+            let iteration_lmr_researches = iteration_search_data
+                .total_lmr_researches
+                .load(Ordering::Relaxed);
+            let iteration_pvs_researches = iteration_search_data
+                .total_pvs_researches
+                .load(Ordering::Relaxed);
             let global_duration = global_start.elapsed();
 
             let current_total_nodes = iteration_nodes as f64;

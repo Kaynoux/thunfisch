@@ -59,9 +59,6 @@ pub fn alpha_beta<const PV_NODE: bool>(
     let mut tt_move: Option<EncodedMove> = None;
     let tt_score;
 
-    // TODO: Implement Proper PVS if you want to use pv_node checks
-    //let pv_node = beta > alpha + 1; // TODO
-
     if settings::TT_AB {
         // TODO: legal detection to prevent collisions
         #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
@@ -157,11 +154,13 @@ pub fn alpha_beta<const PV_NODE: bool>(
             // Since the TT move, if existant, is in first place anyway this automatically includes information from shallower search depths
             eval = -alpha_beta::<true>(depth - 1, -beta, -alpha, sd, ply + 1, true);
         } else {
-            #[allow(clippy::useless_let_if_seq)]
             let mut reduction = 1;
+
+            #[allow(clippy::useless_let_if_seq, clippy::cast_possible_truncation)]
             if settings::LMR && moves_visited >= settings::MOVES_BEFORE_LMR && depth > 2 {
                 // ensure we always reduce less than `depth`, otherwise we run into overflows and search until the end of the universe
-                reduction += LMR_REDUCTION[depth][moves_visited.clamp(0, 63)].min(depth as u32);
+                reduction +=
+                    LMR_REDUCTION[depth.clamp(0, 63)][moves_visited.clamp(0, 63)].min(depth as u32);
             }
 
             debug_assert!(
@@ -294,10 +293,13 @@ const LMR_REDUCTION: [[u32; 64]; 64] = {
     out
 };
 
+#[allow(clippy::cast_possible_truncation, clippy::cast_sign_loss)]
 const fn lmr_reduction(depth: usize, moves_visited: usize) -> u32 {
     (1.35 + int_ln(depth) as f64 * int_ln(moves_visited) as f64 / 2.75) as u32
 }
 
+/// Method really is only there because `f64::ln` is not a const function and so cannot be called at compile time
+/// This here expresses a ln on integers using the constant log 2
 #[allow(
     clippy::cast_sign_loss,
     clippy::cast_precision_loss,

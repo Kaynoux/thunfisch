@@ -24,7 +24,6 @@ pub const RFP_MARGIN: usize = 50;
 // The better our move ordering is, the earlier we can do LMR, the more we hopefully prune
 pub const MOVES_BEFORE_LMR: usize = 4;
 
-
 #[inline]
 pub fn repr() -> String {
     format!(

@@ -140,12 +140,6 @@ const MAX_HISTORY_VALUE: i32 = i16::MAX as i32;
 /// vectors are two-dimensional arrays indexed by `[from_square][to_square]`
 pub struct HistoryTable([[AtomicI32; 64]; 64], [[AtomicI32; 64]; 64]);
 
-// impl Default for HistoryTable {
-//     fn default() -> Self {
-//         Self::new()
-//     }
-// }
-
 impl HistoryTable {
     pub fn new() -> Self {
         Self(
@@ -181,11 +175,6 @@ impl HistoryTable {
             White => self.0[fro][to].load(Ordering::Relaxed),
             Black => self.1[fro][to].load(Ordering::Relaxed),
         }
-    }
-
-    #[allow(dead_code)]
-    pub fn get_relative_history(&self, _mv: DecodedMove, _color: Color) -> i32 {
-        todo!()
     }
 
     /// Age history values between search iterations
