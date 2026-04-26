@@ -38,6 +38,8 @@ pub fn iterative_deepening(
             println!("AB Nodes: Nodes visited in standard Alpha-Beta");
             println!("QS nodes: Nodes visited in Quiescence search");
             println!("TT Hits : Times a TT entry was reused");
+            println!("LMR Res : Total Late Move Reduction re-searches");
+            println!("PVS Res : Total Principal Variation Search re-searches");
             println!("GlobTime: Total elapsed time since search started (ms)");
             println!(
                 "EBF     : Effective Branch Factor (Relative to the previous depth iteration)"
@@ -62,7 +64,7 @@ pub fn iterative_deepening(
         }
 
         println!(
-            "{:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} PV",
+            "{:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} PV",
             "Depth",
             "Seldepth",
             "Score",
@@ -73,6 +75,8 @@ pub fn iterative_deepening(
             "AB Nodes",
             "QS Nodes",
             "TT Hits",
+            "LMR Res",
+            "PVS Res",
             "GlobTime",
             "EBF",
             "AB EBF"
@@ -167,6 +171,8 @@ pub fn iterative_deepening(
         #[allow(clippy::cast_precision_loss)]
         if debug {
             let iteration_tt_hits = iteration_search_data.total_tt_hits.load(Ordering::Relaxed);
+            let iteration_lmr_researches = iteration_search_data.total_lmr_researches.load(Ordering::Relaxed);
+            let iteration_pvs_researches = iteration_search_data.total_pvs_researches.load(Ordering::Relaxed);
             let global_duration = global_start.elapsed();
 
             let current_total_nodes = iteration_nodes as f64;
@@ -186,7 +192,7 @@ pub fn iterative_deepening(
             };
 
             println!(
-                "{:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {}",
+                "{:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {:>8} {}",
                 depth,
                 seldepth,
                 best_eval_overall,
@@ -197,6 +203,8 @@ pub fn iterative_deepening(
                 format_usize(iteration_ab_nodes),
                 format_usize(iteration_qs_nodes),
                 format_usize(iteration_tt_hits),
+                format_usize(iteration_lmr_researches),
+                format_usize(iteration_pvs_researches),
                 format_usize(global_duration.as_millis() as usize),
                 format_f64(ebf),
                 format_f64(ab_ebf),

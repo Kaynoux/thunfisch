@@ -155,14 +155,13 @@ pub fn alpha_beta<const PV_NODE: bool>(
             // Principal Variation Search
             // We assume that the first move from the move ordering is the PV move;
             // Since the TT move, if existant, is in first place anyway this automatically includes information from shallower search depths
-
             eval = -alpha_beta::<true>(depth - 1, -beta, -alpha, sd, ply + 1, true);
         } else {
             #[allow(clippy::useless_let_if_seq)]
             let mut reduction = 1;
             if settings::LMR && moves_visited >= settings::MOVES_BEFORE_LMR && depth > 2 {
                 // ensure we always reduce less than `depth`, otherwise we run into overflows and search until the end of the universe
-                reduction += LMP_REDUCTION[depth][moves_visited.clamp(0, 63)].min(depth as u32);
+                reduction += LMR_REDUCTION[depth][moves_visited.clamp(0, 63)].min(depth as u32);
             }
 
             debug_assert!(
@@ -181,14 +180,16 @@ pub fn alpha_beta<const PV_NODE: bool>(
 
             if eval > alpha {
                 // If our shallow-depth search raised alpha, we perform a search at full depth but still with a null window
-                // in hopes that we can avoid a full search
+                // in hopes that we can still avoid a full search
                 if reduction > 1 {
                     // Search non-PV moves with null window
+                    sd.total_lmr_researches.fetch_add(1, Ordering::Relaxed);
                     eval = -alpha_beta::<false>(depth - 1, -alpha - 1, -alpha, sd, ply + 1, true);
                 }
                 // ONLY do full-window full-depth re-searching if the current Node is on PV - we don't care for re-searching OffPV nodes
                 // (if they actually improve over the PV that variation will be searched again at the last PV node anyway)
                 if eval > alpha && PV_NODE {
+                    sd.total_pvs_researches.fetch_add(1, Ordering::Relaxed);
                     eval = -alpha_beta::<true>(depth - 1, -beta, -alpha, sd, ply + 1, true);
                 }
             }
@@ -276,8 +277,8 @@ pub fn alpha_beta<const PV_NODE: bool>(
 
 // const LMP_LAZYLOCK = s
 
-// store the base LMP reductions statically
-const LMP_REDUCTION: [[u32; 64]; 64] = {
+// store the base LMR reductions statically
+const LMR_REDUCTION: [[u32; 64]; 64] = {
     let mut out = [[0u32; 64]; 64];
 
     let mut depth = 1;
@@ -317,6 +318,6 @@ mod tests {
 
     #[test]
     fn print_lmp_board() {
-        println!("{LMP_REDUCTION:?}");
+        println!("{LMR_REDUCTION:?}");
     }
 }
