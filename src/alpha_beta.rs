@@ -294,13 +294,8 @@ const LMR_REDUCTION: [[u32; 64]; 64] = {
     out
 };
 
-// TODO const-memoize this for O(1) lookup
 const fn lmr_reduction(depth: usize, moves_visited: usize) -> u32 {
-    // let r: u32 = match is_quiet {
-    //     false => 20 * int_ln(depth) * int_ln(moves_visited) / 335,
-    //     true => 135 * int_ln(depth) * int_ln(moves_visited) / 275
-    // };
-    135 * int_ln(depth) * int_ln(moves_visited) / 275
+    (1.35 + int_ln(depth) as f64 * int_ln(moves_visited) as f64 / 2.75) as u32
 }
 
 #[allow(
