@@ -160,9 +160,26 @@ pub fn alpha_beta<const PV_NODE: bool>(
 
             #[allow(clippy::useless_let_if_seq, clippy::cast_possible_truncation)]
             if settings::LMR && moves_visited >= settings::MOVES_BEFORE_LMR && depth > 2 {
-                // ensure we always reduce less than `depth`, otherwise we run into overflows and search until the end of the universe
                 reduction +=
-                    LMR_REDUCTION[depth.clamp(0, 63)][moves_visited.clamp(0, 63)].min(depth as u32);
+                    LMR_REDUCTION[depth.clamp(0, 63)][moves_visited.clamp(0, 63)];
+
+                // Domain-dependant heuristic recuctions
+                // For now these just increase/decrease by 1; it's probably worth tuning though
+                // reduce less if in check
+                reduction -= u32::from(sd.board.is_in_check());
+                // reduce more on quiet moves
+                // reduction += u32::from(mv.decode().is_quiet());
+                // reduce less on captures
+                reduction -= u32::from(mv.decode().mv_type.is_capture());
+                // reduce less on killer move
+                // factor 2 to counteract the reduction increase from the killer move being a quiet move
+                reduction -=  u32::from(mv == sd.killers[depth]);
+
+                // // TODO: tweak reduction if position is improving
+                // // TODO: tweak reduction based on histories (?)
+
+                // ensure we always reduce less than `depth`, otherwise we run into overflows and search until the end of the universe
+                reduction = reduction.min(depth as u32);
             }
 
             debug_assert!(
