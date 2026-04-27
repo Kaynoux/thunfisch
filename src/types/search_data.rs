@@ -14,7 +14,7 @@ pub struct SharedSearchData<'sd> {
     pub board: &'sd mut Board,
     pub stop: &'sd Arc<AtomicBool>,
     pub local_seldepth: &'sd mut usize,
-    pub killers: &'sd mut [EncodedMove; MAX_AB_DEPTH],
+    pub killers: &'sd mut [EncodedMove; MAX_AB_DEPTH + 1],
     pub ab_ply: usize,
 
     // From here these are only used for additional info collection
@@ -34,7 +34,7 @@ impl<'sd> SharedSearchData<'sd> {
         board: &'sd mut Board,
         stop: &'sd Arc<AtomicBool>,
         local_seldepth: &'sd mut usize,
-        killers: &'sd mut [EncodedMove; MAX_AB_DEPTH],
+        killers: &'sd mut [EncodedMove; MAX_AB_DEPTH + 1],
     ) -> Self {
         Self {
             board,

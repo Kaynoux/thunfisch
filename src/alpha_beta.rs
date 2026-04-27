@@ -38,6 +38,8 @@ pub fn alpha_beta<const PV_NODE: bool>(
     *sd.local_seldepth = (*sd.local_seldepth).max(ply);
     sd.total_alpha_beta_nodes.fetch_add(1, Ordering::Relaxed);
 
+    assert!(depth <= MAX_AB_DEPTH);
+
     if sd.board.is_threefold_repetition() || sd.board.is_50_move_rule() {
         return 0;
     }
@@ -315,6 +317,7 @@ mod tests {
 
     #[test]
     fn print_lmp_board() {
+        println!("{}", u32::from(false));
         println!("{LMR_REDUCTION:?}");
     }
 }

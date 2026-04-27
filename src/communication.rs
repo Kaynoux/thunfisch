@@ -9,13 +9,14 @@ use crate::{
 };
 use std::{
     env,
-    io::{self, BufRead, Write},
+    io::{self, BufRead, BufReader, Write},
     process::exit,
     time::Duration,
 };
 
 pub fn handle_communication(board: &mut Board) {
     let stdin = io::stdin();
+    let reader = BufReader::with_capacity(65536, stdin.lock());
     let mut stdout = io::stdout();
 
     let args: Vec<String> = env::args().collect();
@@ -34,7 +35,7 @@ pub fn handle_communication(board: &mut Board) {
         exit(0);
     }
 
-    for line_res in stdin.lock().lines() {
+    for line_res in reader.lines() {
         let Ok(line) = line_res else { break };
         let mut parts = line.split_whitespace();
 

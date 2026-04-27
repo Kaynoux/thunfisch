@@ -99,7 +99,7 @@ pub fn iterative_deepening(
     let global_start = Instant::now();
     let mut previouse_iteration_ab_nodes: usize = 0;
     let mut previouse_iteration_qs_nodes: usize = 0;
-    let mut killers = [EncodedMove(0); MAX_AB_DEPTH];
+    let mut killers = [EncodedMove(0); MAX_AB_DEPTH + 1];
 
     HISTORY_TABLE.age();
     for depth in 1..=max_depth {

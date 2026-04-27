@@ -19,7 +19,7 @@ run_sprt() {
         -openings file=8moves_v3.pgn format=pgn order=random \
         -concurrency 8 \
         -rounds 5000 \
-        -recover \
+        -log append=false engine=true file=sprt.log \
         -sprt elo0=0 elo1=10 alpha=0.05 beta=0.05
 }
 run_sprt $@
