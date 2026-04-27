@@ -23,20 +23,10 @@ all = [
     "rfp",
     "pvs",
     "killers",
-    "histories"
+    "histories",
+    "lmr"
 ]
-all-no-killers = [
-    "ab",
-    "qs",
-    "tt-ab",
-    "tt-qs",
-    "mvv-lva",
-    "order-tt-mv-first",
-    "tt-cuttoffs",
-    "nmp",
-    "rfp",
-    "pvs",
-]
+
 ab = []
 qs = []
 tt-ab = []
@@ -49,6 +39,7 @@ rfp = []
 pvs = []
 killers = []
 histories = []
+lmr = []
 
 [dependencies]
 rayon = "1.11.0"

@@ -14,7 +14,7 @@ pub struct SharedSearchData<'sd> {
     pub board: &'sd mut Board,
     pub stop: &'sd Arc<AtomicBool>,
     pub local_seldepth: &'sd mut usize,
-    pub killers: &'sd mut [EncodedMove; MAX_AB_DEPTH],
+    pub killers: &'sd mut [EncodedMove; MAX_AB_DEPTH + 1],
     pub ab_ply: usize,
 
     // From here these are only used for additional info collection
@@ -22,6 +22,8 @@ pub struct SharedSearchData<'sd> {
     pub total_qs_nodes: AtomicUsize,
     pub total_eval_nodes: AtomicUsize,
     pub total_tt_hits: AtomicUsize,
+    pub total_lmr_researches: AtomicUsize,
+    pub total_pvs_researches: AtomicUsize,
     // stores whether the current search got cancelled due to timeout
     // TODO find out whether this can be eliminated in favor of using only `stop`
     pub timeout_occurred: AtomicBool,
@@ -32,7 +34,7 @@ impl<'sd> SharedSearchData<'sd> {
         board: &'sd mut Board,
         stop: &'sd Arc<AtomicBool>,
         local_seldepth: &'sd mut usize,
-        killers: &'sd mut [EncodedMove; MAX_AB_DEPTH],
+        killers: &'sd mut [EncodedMove; MAX_AB_DEPTH + 1],
     ) -> Self {
         Self {
             board,
@@ -45,6 +47,8 @@ impl<'sd> SharedSearchData<'sd> {
             total_qs_nodes: AtomicUsize::new(0),
             total_eval_nodes: AtomicUsize::new(0),
             total_tt_hits: AtomicUsize::new(0),
+            total_lmr_researches: AtomicUsize::new(0),
+            total_pvs_researches: AtomicUsize::new(0),
         }
     }
 }
