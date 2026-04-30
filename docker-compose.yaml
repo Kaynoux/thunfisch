@@ -3,11 +3,9 @@
 # Linux build of this engine needs to exist in the target/release/ folder
 # More info: https://github.com/lichess-bot-devs/lichess-bot
 
-version: "3.8"
-
 services:
   lichess-bot:
-    image: lichessbotdevs/lichess-bot
+    image: lichessbotdevs/lichess-bot:latest
     container_name: thunfisch
     volumes:
       - ./config.yml:/lichess-bot/config/config.yml
