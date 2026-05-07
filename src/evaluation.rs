@@ -19,6 +19,14 @@ const GAMEPHASE_INC: [i32; 12] = [
     0, 0, KNIGHT, KNIGHT, BISHOP, BISHOP, ROOK, ROOK, QUEEN, QUEEN, 0, 0,
 ];
 
+// TODO: probably interpolation of these values between MG and EG makes sense
+// rooks on open files are a rather weak positional idea so this should be kept pretty low
+// format: [MG, EG]
+const ROOK_OPEN_FILE_BONUS: [i32; 2] = [25, 0];
+
+// a doubled pawn should be worth about half a regular pawn
+const DOUBLED_PAWN_PENALTIES: i32 = 45;
+
 // Flips square index to flip rows but keep columns the same
 // e.g. a1 becomes a8; e4 -> e5
 const fn flip(sq: usize) -> usize {
@@ -146,12 +154,18 @@ impl Board {
         let black = 1usize;
         let mut mg = [0i32; 2];
         let mut eg = [0i32; 2];
+        let open_files = self.open_files();
 
         let mut phase = TOTAL;
         for i in 0..=11 {
             let mut bb = self.figure_bb_by_index(i);
             // println!("figure: {:?}", Figure::from_idx(i));
             for bit in bb.iter_mut() {
+                // rooks on open files
+                if (i == 6 || i == 7) && open_files.is_position_set(bit) {
+                    mg[i & 1] += ROOK_OPEN_FILE_BONUS[0];
+                    eg[i & 1] += ROOK_OPEN_FILE_BONUS[1];
+                }
                 let square = bit.to_square();
                 mg[i & 1] += MG_TABLE[i][square];
                 eg[i & 1] += EG_TABLE[i][square];
@@ -173,5 +187,22 @@ impl Board {
         };
 
         ((mg_score * (256 - gamephase) + eg_score * gamephase) >> 8) * current_color_multiplier
+    }
+
+    pub fn doubled_pawns() -> i32 {
+        todo!()
+    }
+
+    pub fn open_files(&self) -> Bitboard {
+        let pawn_structure =
+            self.figure_bb(Color::White, Piece::Pawn) | self.figure_bb(Color::Black, Piece::Pawn);
+        let mut open_files = Bitboard::EMPTY;
+        for i in 0..=7 {
+            let file = Bitboard::file(i);
+            if (file & pawn_structure).is_empty() {
+                open_files += file;
+            }
+        }
+        open_files
     }
 }

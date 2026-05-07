@@ -77,6 +77,9 @@ pub fn handle_custom_commands(board: &mut Board, command: &str, args: &[&str]) {
         "occupied" => {
             println!("{:?}", board.occupied());
         }
+        "files" => {
+            println!("{:?}", board.open_files());
+        }
         "hash" => {
             println!("{:?}", board.hash());
         }
