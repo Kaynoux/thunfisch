@@ -25,6 +25,8 @@ jobs:
       - name: Prepare worktree for base branch
         working-directory: pr
         run: |
+          if [ -d "../base" ]; then rm -rf ../base; fi
+          git worktree prune
           git worktree add -f ../base origin/${{ github.base_ref }}
           git worktree list
 
