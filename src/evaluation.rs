@@ -15,24 +15,22 @@ const MG_TABLE: [[i32; 64]; 12] = init_table(&MG_PIECE_VALUES, &MG_BASE_POSITION
 const EG_TABLE: [[i32; 64]; 12] = init_table(&EG_PIECE_VALUES, &EG_BASE_POSITION_TABLE);
 // how impactful to the game phase a figure is if it's still on the board
 // for example: A game is 'more' endgame if there are no more queens on the board
-const GAMEPHASE_INC: [i32; 12] = [
+pub const GAMEPHASE_INC: [i32; 12] = [
     0, 0, KNIGHT, KNIGHT, BISHOP, BISHOP, ROOK, ROOK, QUEEN, QUEEN, 0, 0,
 ];
 
-// TODO: probably interpolation of these values between MG and EG makes sense
 // rooks on open files are a rather weak positional idea so this should be kept pretty low
 // Additionally, Endgames typically have a lot of open files, so there's no benefit to occupying one (hence 0 EG score)
 // format: [MG, EG]
 const ROOK_OPEN_FILE_BONUS: [i32; 2] = [25, 0];
 
+// TODO: probably interpolation of these values between MG and EG makes sense
 // a doubled pawn should be worth about half a pawn
 // For now we just linearly scale this; may be worth tho looking at punishing tripled pawns harder than doubled pawns
-const DOUBLED_PAWN_PENALTY: i32 = 20;
+const DOUBLED_PAWN_PENALTY: i32 = -20;
 
-// these are derived by Sebastian Lague
-// TODO: he said "these are pulled from thin air" so... needs texel tuning haha
-const PASSED_PAWN_BONUS: [i16; 8] = [0, 15, 15, 25, 40, 60, 80, 0];
-// const ISOLATED_PAWN_PENALTY: [i32; 8]
+// isolated pawn pu
+const ISOLATED_PAWN_PENALTY: i16 = 15;
 
 // format: [MG, EG]
 // PASSED_PAWN_BONUS: [i32; 2] =
@@ -70,6 +68,33 @@ const fn init_table(
     }
     table
 }
+
+/// Values here are vaguely inspired in their Shape by Fatalii
+/// However I've changed them to only give bonusses and never subtract from the eval
+/// let's see how this does haha
+#[rustfmt::skip]
+pub const MG_PASSED_PAWN_TABLE: [i16; 64] = [
+         0,    0,    0,    0,    0,    0,    0,    0,
+         0,    0,    0,    0,    0,    0,    0,    0,
+        15,   20,   20,   10,   10,   20,   20,   15,
+        10,   15,   15,    5,    5,   15,   15,   10,
+        10,   15,   15,    5,    5,   15,   15,   10,
+        15,   20,   20,   10,   10,   20,   20,   15,
+        15,   20,   20,   10,   10,   20,   20,   15,
+         0,    0,    0,    0,    0,    0,    0,    0,
+];
+
+#[rustfmt::skip]
+pub const EG_PASSED_PAWN_TABLE: [i16; 64] = [
+         0,    0,    0,    0,    0,    0,    0,    0,
+         0,    0,    0,    0,    0,    0,    0,    0,
+        90,   85,   80,   70,   70,   80,   85,   90,
+        65,   60,   55,   45,   45,   55,   60,   65,
+        40,   35,   30,   20,   20,   30,   35,   40,
+        30,   25,   20,   10,   10,   20,   25,   30,
+        25,   20,   15,    5,    5,   15,   20,   25,
+         0,    0,    0,    0,    0,    0,    0,    0,
+];
 
 /// Middlegame-Piece-Square Tables Base Values used for calculation of the real eval values
 pub const MG_BASE_POSITION_TABLE: [[i32; 64]; 6] = [
@@ -194,8 +219,13 @@ impl Board {
         // (0 = starting position, 256 = only pawns and kings)
         let gamephase = (phase * 256 + (TOTAL / 2)) / TOTAL;
 
-        let mg_score = mg[white] - mg[black];
-        let eg_score = eg[white] - eg[black];
+        let mut mg_score = mg[white] - mg[black];
+        let mut eg_score = eg[white] - eg[black];
+
+        let (mg_pawn_structure, eg_pawn_structure) = self.pawn_structure();
+        mg_score += i32::from(mg_pawn_structure[white] - mg_pawn_structure[black]);
+        eg_score += i32::from(eg_pawn_structure[white] - eg_pawn_structure[black]);
+
 
         let current_color_multiplier = match self.current_color() {
             White => 1,
@@ -207,51 +237,68 @@ impl Board {
 
         if settings::DOUBLED_PAWNS {
             let doubled_pawns = self.doubled_pawn_penalties();
-            score -= doubled_pawns[white] - doubled_pawns[black];
+            score += doubled_pawns[white] - doubled_pawns[black];
         }
 
-        if settings::PASSED_PAWNS {
-            score += i32::from(self.pawn_structure());
-        }
+        // score += i32::from(self.pawn_structure());
 
         score * current_color_multiplier
     }
 
-    pub fn pawn_structure(&self) -> i16 {
-        // from white's perspective
-        let mut pawn_bonus = 0;
+    pub fn pawn_structure(&self) -> ([i16; 2], [i16; 2]) {
+        // [white, black]
+        let mut mg_pawn_bonus = [0i16; 2];
+        let mut eg_pawn_bonus = [0i16; 2];
 
-        // white pawns -> add
-        for pawn in self.figure_bb_by_index(0).iter_mut() {
-            println!("{}: {}", pawn.to_coords(), self.passed_pawn_bonus(pawn, Color::White));
-            pawn_bonus += self.passed_pawn_bonus(pawn, Color::White);
+        for i in 0..=1 {
+            for pawn in self.figure_bb_by_index(i).iter_mut() {
+                if settings::PASSED_PAWNS {
+                    let passed_pawn_bonusses = self.passed_pawn_bonusses(pawn, Color::from_usize(i));
+                    mg_pawn_bonus[i] += passed_pawn_bonusses[0];
+                    eg_pawn_bonus[i] += passed_pawn_bonusses[1];
+                }
+            }
         }
 
-        // black pawns -> subtract
-        for pawn in self.figure_bb_by_index(1).iter_mut() {
-            println!("{}: -{}", pawn.to_coords(), self.passed_pawn_bonus(pawn, Color::Black));
-            pawn_bonus -= self.passed_pawn_bonus(pawn, Color::Black);
-        }
-
-        pawn_bonus
+        (mg_pawn_bonus, eg_pawn_bonus)
     }
 
-    fn passed_pawn_bonus(&self, pawn: Bit, friendly: Color) -> i16 {
+    /// Returns the passed pawn bonusses for `pawn`.
+    /// Format: `[MG, EG]`.
+    /// If the pawn is not passed, returns `[0, 0]`
+    fn passed_pawn_bonusses(&self, pawn: Bit, friendly: Color) -> [i16; 2] {
         let opponent_pawns = self.figure_bb(!friendly, Piece::Pawn);
         let scan_mask = Bitboard::passed_pawn_mask(pawn, friendly);
+        let is_passed = i16::from((scan_mask & opponent_pawns).is_empty());
 
-        let idx = match friendly {
-            White => pawn.to_y(),
-            Black => 7 - pawn.to_y(),
+        let idx: usize = match friendly {
+            White => flip(pawn.to_square().0),
+            Black => pawn.to_square().0,
         };
 
-        i16::from((scan_mask & opponent_pawns).is_empty()) * PASSED_PAWN_BONUS[idx]
+        [
+            is_passed * MG_PASSED_PAWN_TABLE[idx],
+            is_passed * EG_PASSED_PAWN_TABLE[idx],
+        ]
+    }
+
+    /// Return the isolated pawn penalty score for `pawn`.
+    /// The penalty is returned as a positive value and should be subtracted for proper evaluation.
+    /// If the pawn is not isolated, returns 0.
+    fn isolated_pawn_penalty(&self, pawn: Bit, friendly: Color) -> i16 {
+        let friendly_pawns = self.figure_bb(friendly, Piece::Pawn);
+        let x = pawn.to_x() as i16;
+
+        let relevant_files =
+            Bitboard::file(x) | Bitboard::file((x - 1).max(0)) | Bitboard::file((x + 1).min(7));
+
+        i16::from((relevant_files & friendly_pawns).is_empty()) * ISOLATED_PAWN_PENALTY
     }
 
     /// Calculate the penalties for doubled pawns for both white and black
     /// returns: 2-element array: `[white_penalty, black_penalty]`
     ///
-    /// Note: penalties are positive for both sides
+    /// Note: penalties are negative for both sides
     /// TODO: this can probably be improved by weighing it against the remaining pawns (the less pawns are on the board, the worse it is if they're doubled)
     #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
     pub fn doubled_pawn_penalties(&self) -> [i32; 2] {
@@ -275,8 +322,6 @@ impl Board {
 
         penalties
     }
-
-    // pub fn passed_pawn_bonus(&self) -> [i32]
 
     /// Calculate a bitboard marking open files (files without any pawns on them)
     pub fn open_files(&self) -> Bitboard {
