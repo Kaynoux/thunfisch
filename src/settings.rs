@@ -11,6 +11,9 @@ pub const PVS: bool = cfg!(feature = "pvs");
 pub const KILLERS: bool = cfg!(feature = "killers");
 pub const HISTORIES: bool = cfg!(feature = "histories");
 pub const LMR: bool = cfg!(feature = "lmr");
+pub const ROOKS_OPEN_FILES: bool = true;
+pub const DOUBLED_PAWNS: bool = true;
+pub const PASSED_PAWNS: bool = false;
 
 // These can be tweaked, have an effect on elo
 pub const QS_CHECK_EVASION_LIMIT: usize = 2;

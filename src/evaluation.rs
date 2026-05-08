@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{prelude::*, settings};
 
 pub const MATE_SCORE: i32 = 30_000;
 
@@ -21,11 +21,21 @@ const GAMEPHASE_INC: [i32; 12] = [
 
 // TODO: probably interpolation of these values between MG and EG makes sense
 // rooks on open files are a rather weak positional idea so this should be kept pretty low
+// Additionally, Endgames typically have a lot of open files, so there's no benefit to occupying one (hence 0 EG score)
 // format: [MG, EG]
 const ROOK_OPEN_FILE_BONUS: [i32; 2] = [25, 0];
 
-// a doubled pawn should be worth about half a regular pawn
-const DOUBLED_PAWN_PENALTIES: i32 = 45;
+// a doubled pawn should be worth about half a pawn
+// For now we just linearly scale this; may be worth tho looking at punishing tripled pawns harder than doubled pawns
+const DOUBLED_PAWN_PENALTY: i32 = 20;
+
+// these are derived by Sebastian Lague
+// TODO: he said "these are pulled from thin air" so... needs texel tuning haha
+const PASSED_PAWN_BONUS: [i16; 8] = [0, 15, 15, 25, 40, 60, 80, 0];
+// const ISOLATED_PAWN_PENALTY: [i32; 8]
+
+// format: [MG, EG]
+// PASSED_PAWN_BONUS: [i32; 2] =
 
 // Flips square index to flip rows but keep columns the same
 // e.g. a1 becomes a8; e4 -> e5
@@ -145,8 +155,13 @@ pub const EG_BASE_POSITION_TABLE: [[i32; 64]; 6] = [
 ];
 
 /// Evaluates the board
-/// positive -> advantage for white,
-/// negative -> advantage for black,
+/// Uses Piece-Square Tables a base, and augments values of individual pieces as fitting.
+/// Concepts that aren't specific to a certain piece (e.g. doubled pawns) are evaluated seperately and added to the augmented PSQT score.
+/// Throughout the function, scores are to be interpreted as follows:
+/// - positive -> advantage for white,
+/// - negative -> advantage for black,
+///
+/// !! Return type is relativized for the current player for negamax search
 /// Unit = Centipawns, 100 Centipawns => 1 Pawn
 impl Board {
     pub fn evaluate(&self) -> i32 {
@@ -159,17 +174,18 @@ impl Board {
         let mut phase = TOTAL;
         for i in 0..=11 {
             let mut bb = self.figure_bb_by_index(i);
-            // println!("figure: {:?}", Figure::from_idx(i));
             for bit in bb.iter_mut() {
                 // rooks on open files
-                if (i == 6 || i == 7) && open_files.is_position_set(bit) {
+                if settings::ROOKS_OPEN_FILES
+                    && (i == 6 || i == 7)
+                    && open_files.is_position_set(bit)
+                {
                     mg[i & 1] += ROOK_OPEN_FILE_BONUS[0];
                     eg[i & 1] += ROOK_OPEN_FILE_BONUS[1];
                 }
                 let square = bit.to_square();
                 mg[i & 1] += MG_TABLE[i][square];
                 eg[i & 1] += EG_TABLE[i][square];
-                // println!("blended: {}", (MG_TABLE[i][square] * (256 - 224) + EG_TABLE[i][square] * 224 >> 8));
                 phase -= GAMEPHASE_INC[i];
             }
         }
@@ -186,13 +202,83 @@ impl Board {
             Black => -1,
         };
 
-        ((mg_score * (256 - gamephase) + eg_score * gamephase) >> 8) * current_color_multiplier
+        // Final aggregation of scoring aspects
+        let mut score = (mg_score * (256 - gamephase) + eg_score * gamephase) >> 8;
+
+        if settings::DOUBLED_PAWNS {
+            let doubled_pawns = self.doubled_pawn_penalties();
+            score -= doubled_pawns[white] - doubled_pawns[black];
+        }
+
+        if settings::PASSED_PAWNS {
+            score += i32::from(self.pawn_structure());
+        }
+
+        score * current_color_multiplier
     }
 
-    pub fn doubled_pawns() -> i32 {
-        todo!()
+    pub fn pawn_structure(&self) -> i16 {
+        // from white's perspective
+        let mut pawn_bonus = 0;
+
+        // white pawns -> add
+        for pawn in self.figure_bb_by_index(0).iter_mut() {
+            println!("{}: {}", pawn.to_coords(), self.passed_pawn_bonus(pawn, Color::White));
+            pawn_bonus += self.passed_pawn_bonus(pawn, Color::White);
+        }
+
+        // black pawns -> subtract
+        for pawn in self.figure_bb_by_index(1).iter_mut() {
+            println!("{}: -{}", pawn.to_coords(), self.passed_pawn_bonus(pawn, Color::Black));
+            pawn_bonus -= self.passed_pawn_bonus(pawn, Color::Black);
+        }
+
+        pawn_bonus
     }
 
+    fn passed_pawn_bonus(&self, pawn: Bit, friendly: Color) -> i16 {
+        let opponent_pawns = self.figure_bb(!friendly, Piece::Pawn);
+        let scan_mask = Bitboard::passed_pawn_mask(pawn, friendly);
+
+        let idx = match friendly {
+            White => pawn.to_y(),
+            Black => 7 - pawn.to_y(),
+        };
+
+        i16::from((scan_mask & opponent_pawns).is_empty()) * PASSED_PAWN_BONUS[idx]
+    }
+
+    /// Calculate the penalties for doubled pawns for both white and black
+    /// returns: 2-element array: `[white_penalty, black_penalty]`
+    ///
+    /// Note: penalties are positive for both sides
+    /// TODO: this can probably be improved by weighing it against the remaining pawns (the less pawns are on the board, the worse it is if they're doubled)
+    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+    pub fn doubled_pawn_penalties(&self) -> [i32; 2] {
+        let white_pawns = self.figure_bb_by_index(0);
+        let black_pawns = self.figure_bb_by_index(1);
+        // [white, black]
+        let mut penalties: [i32; 2] = [0i32; 2];
+        for i in 0..=7 {
+            let file = Bitboard::file(i);
+            let file_pawns = [(file & white_pawns).0, (file & black_pawns).0];
+            // x & (x - 1) flips the lowest set bit -> essentially "removing" one pawn from the file
+            // we explicitly allow overflows to deal with the case where there's 0 pawns
+            let file_pawns = [
+                (file_pawns[0] & file_pawns[0].wrapping_sub(1)).count_ones() as i32,
+                (file_pawns[1] & file_pawns[1].wrapping_sub(1)).count_ones() as i32,
+            ];
+
+            penalties[0] += file_pawns[0] * DOUBLED_PAWN_PENALTY;
+            penalties[1] += file_pawns[1] * DOUBLED_PAWN_PENALTY;
+        }
+
+        penalties
+    }
+
+    // pub fn passed_pawn_bonus(&self) -> [i32]
+
+    /// Calculate a bitboard marking open files (files without any pawns on them)
     pub fn open_files(&self) -> Bitboard {
         let pawn_structure =
             self.figure_bb(Color::White, Piece::Pawn) | self.figure_bb(Color::Black, Piece::Pawn);

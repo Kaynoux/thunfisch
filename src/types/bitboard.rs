@@ -9,6 +9,27 @@ use std::{
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Bitboard(pub u64);
 
+impl<T> std::ops::Shl<T> for Bitboard
+where
+    u64: std::ops::Shl<T, Output = u64>,
+{
+    type Output = Self;
+
+    fn shl(self, rhs: T) -> Self::Output {
+        Self(self.0 << rhs)
+    }
+}
+impl<T> std::ops::Shr<T> for Bitboard
+where
+    u64: std::ops::Shr<T, Output = u64>,
+{
+    type Output = Self;
+
+    fn shr(self, rhs: T) -> Self::Output {
+        Self(self.0 >> rhs)
+    }
+}
+
 impl std::ops::AddAssign for Bitboard {
     fn add_assign(&mut self, rhs: Self) {
         self.0 += rhs.0;
@@ -69,6 +90,22 @@ impl Bitboard {
     }
 
     #[inline]
+    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+    pub fn passed_pawn_mask(bit: Bit, color: Color) -> Self {
+        let (x, y) = (bit.to_x() as i16, bit.to_y() as u16);
+
+        let relevant_files =
+            Self::file(x) | Self::file((x - 1).max(0)) | Self::file((x + 1).min(7));
+
+        // Note: & 63 ensures we don't exceed the maximum bit shift; allowing compiler optimizations
+        match color {
+            White => relevant_files << (((y + 1) * 8) & 63),
+            Black => relevant_files >> ((8u16.saturating_sub(y) * 8) & 63),
+        }
+
+    }
+
+    #[inline]
     pub fn pop_lsb_position(&mut self) -> Option<Bit> {
         if *self == Self(0) {
             None
@@ -103,10 +140,6 @@ impl Bitboard {
 
     pub const fn is_empty(self) -> bool {
         self.0 == 0
-    }
-
-    pub const fn count(self) -> usize {
-        self.0.count_ones() as usize
     }
 }
 

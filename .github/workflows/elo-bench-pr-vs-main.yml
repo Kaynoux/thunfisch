@@ -1,7 +1,7 @@
 name: ELO Benchmark between PR and base branch
 on:
   pull_request:
-    types: [opened, reopened, labeled]
+    types: [opened, reopened, labeled, synchronize]
   workflow_dispatch:
 
 jobs:
@@ -131,7 +131,11 @@ jobs:
 
       - name: Extract benchmark summary
         if: github.event_name == 'pull_request'
-        run: tail -n 10 benchmark_summary.txt > benchmark_for_comment.txt
+        run: |
+          tac benchmark_summary.txt | awk '/^---+/{count++} {print} count==2{exit}' | tac > raw_summary.txt
+          echo '```text' > benchmark_for_comment.txt
+          cat raw_summary.txt >> benchmark_for_comment.txt
+          echo '```' >> benchmark_for_comment.txt
 
       - name: Post Benchmark Results to PR
         if: github.event_name == 'pull_request'

@@ -35,7 +35,18 @@ pub fn handle_custom_commands(board: &mut Board, command: &str, args: &[&str]) {
             println!("Quiets: {quiets:?}");
             println!("Captures: {captures:?}");
         }
-        "eval" => println!("Depth 0 Board Evaluation: {}", board.evaluate()),
+        "eval" => {
+            println!("Depth 0 Board Evaluation: {}\n", board.evaluate());
+            let doubled_pawns = board.doubled_pawn_penalties();
+            println!(
+                "Doubled Pawn offset: -({} - {}) = {}",
+                doubled_pawns[0],
+                doubled_pawns[1],
+                -(doubled_pawns[0] - doubled_pawns[1])
+            );
+
+            println!("Passed Pawn eval: {}", board.pawn_structure());
+        }
         "do" => {
             let mv_str: &str = args[0];
             let mv = DecodedMove::from_coords(mv_str, board);
@@ -77,8 +88,20 @@ pub fn handle_custom_commands(board: &mut Board, command: &str, args: &[&str]) {
         "occupied" => {
             println!("{:?}", board.occupied());
         }
-        "files" => {
+        "openfiles" => {
             println!("{:?}", board.open_files());
+        }
+        "passedmask" => {
+            let square_str: &str = args[0];
+            let color_str: &str = args[1];
+            let bit = Bit::from_coords(square_str).unwrap();
+            let color = match color_str {
+                "white" | "w" => Color::White,
+                "black" | "b" => Color::Black,
+                _ => panic!("illegal color")
+            };
+            let passed_pawn_mask = Bitboard::passed_pawn_mask(bit, color);
+            println!("{passed_pawn_mask:?}");
         }
         "hash" => {
             println!("{:?}", board.hash());
