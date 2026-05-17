@@ -15,6 +15,7 @@ pub const ROOKS_OPEN_FILES: bool = true;
 pub const DOUBLED_PAWNS: bool = false;
 pub const PASSED_PAWNS: bool = true;
 pub const ISOLATED_PAWNS: bool = false;
+pub const KINGS_OPEN_FILES: bool = false;
 
 // These can be tweaked, have an effect on elo
 pub const QS_CHECK_EVASION_LIMIT: usize = 2;

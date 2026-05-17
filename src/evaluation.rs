@@ -23,17 +23,14 @@ pub const GAMEPHASE_INC: [i32; 12] = [
 // Additionally, Endgames typically have a lot of open files, so there's no benefit to occupying one (hence 0 EG score)
 // format: [MG, EG]
 const ROOK_OPEN_FILE_BONUS: [i32; 2] = [25, 0];
+const KING_OPEN_FILE_PENALTY: [i32; 2] = [-25, 0];
 
 // TODO: probably interpolation of these values between MG and EG makes sense
 // a doubled pawn should be worth about half a pawn
 // For now we just linearly scale this; may be worth tho looking at punishing tripled pawns harder than doubled pawns
-const DOUBLED_PAWN_PENALTY: i32 = -20;
+const DOUBLED_PAWN_PENALTY: i32 = -10;
 
-// isolated pawn pu
-const ISOLATED_PAWN_PENALTY: i16 = 15;
-
-// format: [MG, EG]
-// PASSED_PAWN_BONUS: [i32; 2] =
+const ISOLATED_PAWN_PENALTY: [i16; 2] = [-23, -13];
 
 // Flips square index to flip rows but keep columns the same
 // e.g. a1 becomes a8; e4 -> e5
@@ -200,14 +197,18 @@ impl Board {
         for i in 0..=11 {
             let mut bb = self.figure_bb_by_index(i);
             for bit in bb.iter_mut() {
-                // rooks on open files
-                if settings::ROOKS_OPEN_FILES
-                    && (i == 6 || i == 7)
-                    && open_files.is_position_set(bit)
-                {
-                    mg[i & 1] += ROOK_OPEN_FILE_BONUS[0];
-                    eg[i & 1] += ROOK_OPEN_FILE_BONUS[1];
+                if open_files.is_position_set(bit) {
+                    // rooks on open files
+                    if settings::ROOKS_OPEN_FILES && (i == 6 || i == 7) {
+                        mg[i & 1] += ROOK_OPEN_FILE_BONUS[0];
+                        eg[i & 1] += ROOK_OPEN_FILE_BONUS[1];
+                    }
+                    if settings::KINGS_OPEN_FILES && (i == 10 && i == 11) {
+                        mg[i & 1] += KING_OPEN_FILE_PENALTY[0];
+                        eg[i & 1] += KING_OPEN_FILE_PENALTY[1];
+                    }
                 }
+
                 let square = bit.to_square();
                 mg[i & 1] += MG_TABLE[i][square];
                 eg[i & 1] += EG_TABLE[i][square];
@@ -225,7 +226,6 @@ impl Board {
         let (mg_pawn_structure, eg_pawn_structure) = self.pawn_structure();
         mg_score += i32::from(mg_pawn_structure[white] - mg_pawn_structure[black]);
         eg_score += i32::from(eg_pawn_structure[white] - eg_pawn_structure[black]);
-
 
         let current_color_multiplier = match self.current_color() {
             White => 1,
@@ -247,26 +247,49 @@ impl Board {
 
     pub fn pawn_structure(&self) -> ([i16; 2], [i16; 2]) {
         // [white, black]
-        let mut mg_pawn_bonus = [0i16; 2];
-        let mut eg_pawn_bonus = [0i16; 2];
+        let mut mg_pawn_offset = [0i16; 2];
+        let mut eg_pawn_offset = [0i16; 2];
 
         for i in 0..=1 {
+            let color = Color::from_usize(i);
             for pawn in self.figure_bb_by_index(i).iter_mut() {
                 if settings::PASSED_PAWNS {
-                    let passed_pawn_bonusses = self.passed_pawn_bonusses(pawn, Color::from_usize(i));
-                    mg_pawn_bonus[i] += passed_pawn_bonusses[0];
-                    eg_pawn_bonus[i] += passed_pawn_bonusses[1];
+                    let bonus = self.passed_pawn_bonus(pawn, color);
+                    mg_pawn_offset[i] += bonus[0];
+                    eg_pawn_offset[i] += bonus[1];
+                }
+                if settings::ISOLATED_PAWNS {
+                    let penalty = self.isolated_pawn_penalty(pawn, color);
+                    mg_pawn_offset[i] += penalty[0];
+                    eg_pawn_offset[i] += penalty[1];
                 }
             }
         }
 
-        (mg_pawn_bonus, eg_pawn_bonus)
+        (mg_pawn_offset, eg_pawn_offset)
+    }
+
+    /// Format: `[MG, EG]`
+    /// Note: Penalties are negative, i.e. should be added
+    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+    fn isolated_pawn_penalty(&self, pawn: Bit, friendly: Color) -> [i16; 2] {
+        let friendly_pawns = self.figure_bb(friendly, Piece::Pawn);
+        let x = pawn.to_x() as i16;
+        // we only look at the neighbouring files
+        // double isolated pawns are still isolated, in fact an even worse liability than a singular isolated pawn
+        let scan_mask = Bitboard::file((x - 1).max(0)) | Bitboard::file((x + 1).min(7));
+        let is_isolated = i16::from((scan_mask & friendly_pawns).is_empty());
+
+        [
+            ISOLATED_PAWN_PENALTY[0] * is_isolated,
+            ISOLATED_PAWN_PENALTY[1] * is_isolated,
+        ]
     }
 
     /// Returns the passed pawn bonusses for `pawn`.
     /// Format: `[MG, EG]`.
     /// If the pawn is not passed, returns `[0, 0]`
-    fn passed_pawn_bonusses(&self, pawn: Bit, friendly: Color) -> [i16; 2] {
+    fn passed_pawn_bonus(&self, pawn: Bit, friendly: Color) -> [i16; 2] {
         let opponent_pawns = self.figure_bb(!friendly, Piece::Pawn);
         let scan_mask = Bitboard::passed_pawn_mask(pawn, friendly);
         let is_passed = i16::from((scan_mask & opponent_pawns).is_empty());
@@ -280,19 +303,6 @@ impl Board {
             is_passed * MG_PASSED_PAWN_TABLE[idx],
             is_passed * EG_PASSED_PAWN_TABLE[idx],
         ]
-    }
-
-    /// Return the isolated pawn penalty score for `pawn`.
-    /// The penalty is returned as a positive value and should be subtracted for proper evaluation.
-    /// If the pawn is not isolated, returns 0.
-    fn isolated_pawn_penalty(&self, pawn: Bit, friendly: Color) -> i16 {
-        let friendly_pawns = self.figure_bb(friendly, Piece::Pawn);
-        let x = pawn.to_x() as i16;
-
-        let relevant_files =
-            Bitboard::file(x) | Bitboard::file((x - 1).max(0)) | Bitboard::file((x + 1).min(7));
-
-        i16::from((relevant_files & friendly_pawns).is_empty()) * ISOLATED_PAWN_PENALTY
     }
 
     /// Calculate the penalties for doubled pawns for both white and black
