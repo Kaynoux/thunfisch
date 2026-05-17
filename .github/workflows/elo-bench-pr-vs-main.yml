@@ -25,6 +25,8 @@ jobs:
       - name: Prepare worktree for base branch
         working-directory: pr
         run: |
+          if [ -d "../base" ]; then rm -rf ../base; fi
+          git worktree prune
           git worktree add -f ../base origin/${{ github.base_ref }}
           git worktree list
 
@@ -132,7 +134,7 @@ jobs:
       - name: Extract benchmark summary
         if: github.event_name == 'pull_request'
         run: |
-          tac benchmark_summary.txt | awk '/^---+/{count++} {print} count==2{exit}' | tac > raw_summary.txt
+          awk '/^---+/{a=b; b=NR} {lines[NR]=$0} END{start = (a ? a : 1); for(i=start; i<=NR; i++) print lines[i]}' benchmark_summary.txt > raw_summary.txt
           echo '```text' > benchmark_for_comment.txt
           cat raw_summary.txt >> benchmark_for_comment.txt
           echo '```' >> benchmark_for_comment.txt

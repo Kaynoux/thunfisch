@@ -1,11 +1,5 @@
 use crate::{
-    communication::handle_go,
-    debug::{perft, visualize},
-    move_generator::{masks, pinmask},
-    move_picker::MoveList,
-    move_scoring::{mvv_lva, score_quiets},
-    prelude::*,
-    transposition_table::TT,
+    communication::handle_go, debug::{perft, visualize}, evaluation::GAMEPHASE_INC, move_generator::{masks, pinmask}, move_picker::MoveList, move_scoring::{mvv_lva, score_quiets}, prelude::*, transposition_table::TT
 };
 
 pub fn handle_custom_commands(board: &mut Board, command: &str, args: &[&str]) {
@@ -39,13 +33,31 @@ pub fn handle_custom_commands(board: &mut Board, command: &str, args: &[&str]) {
             println!("Depth 0 Board Evaluation: {}\n", board.evaluate());
             let doubled_pawns = board.doubled_pawn_penalties();
             println!(
-                "Doubled Pawn offset: -({} - {}) = {}",
+                "Doubled Pawn offset: {} - {} = {}",
                 doubled_pawns[0],
                 doubled_pawns[1],
-                -(doubled_pawns[0] - doubled_pawns[1])
+                doubled_pawns[0] - doubled_pawns[1]
             );
 
-            println!("Passed Pawn eval: {}", board.pawn_structure());
+            let (mg_pawn, eg_pawn) = board.pawn_structure();
+
+            let mut phase = 32;
+            #[allow(clippy::needless_range_loop, clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+            for i in 0..=11 {
+                let mut bb = board.figure_bb_by_index(i);
+                let count = bb.iter_mut().count() as i32;
+                phase -= count * GAMEPHASE_INC[i];
+            }
+            let gamephase = (phase * 256 + 16) / 32;
+
+            let white_blended = (i32::from(mg_pawn[0]) * (256 - gamephase) + i32::from(eg_pawn[0]) * gamephase) >> 8;
+            let black_blended = (i32::from(mg_pawn[1]) * (256 - gamephase) + i32::from(eg_pawn[1]) * gamephase) >> 8;
+
+            println!(
+                "Passed Pawn eval:\n  White: MG {}, EG {} -> Blended: {}\n  Black: MG {}, EG {} -> Blended: {}",
+                mg_pawn[0], eg_pawn[0], white_blended,
+                mg_pawn[1], eg_pawn[1], black_blended
+            );
         }
         "do" => {
             let mv_str: &str = args[0];
