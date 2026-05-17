@@ -12,7 +12,7 @@ pub const KILLERS: bool = cfg!(feature = "killers");
 pub const HISTORIES: bool = cfg!(feature = "histories");
 pub const LMR: bool = cfg!(feature = "lmr");
 pub const ROOKS_OPEN_FILES: bool = true;
-pub const DOUBLED_PAWNS: bool = true;
+pub const DOUBLED_PAWNS: bool = false;
 pub const PASSED_PAWNS: bool = true;
 pub const ISOLATED_PAWNS: bool = false;
 
