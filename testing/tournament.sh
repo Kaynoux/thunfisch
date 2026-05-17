@@ -1,8 +1,31 @@
 #!/bin/bash
 # Tournament script for comparing multiple engine versions with fastchess
 
-# Get the tournament directory from argument or use default
-TOURNAMENT_DIR="${1:-./ tournament}"
+# Parse arguments
+TOURNAMENT_DIR="./tournament"
+RUN_IN_BACKGROUND=false
+
+# Parse flags and directory
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --background)
+            RUN_IN_BACKGROUND=true
+            shift
+            ;;
+        --)
+            shift
+            break
+            ;;
+        -*)
+            echo "Error: Unknown flag: $1"
+            exit 1
+            ;;
+        *)
+            TOURNAMENT_DIR="$1"
+            shift
+            ;;
+    esac
+done
 
 # Validate directory exists
 if [ ! -d "$TOURNAMENT_DIR" ]; then
@@ -49,10 +72,22 @@ CMD="$CMD \\
     -sprt elo0=0 elo1=10 alpha=0.05 beta=0.05 \\
     | tee benchmark_summary_\$(date +%Y-%m-%d_%H-%M).txt"
 
-# Print and execute
+# Print configuration
 echo "Tournament Directory: $TOURNAMENT_DIR"
 echo "Found $engine_count engine(s)"
+echo "Background Mode: $RUN_IN_BACKGROUND"
 echo "================================"
 echo "Executing: $CMD"
 echo "================================"
-eval "$CMD"
+
+# Execute with or without background
+if [ "$RUN_IN_BACKGROUND" = true ]; then
+    eval "$CMD &"
+    BG_PID=$!
+    echo ""
+    echo "Tournament started in background (PID: $BG_PID)"
+    echo "To monitor progress: tail -f benchmark_summary_*.txt"
+    echo "To stop: kill $BG_PID"
+else
+    eval "$CMD"
+fi
