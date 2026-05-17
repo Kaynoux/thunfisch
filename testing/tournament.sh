@@ -73,21 +73,21 @@ CMD="$CMD \\
     | tee benchmark_summary_\$(date +%Y-%m-%d_%H-%M).txt"
 
 # Print configuration
-echo "Tournament Directory: $TOURNAMENT_DIR"
-echo "Found $engine_count engine(s)"
-echo "Background Mode: $RUN_IN_BACKGROUND"
-echo "================================"
-echo "Executing: $CMD"
-echo "================================"
+if [ "$RUN_IN_BACKGROUND" = false ]; then
+    echo "Tournament Directory: $TOURNAMENT_DIR"
+    echo "Found $engine_count engine(s)"
+    echo "Background Mode: $RUN_IN_BACKGROUND"
+    echo "================================"
+    echo "Executing: $CMD"
+    echo "================================"
+fi
 
 # Execute with or without background
 if [ "$RUN_IN_BACKGROUND" = true ]; then
-    eval "$CMD &"
+    eval "$CMD > /dev/null 2>&1 &"
     BG_PID=$!
-    echo ""
     echo "Tournament started in background (PID: $BG_PID)"
-    echo "To monitor progress: tail -f benchmark_summary_*.txt"
-    echo "To stop: kill $BG_PID"
+    echo "Logs saved to: benchmark_summary_$(date +%Y-%m-%d_%H-%M).txt"
 else
     eval "$CMD"
 fi
