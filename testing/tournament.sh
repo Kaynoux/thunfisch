@@ -1,52 +1,58 @@
-#!/bin/sh
-# Tournament script for comparing multiple engine versions with pentanomial distribution
+#!/bin/bash
+# Tournament script for comparing multiple engine versions with fastchess
 
-ROOT_DIR=$(pwd | sed -E "s#/testing/?##g")
-n=3
+# Get the tournament directory from argument or use default
+TOURNAMENT_DIR="${1:-./ tournament}"
 
-run_tournament() {
-    if [ $# -ne $n ]; then
-        echo "usage: ./tournament.sh engine1 engine2 engine3 engine4"
-        echo "(currently we have $n engines)"
-        echo "example: ./tournament.sh ./engine-all ./engine-no-nmp ./engine-no-rfp ./engine-baseline"
-        exit 1
+# Validate directory exists
+if [ ! -d "$TOURNAMENT_DIR" ]; then
+    echo "Error: Tournament directory not found: $TOURNAMENT_DIR"
+    exit 1
+fi
+
+# Base command
+CMD="fastchess"
+
+# Add 'master' first if it exists
+if [ -x "$TOURNAMENT_DIR/master" ]; then
+    CMD="$CMD \\
+    -engine cmd=$TOURNAMENT_DIR/master name=master"
+fi
+
+# Add other engines from the tournament folder (excluding master)
+for engine_path in "$TOURNAMENT_DIR"/*; do
+    if [ -x "$engine_path" ] && [ -f "$engine_path" ]; then
+        engine_name=$(basename "$engine_path")
+        if [ "$engine_name" != "master" ]; then
+            CMD="$CMD \\
+    -engine cmd=$engine_path name=$engine_name"
+        fi
     fi
+done
 
-    ENGINE1=$1
-    ENGINE2=$2
-    ENGINE3=$3
-    ENGINE4=$4
+# Verify we have at least 2 engines
+engine_count=$(echo "$CMD" | grep -o '\-engine' | wc -l)
+if [ "$engine_count" -lt 2 ]; then
+    echo "Error: Found only $engine_count engine(s). Need at least 2 engines."
+    exit 1
+fi
 
-    # Validate that all engines exist
-    # for engine in "$ENGINE1" "$ENGINE2" "$ENGINE3" "$ENGINE4"; do
-    #     if [ ! -f "$engine" ] && [ ! -x "$engine" ]; then
-    #         echo "Error: Engine not found or not executable: $engine"
-    #         exit 1
-    #     fi
-    # done
+# Add the rest of the arguments
+CMD="$CMD \\
+    -each proto=uci tc=8+0.08 \\
+    -concurrency 10 \\
+    -rounds 1000 \\
+    -repeat \\
+    -recover \\
+    -openings file=8moves_v3.pgn format=pgn order=random \\
+    -pgnout file=results.pgn \\
+    -sprt elo0=0 elo1=10 alpha=0.05 beta=0.05 \\
+    | tee benchmark_summary_\$(date +%Y-%m-%d_%H-%M).txt"
 
-    cd $ROOT_DIR/testing
-    rm -f tournament.pgn
-
-    echo "=== Tournament Configuration ==="
-    echo "Engine 1: $ENGINE1"
-    echo "Engine 2: $ENGINE2"
-    echo "Engine 3: $ENGINE3"
-    echo "Engine 4: $ENGINE4"
-    echo "Time Control: 8+0.8"
-    echo "Distribution: Pentanomial"
-    echo "================================"
-
-    fastchess \
-        -engine cmd=$ENGINE1 name=$ENGINE1  \
-        -engine cmd=$ENGINE2 name=$ENGINE2 \
-        -engine cmd=$ENGINE3 name=$ENGINE3 \
-        -each proto=uci tc=8+0.8 \
-        -pgnout file=tournament.pgn \
-        -openings file=8moves_v3.pgn format=pgn order=random \
-        -concurrency 4 \
-        -rounds 1000 \
-        -recover
-}
-
-run_tournament $@
+# Print and execute
+echo "Tournament Directory: $TOURNAMENT_DIR"
+echo "Found $engine_count engine(s)"
+echo "================================"
+echo "Executing: $CMD"
+echo "================================"
+eval "$CMD"
