@@ -126,6 +126,7 @@ impl Board {
         self.push_repetition_stack();
 
         self.toggle_current_color();
+        self.set_ep_target(None);
         self.increase_halfmove_clock();
         self.set_total_halfmove_counter(self.total_halfmove_counter() + 1);
         self.set_attackmask(Bitboard::UNSET_ATTACK_MASK);
