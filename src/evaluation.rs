@@ -32,6 +32,8 @@ const DOUBLED_PAWN_PENALTY: i32 = -10;
 
 const ISOLATED_PAWN_PENALTY: [i16; 2] = [-23, -13];
 
+const BISHOP_PAIR_BONUS: [i16; 2] = [15, 25];
+
 // Flips square index to flip rows but keep columns the same
 // e.g. a1 becomes a8; e4 -> e5
 const fn flip(sq: usize) -> usize {
@@ -227,6 +229,11 @@ impl Board {
         mg_score += i32::from(mg_pawn_structure[white] - mg_pawn_structure[black]);
         eg_score += i32::from(eg_pawn_structure[white] - eg_pawn_structure[black]);
 
+        let (mg_bishop_pair, eg_bishop_pair) = self.bishop_pair_boni();
+        mg_score += i32::from(mg_bishop_pair[white] - mg_bishop_pair[black]);
+        eg_score += i32::from(eg_bishop_pair[white] - eg_bishop_pair[black]);
+
+
         let current_color_multiplier = match self.current_color() {
             White => 1,
             Black => -1,
@@ -245,6 +252,8 @@ impl Board {
         score * current_color_multiplier
     }
 
+    /// Format:
+    /// (mg: [white, black], eg: [white, black])
     pub fn pawn_structure(&self) -> ([i16; 2], [i16; 2]) {
         // [white, black]
         let mut mg_pawn_offset = [0i16; 2];
@@ -331,6 +340,25 @@ impl Board {
         }
 
         penalties
+    }
+
+    /// return Format:
+    /// (mg: [white, black], eg: [white, black])
+    #[inline]
+    fn bishop_pair_boni(&self) -> ([i16; 2], [i16; 2]) {
+        let white_bishops = self.figure_bb(Color::White, Piece::Bishop).get_count();
+        let black_bishops = self.figure_bb(Color::Black, Piece::Bishop).get_count();
+
+        (
+            [
+                BISHOP_PAIR_BONUS[0] * (white_bishops >> 1) as i16,
+                BISHOP_PAIR_BONUS[0] * (black_bishops >> 1) as i16,
+            ],
+            [
+                BISHOP_PAIR_BONUS[1] * (white_bishops >> 1) as i16,
+                BISHOP_PAIR_BONUS[1] * (black_bishops >> 1) as i16,
+            ],
+        )
     }
 
     /// Calculate a bitboard marking open files (files without any pawns on them)
