@@ -1,7 +1,8 @@
 use crate::{
-    communication::handle_go, debug::{perft, visualize}, evaluation::GAMEPHASE_INC, move_generator::{masks, pinmask}, move_picker::MoveList, move_scoring::{mvv_lva, score_quiets}, prelude::*, transposition_table::TT
+    communication::handle_go, debug::{perft, visualize}, evaluation::GAMEPHASE_INC, move_generator::{masks, pinmask}, move_picker::MoveList, move_scoring::{mvv_lva, score_quiets}, prelude::*, settings, transposition_table::TT
 };
 
+#[allow(clippy::too_many_lines)]
 pub fn handle_custom_commands(board: &mut Board, command: &str, args: &[&str]) {
     match command {
         // Custom commands: Mostly used for debugging
@@ -11,6 +12,9 @@ pub fn handle_custom_commands(board: &mut Board, command: &str, args: &[&str]) {
         "search" => {
             let help = args.contains(&"--help");
             handle_go(board, args, true, help);
+        }
+        "settings" => {
+            println!("{}", settings::repr());
         }
         "fen" => println!("{}", board.fen()),
         "draw" => visualize::print_board(board, None),
@@ -42,7 +46,11 @@ pub fn handle_custom_commands(board: &mut Board, command: &str, args: &[&str]) {
             let (mg_pawn, eg_pawn) = board.pawn_structure();
 
             let mut phase = 32;
-            #[allow(clippy::needless_range_loop, clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+            #[allow(
+                clippy::needless_range_loop,
+                clippy::cast_possible_truncation,
+                clippy::cast_possible_wrap
+            )]
             for i in 0..=11 {
                 let mut bb = board.figure_bb_by_index(i);
                 let count = bb.iter_mut().count() as i32;
@@ -50,13 +58,16 @@ pub fn handle_custom_commands(board: &mut Board, command: &str, args: &[&str]) {
             }
             let gamephase = (phase * 256 + 16) / 32;
 
-            let white_blended = (i32::from(mg_pawn[0]) * (256 - gamephase) + i32::from(eg_pawn[0]) * gamephase) >> 8;
-            let black_blended = (i32::from(mg_pawn[1]) * (256 - gamephase) + i32::from(eg_pawn[1]) * gamephase) >> 8;
+            let white_blended = (i32::from(mg_pawn[0]) * (256 - gamephase)
+                + i32::from(eg_pawn[0]) * gamephase)
+                >> 8;
+            let black_blended = (i32::from(mg_pawn[1]) * (256 - gamephase)
+                + i32::from(eg_pawn[1]) * gamephase)
+                >> 8;
 
             println!(
                 "Passed Pawn eval:\n  White: MG {}, EG {} -> Blended: {}\n  Black: MG {}, EG {} -> Blended: {}",
-                mg_pawn[0], eg_pawn[0], white_blended,
-                mg_pawn[1], eg_pawn[1], black_blended
+                mg_pawn[0], eg_pawn[0], white_blended, mg_pawn[1], eg_pawn[1], black_blended
             );
         }
         "do" => {
@@ -110,7 +121,7 @@ pub fn handle_custom_commands(board: &mut Board, command: &str, args: &[&str]) {
             let color = match color_str {
                 "white" | "w" => Color::White,
                 "black" | "b" => Color::Black,
-                _ => panic!("illegal color")
+                _ => panic!("illegal color"),
             };
             let passed_pawn_mask = Bitboard::passed_pawn_mask(bit, color);
             println!("{passed_pawn_mask:?}");

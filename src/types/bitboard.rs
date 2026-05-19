@@ -91,14 +91,14 @@ impl Bitboard {
 
     #[inline]
     #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
-    pub fn passed_pawn_mask(bit: Bit, color: Color) -> Self {
+    pub fn passed_pawn_mask(bit: Bit, friendly: Color) -> Self {
         let (x, y) = (bit.to_x() as i16, bit.to_y() as u16);
 
         let relevant_files =
             Self::file(x) | Self::file((x - 1).max(0)) | Self::file((x + 1).min(7));
 
         // Note: & 63 ensures we don't exceed the maximum bit shift; allowing compiler optimizations
-        match color {
+        match friendly {
             White => relevant_files << (((y + 1) * 8) & 63),
             Black => relevant_files >> ((8u16.saturating_sub(y) * 8) & 63),
         }

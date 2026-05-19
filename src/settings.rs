@@ -14,7 +14,8 @@ pub const LMR: bool = cfg!(feature = "lmr");
 pub const ROOKS_OPEN_FILES: bool = true;
 pub const DOUBLED_PAWNS: bool = false;
 pub const PASSED_PAWNS: bool = true;
-pub const ISOLATED_PAWNS: bool = false;
+pub const ISOLATED_PAWNS: bool = true;
+pub const KINGS_OPEN_FILES: bool = true;
 
 // These can be tweaked, have an effect on elo
 pub const QS_CHECK_EVASION_LIMIT: usize = 2;
@@ -31,6 +32,6 @@ pub const MOVES_BEFORE_LMR: usize = 4;
 #[inline]
 pub fn repr() -> String {
     format!(
-        "Activated Features: AB={AB:?} QS={QS:?} TT-AB={TT_AB:?} TT-QS={TT_QS:?} MVV-LVA={MVV_LVA:?} QS_CHECK_EVASION_LIMIT={QS_CHECK_EVASION_LIMIT:?} ORDER_TT_MV_FIRST={ORDER_TT_MV_FIRST:?} TT_CUTTOFFS={TT_CUTTOFFS:?} NMP={NMP:?} RFP={RFP:?} PVS={PVS:?}, KILLERS={KILLERS:?}"
+        "Activated Features: AB={AB:?} QS={QS:?} TT-AB={TT_AB:?} TT-QS={TT_QS:?} MVV-LVA={MVV_LVA:?} QS_CHECK_EVASION_LIMIT={QS_CHECK_EVASION_LIMIT:?} ORDER_TT_MV_FIRST={ORDER_TT_MV_FIRST:?} TT_CUTTOFFS={TT_CUTTOFFS:?} NMP={NMP:?} RFP={RFP:?} PVS={PVS:?} KILLERS={KILLERS:?} HISTORIES={HISTORIES:?} LMR={LMR:?}\nEvaluation Settings: ROOKS_OPEN_FILES={ROOKS_OPEN_FILES:?} DOUBLED_PAWNS={DOUBLED_PAWNS:?} PASSED_PAWNS={PASSED_PAWNS:?} ISOLATED_PAWNS={ISOLATED_PAWNS:?} KINGS_OPEN_FILES={KINGS_OPEN_FILES:?}"
     )
 }
