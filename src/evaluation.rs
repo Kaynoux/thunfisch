@@ -30,9 +30,15 @@ const KING_OPEN_FILE_PENALTY: [i32; 2] = [-25, 0];
 // For now we just linearly scale this; may be worth tho looking at punishing tripled pawns harder than doubled pawns
 const DOUBLED_PAWN_PENALTY: i32 = -10;
 
+// A pawn is isolated if it has no pawns on the file next to it
+// Generally isolated pawns are bad as they require pieces to defend and thus are easy targets
 const ISOLATED_PAWN_PENALTY: [i16; 2] = [-23, -13];
 
+// Some say having the bishop pair is a slight advantage because having only one bishop essentially makes half the board unreachable
+// Personally I'm indifferent to the bishop pair but it's an easy implementation and may gain a little bit
 const BISHOP_PAIR_BONUS: [i16; 2] = [15, 25];
+
+const MOBILITY_COEFFICIENTS :[[i32; 5]; 2] = [[0, 5, 3, 2, 1], [0, 5, 3, 4, 1]];
 
 // Flips square index to flip rows but keep columns the same
 // e.g. a1 becomes a8; e4 -> e5
@@ -193,6 +199,12 @@ impl Board {
         let black = 1usize;
         let mut mg = [0i32; 2];
         let mut eg = [0i32; 2];
+
+        // cache the movement bitboards so this information can be used for both king safety and mobility
+        let mut piece_movements = [[Bitboard::EMPTY; 5]; 2];
+        let mut mg_mobility = [0i32; 2];
+        let mut eg_mobility = [0i32; 2];
+
         let open_files = self.open_files();
 
         let mut phase = TOTAL;
@@ -214,6 +226,10 @@ impl Board {
                 let square = bit.to_square();
                 mg[i & 1] += MG_TABLE[i][square];
                 eg[i & 1] += EG_TABLE[i][square];
+                // TODO actually calculate mobility here haha
+                let piece_movements = 0;
+                mg_mobility[i & 1] += MOBILITY_COEFFICIENTS[0][i >> 1] * piece_movements;
+                eg_mobility[i & 1] += MOBILITY_COEFFICIENTS[1][i >> 1] * piece_movements;
                 phase -= GAMEPHASE_INC[i];
             }
         }
