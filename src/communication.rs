@@ -24,7 +24,7 @@ pub fn handle_communication(board: &mut Board) {
         let best_move = iterative_deepening::iterative_deepening(
             board,
             100,
-            Duration::from_millis(1000),
+            Duration::from_millis(10000),
             false,
             false,
         );

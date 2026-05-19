@@ -1,4 +1,4 @@
-use crate::prelude::*;
+use crate::{move_generator::masks, prelude::*, settings};
 
 pub const MATE_SCORE: i32 = 30_000;
 
@@ -15,9 +15,30 @@ const MG_TABLE: [[i32; 64]; 12] = init_table(&MG_PIECE_VALUES, &MG_BASE_POSITION
 const EG_TABLE: [[i32; 64]; 12] = init_table(&EG_PIECE_VALUES, &EG_BASE_POSITION_TABLE);
 // how impactful to the game phase a figure is if it's still on the board
 // for example: A game is 'more' endgame if there are no more queens on the board
-const GAMEPHASE_INC: [i32; 12] = [
+pub const GAMEPHASE_INC: [i32; 12] = [
     0, 0, KNIGHT, KNIGHT, BISHOP, BISHOP, ROOK, ROOK, QUEEN, QUEEN, 0, 0,
 ];
+
+// rooks on open files are a rather weak positional idea so this should be kept pretty low
+// Additionally, Endgames typically have a lot of open files, so there's no benefit to occupying one (hence 0 EG score)
+// format: [MG, EG]
+const ROOK_OPEN_FILE_BONUS: [i32; 2] = [25, 0];
+const KING_OPEN_FILE_PENALTY: [i32; 2] = [-25, 0];
+
+// TODO: probably interpolation of these values between MG and EG makes sense
+// a doubled pawn should be worth about half a pawn
+// For now we just linearly scale this; may be worth tho looking at punishing tripled pawns harder than doubled pawns
+const DOUBLED_PAWN_PENALTY: i32 = -10;
+
+// A pawn is isolated if it has no pawns on the file next to it
+// Generally isolated pawns are bad as they require pieces to defend and thus are easy targets
+const ISOLATED_PAWN_PENALTY: [i16; 2] = [-23, -13];
+
+// Some say having the bishop pair is a slight advantage because having only one bishop essentially makes half the board unreachable
+// Personally I'm indifferent to the bishop pair but it's an easy implementation and may gain a little bit
+const BISHOP_PAIR_BONUS: [i16; 2] = [15, 25];
+
+pub const MOBILITY_COEFFICIENTS: [[i32; 6]; 2] = [[0, 5, 3, 2, 1, 0], [0, 5, 3, 4, 1, 0]];
 
 // Flips square index to flip rows but keep columns the same
 // e.g. a1 becomes a8; e4 -> e5
@@ -52,6 +73,33 @@ const fn init_table(
     }
     table
 }
+
+/// Values here are vaguely inspired in their Shape by Fatalii
+/// However I've changed them to only give bonusses and never subtract from the eval
+/// let's see how this does haha
+#[rustfmt::skip]
+pub const MG_PASSED_PAWN_TABLE: [i16; 64] = [
+         0,    0,    0,    0,    0,    0,    0,    0,
+         0,    0,    0,    0,    0,    0,    0,    0,
+        15,   20,   20,   10,   10,   20,   20,   15,
+        10,   15,   15,    5,    5,   15,   15,   10,
+        10,   15,   15,    5,    5,   15,   15,   10,
+        15,   20,   20,   10,   10,   20,   20,   15,
+        15,   20,   20,   10,   10,   20,   20,   15,
+         0,    0,    0,    0,    0,    0,    0,    0,
+];
+
+#[rustfmt::skip]
+pub const EG_PASSED_PAWN_TABLE: [i16; 64] = [
+         0,    0,    0,    0,    0,    0,    0,    0,
+         0,    0,    0,    0,    0,    0,    0,    0,
+        90,   85,   80,   70,   70,   80,   85,   90,
+        65,   60,   55,   45,   45,   55,   60,   65,
+        40,   35,   30,   20,   20,   30,   35,   40,
+        30,   25,   20,   10,   10,   20,   25,   30,
+        25,   20,   15,    5,    5,   15,   20,   25,
+         0,    0,    0,    0,    0,    0,    0,    0,
+];
 
 /// Middlegame-Piece-Square Tables Base Values used for calculation of the real eval values
 pub const MG_BASE_POSITION_TABLE: [[i32; 64]; 6] = [
@@ -137,8 +185,13 @@ pub const EG_BASE_POSITION_TABLE: [[i32; 64]; 6] = [
 ];
 
 /// Evaluates the board
-/// positive -> advantage for white,
-/// negative -> advantage for black,
+/// Uses Piece-Square Tables a base, and augments values of individual pieces as fitting.
+/// Concepts that aren't specific to a certain piece (e.g. doubled pawns) are evaluated seperately and added to the augmented PSQT score.
+/// Throughout the function, scores are to be interpreted as follows:
+/// - positive -> advantage for white,
+/// - negative -> advantage for black,
+///
+/// !! Return type is relativized for the current player for negamax search
 /// Unit = Centipawns, 100 Centipawns => 1 Pawn
 impl Board {
     pub fn evaluate(&self) -> i32 {
@@ -147,15 +200,39 @@ impl Board {
         let mut mg = [0i32; 2];
         let mut eg = [0i32; 2];
 
+        // cache the movement bitboards so this information can be used for both king safety and mobility
+        let mut figure_movements = [Bitboard::EMPTY; 12];
+
+        let open_files = self.open_files();
+
         let mut phase = TOTAL;
         for i in 0..=11 {
             let mut bb = self.figure_bb_by_index(i);
-            // println!("figure: {:?}", Figure::from_idx(i));
+
+            // mobility - only needs to be done once per figure type
+            if settings::MOBILITY {
+                let figure_mobility = self.calculate_piece_mobility(i, &mut figure_movements);
+                mg[i & 1] += MOBILITY_COEFFICIENTS[0][i >> 1] * figure_mobility;
+                eg[i & 1] += MOBILITY_COEFFICIENTS[1][i >> 1] * figure_mobility;
+            }
+
             for bit in bb.iter_mut() {
+                if open_files.is_position_set(bit) {
+                    // rooks on open files
+                    if settings::ROOKS_OPEN_FILES && (i == 6 || i == 7) {
+                        mg[i & 1] += ROOK_OPEN_FILE_BONUS[0];
+                        eg[i & 1] += ROOK_OPEN_FILE_BONUS[1];
+                    }
+                    if settings::KINGS_OPEN_FILES && (i == 10 && i == 11) {
+                        mg[i & 1] += KING_OPEN_FILE_PENALTY[0];
+                        eg[i & 1] += KING_OPEN_FILE_PENALTY[1];
+                    }
+                }
+
                 let square = bit.to_square();
                 mg[i & 1] += MG_TABLE[i][square];
                 eg[i & 1] += EG_TABLE[i][square];
-                // println!("blended: {}", (MG_TABLE[i][square] * (256 - 224) + EG_TABLE[i][square] * 224 >> 8));
+
                 phase -= GAMEPHASE_INC[i];
             }
         }
@@ -164,14 +241,165 @@ impl Board {
         // (0 = starting position, 256 = only pawns and kings)
         let gamephase = (phase * 256 + (TOTAL / 2)) / TOTAL;
 
-        let mg_score = mg[white] - mg[black];
-        let eg_score = eg[white] - eg[black];
+        let mut mg_score = mg[white] - mg[black];
+        let mut eg_score = eg[white] - eg[black];
+
+        let (mg_pawn_structure, eg_pawn_structure) = self.pawn_structure();
+        mg_score += i32::from(mg_pawn_structure[white] - mg_pawn_structure[black]);
+        eg_score += i32::from(eg_pawn_structure[white] - eg_pawn_structure[black]);
+
+        if settings::BISHOP_PAIR {
+            let (mg_bishop_pair, eg_bishop_pair) = self.bishop_pair_boni();
+            mg_score += i32::from(mg_bishop_pair[white] - mg_bishop_pair[black]);
+            eg_score += i32::from(eg_bishop_pair[white] - eg_bishop_pair[black]);
+        }
 
         let current_color_multiplier = match self.current_color() {
             White => 1,
             Black => -1,
         };
 
-        ((mg_score * (256 - gamephase) + eg_score * gamephase) >> 8) * current_color_multiplier
+        // Final aggregation of scoring aspects
+        let mut score = (mg_score * (256 - gamephase) + eg_score * gamephase) >> 8;
+
+        if settings::DOUBLED_PAWNS {
+            let doubled_pawns = self.doubled_pawn_penalties();
+            score += doubled_pawns[white] - doubled_pawns[black];
+        }
+
+        // score += i32::from(self.pawn_structure());
+
+        score * current_color_multiplier
+    }
+
+    /// Format:
+    /// (mg: [white, black], eg: [white, black])
+    pub fn pawn_structure(&self) -> ([i16; 2], [i16; 2]) {
+        // [white, black]
+        let mut mg_pawn_offset = [0i16; 2];
+        let mut eg_pawn_offset = [0i16; 2];
+
+        for i in 0..=1 {
+            let color = Color::from_usize(i);
+            for pawn in self.figure_bb_by_index(i).iter_mut() {
+                if settings::PASSED_PAWNS {
+                    let bonus = self.passed_pawn_bonus(pawn, color);
+                    mg_pawn_offset[i] += bonus[0];
+                    eg_pawn_offset[i] += bonus[1];
+                }
+                if settings::ISOLATED_PAWNS {
+                    let penalty = self.isolated_pawn_penalty(pawn, color);
+                    mg_pawn_offset[i] += penalty[0];
+                    eg_pawn_offset[i] += penalty[1];
+                }
+            }
+        }
+
+        (mg_pawn_offset, eg_pawn_offset)
+    }
+
+    /// Format: `[MG, EG]`
+    /// Note: Penalties are negative, i.e. should be added
+    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+    fn isolated_pawn_penalty(&self, pawn: Bit, friendly: Color) -> [i16; 2] {
+        let friendly_pawns = self.figure_bb(friendly, Piece::Pawn);
+        let x = pawn.to_x() as i16;
+        // we only look at the neighbouring files
+        // double isolated pawns are still isolated, in fact an even worse liability than a singular isolated pawn
+        let scan_mask = Bitboard::file((x - 1).max(0)) | Bitboard::file((x + 1).min(7));
+        let is_isolated = i16::from((scan_mask & friendly_pawns).is_empty());
+
+        [
+            ISOLATED_PAWN_PENALTY[0] * is_isolated,
+            ISOLATED_PAWN_PENALTY[1] * is_isolated,
+        ]
+    }
+
+    /// Returns the passed pawn bonusses for `pawn`.
+    /// Format: `[MG, EG]`.
+    /// If the pawn is not passed, returns `[0, 0]`
+    fn passed_pawn_bonus(&self, pawn: Bit, friendly: Color) -> [i16; 2] {
+        let opponent_pawns = self.figure_bb(!friendly, Piece::Pawn);
+        let scan_mask = Bitboard::passed_pawn_mask(pawn, friendly);
+        let is_passed = i16::from((scan_mask & opponent_pawns).is_empty());
+
+        let idx: usize = match friendly {
+            White => flip(pawn.to_square().0),
+            Black => pawn.to_square().0,
+        };
+
+        [
+            is_passed * MG_PASSED_PAWN_TABLE[idx],
+            is_passed * EG_PASSED_PAWN_TABLE[idx],
+        ]
+    }
+
+    /// Calculate the penalties for doubled pawns for both white and black
+    /// returns: 2-element array: `[white_penalty, black_penalty]`
+    ///
+    /// Note: penalties are negative for both sides
+    /// TODO: this can probably be improved by weighing it against the remaining pawns (the less pawns are on the board, the worse it is if they're doubled)
+    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+    pub fn doubled_pawn_penalties(&self) -> [i32; 2] {
+        let white_pawns = self.figure_bb_by_index(0);
+        let black_pawns = self.figure_bb_by_index(1);
+        // [white, black]
+        let mut penalties: [i32; 2] = [0i32; 2];
+        for i in 0..=7 {
+            let file = Bitboard::file(i);
+            let file_pawns = [(file & white_pawns).0, (file & black_pawns).0];
+            // x & (x - 1) flips the lowest set bit -> essentially "removing" one pawn from the file
+            // we explicitly allow overflows to deal with the case where there's 0 pawns
+            let file_pawns = [
+                (file_pawns[0] & file_pawns[0].wrapping_sub(1)).count_ones() as i32,
+                (file_pawns[1] & file_pawns[1].wrapping_sub(1)).count_ones() as i32,
+            ];
+
+            penalties[0] += file_pawns[0] * DOUBLED_PAWN_PENALTY;
+            penalties[1] += file_pawns[1] * DOUBLED_PAWN_PENALTY;
+        }
+
+        penalties
+    }
+
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+    fn calculate_piece_mobility(&self, figure: usize, piece_movements: &mut [Bitboard; 12]) -> i32 {
+        let attackmask = masks::calculate_attackmask_by_figure(self, self.occupied(), figure, None);
+        piece_movements[figure] = attackmask;
+        attackmask.get_count() as i32
+    }
+
+    /// return Format:
+    /// (mg: [white, black], eg: [white, black])
+    #[inline]
+    #[allow(clippy::cast_possible_truncation)]
+    const fn bishop_pair_boni(&self) -> ([i16; 2], [i16; 2]) {
+        let white_bishops = self.figure_bb(Color::White, Piece::Bishop).get_count();
+        let black_bishops = self.figure_bb(Color::Black, Piece::Bishop).get_count();
+
+        (
+            [
+                BISHOP_PAIR_BONUS[0] * (white_bishops >> 1) as i16,
+                BISHOP_PAIR_BONUS[0] * (black_bishops >> 1) as i16,
+            ],
+            [
+                BISHOP_PAIR_BONUS[1] * (white_bishops >> 1) as i16,
+                BISHOP_PAIR_BONUS[1] * (black_bishops >> 1) as i16,
+            ],
+        )
+    }
+
+    /// Calculate a bitboard marking open files (files without any pawns on them)
+    pub fn open_files(&self) -> Bitboard {
+        let pawn_structure =
+            self.figure_bb(Color::White, Piece::Pawn) | self.figure_bb(Color::Black, Piece::Pawn);
+        let mut open_files = Bitboard::EMPTY;
+        for i in 0..=7 {
+            let file = Bitboard::file(i);
+            if (file & pawn_structure).is_empty() {
+                open_files += file;
+            }
+        }
+        open_files
     }
 }

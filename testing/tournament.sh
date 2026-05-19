@@ -1,52 +1,93 @@
-#!/bin/sh
-# Tournament script for comparing multiple engine versions with pentanomial distribution
+#!/bin/bash
+# Tournament script for comparing multiple engine versions with fastchess
 
-ROOT_DIR=$(pwd | sed -E "s#/testing/?##g")
+# Parse arguments
+TOURNAMENT_DIR="./tournament"
+RUN_IN_BACKGROUND=false
 
-run_tournament() {
-    if [ $# -ne 4 ]; then
-        echo "usage: ./tournament.sh engine1 engine2 engine3 engine4"
-        echo ""
-        echo "example: ./tournament.sh ./engine-all ./engine-no-nmp ./engine-no-rfp ./engine-baseline"
-        exit 1
-    fi
-
-    ENGINE1=$1
-    ENGINE2=$2
-    ENGINE3=$3
-    ENGINE4=$4
-
-    # Validate that all engines exist
-    for engine in "$ENGINE1" "$ENGINE2" "$ENGINE3" "$ENGINE4"; do
-        if [ ! -f "$engine" ] && [ ! -x "$engine" ]; then
-            echo "Error: Engine not found or not executable: $engine"
+# Parse flags and directory
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --background)
+            RUN_IN_BACKGROUND=true
+            shift
+            ;;
+        --)
+            shift
+            break
+            ;;
+        -*)
+            echo "Error: Unknown flag: $1"
             exit 1
+            ;;
+        *)
+            TOURNAMENT_DIR="$1"
+            shift
+            ;;
+    esac
+done
+
+# Validate directory exists
+if [ ! -d "$TOURNAMENT_DIR" ]; then
+    echo "Error: Tournament directory not found: $TOURNAMENT_DIR"
+    exit 1
+fi
+
+# Base command
+CMD="fastchess"
+
+# Add 'master' first if it exists
+if [ -x "$TOURNAMENT_DIR/master" ]; then
+    CMD="$CMD \\
+    -engine cmd=$TOURNAMENT_DIR/master name=master"
+fi
+
+# Add other engines from the tournament folder (excluding master)
+for engine_path in "$TOURNAMENT_DIR"/*; do
+    if [ -x "$engine_path" ] && [ -f "$engine_path" ]; then
+        engine_name=$(basename "$engine_path")
+        if [ "$engine_name" != "master" ]; then
+            CMD="$CMD \\
+    -engine cmd=$engine_path name=$engine_name"
         fi
-    done
+    fi
+done
 
-    cd $ROOT_DIR/testing
-    rm -f tournament.pgn
+# Verify we have at least 2 engines
+engine_count=$(echo "$CMD" | grep -o '\-engine' | wc -l)
+if [ "$engine_count" -lt 2 ]; then
+    echo "Error: Found only $engine_count engine(s). Need at least 2 engines."
+    exit 1
+fi
 
-    echo "=== Tournament Configuration ==="
-    echo "Engine 1: $ENGINE1"
-    echo "Engine 2: $ENGINE2"
-    echo "Engine 3: $ENGINE3"
-    echo "Engine 4: $ENGINE4"
-    echo "Time Control: 8+0.8"
-    echo "Distribution: Pentanomial"
+# Add the rest of the arguments
+CMD="$CMD \\
+    -each proto=uci tc=8+0.08 \\
+    -concurrency 10 \\
+    -rounds 1000 \\
+    -repeat \\
+    -recover \\
+    -openings file=8moves_v3.pgn format=pgn order=random \\
+    -pgnout file=results.pgn \\
+    -sprt elo0=0 elo1=10 alpha=0.05 beta=0.05 \\
+    | tee benchmark_summary_\$(date +%Y-%m-%d_%H-%M).txt"
+
+# Print configuration
+if [ "$RUN_IN_BACKGROUND" = false ]; then
+    echo "Tournament Directory: $TOURNAMENT_DIR"
+    echo "Found $engine_count engine(s)"
+    echo "Background Mode: $RUN_IN_BACKGROUND"
     echo "================================"
+    echo "Executing: $CMD"
+    echo "================================"
+fi
 
-    fastchess \
-        -engine cmd=$ENGINE1 name=$ENGINE1  \
-        -engine cmd=$ENGINE2 name=$ENGINE2 \
-        -engine cmd=$ENGINE3 name=$ENGINE3 \
-        -engine cmd=$ENGINE4 name=$ENGINE4 \
-        -each proto=uci tc=8+0.8 \
-        -pgnout file=tournament.pgn \
-        -openings file=8moves_v3.pgn format=pgn order=random \
-        -concurrency 4 \
-        -rounds 1000 \
-        -recover
-}
-
-run_tournament $@
+# Execute with or without background
+if [ "$RUN_IN_BACKGROUND" = true ]; then
+    eval "$CMD > /dev/null 2>&1 &"
+    BG_PID=$!
+    echo "Tournament started in background (PID: $BG_PID)"
+    echo "Logs saved to: benchmark_summary_$(date +%Y-%m-%d_%H-%M).txt"
+else
+    eval "$CMD"
+fi

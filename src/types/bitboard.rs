@@ -9,6 +9,33 @@ use std::{
 #[derive(Copy, Clone, Eq, PartialEq)]
 pub struct Bitboard(pub u64);
 
+impl<T> std::ops::Shl<T> for Bitboard
+where
+    u64: std::ops::Shl<T, Output = u64>,
+{
+    type Output = Self;
+
+    fn shl(self, rhs: T) -> Self::Output {
+        Self(self.0 << rhs)
+    }
+}
+impl<T> std::ops::Shr<T> for Bitboard
+where
+    u64: std::ops::Shr<T, Output = u64>,
+{
+    type Output = Self;
+
+    fn shr(self, rhs: T) -> Self::Output {
+        Self(self.0 >> rhs)
+    }
+}
+
+impl std::ops::AddAssign for Bitboard {
+    fn add_assign(&mut self, rhs: Self) {
+        self.0 += rhs.0;
+    }
+}
+
 impl fmt::Debug for Bitboard {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f)?; // Start with a newline for better formatting in some contexts
@@ -53,6 +80,31 @@ impl Bitboard {
         self.0 ^= 1 << square.i();
     }
 
+    #[allow(clippy::unreadable_literal)]
+    #[inline]
+    pub const fn file(file_idx: i16) -> Self {
+        debug_assert!(file_idx <= 7);
+        // 0x0101010101010101 is the A file
+        // shift it to get other files
+        Self(0x0101010101010101 << file_idx)
+    }
+
+    #[inline]
+    #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
+    pub fn passed_pawn_mask(bit: Bit, friendly: Color) -> Self {
+        let (x, y) = (bit.to_x() as i16, bit.to_y() as u16);
+
+        let relevant_files =
+            Self::file(x) | Self::file((x - 1).max(0)) | Self::file((x + 1).min(7));
+
+        // Note: & 63 ensures we don't exceed the maximum bit shift; allowing compiler optimizations
+        match friendly {
+            White => relevant_files << (((y + 1) * 8) & 63),
+            Black => relevant_files >> ((8u16.saturating_sub(y) * 8) & 63),
+        }
+
+    }
+
     #[inline]
     pub fn pop_lsb_position(&mut self) -> Option<Bit> {
         if *self == Self(0) {
@@ -70,6 +122,7 @@ impl Bitboard {
     }
 
     /// Iterator for Bitboard, uses pop lsb to always return
+    /// Yields only the bits that are set
     pub fn iter_mut(&mut self) -> impl Iterator<Item = Bit> + '_ {
         std::iter::from_fn(move || self.pop_lsb_position())
     }
@@ -87,10 +140,6 @@ impl Bitboard {
 
     pub const fn is_empty(self) -> bool {
         self.0 == 0
-    }
-
-    pub const fn count(self) -> usize {
-        self.0.count_ones() as usize
     }
 }
 
@@ -190,5 +239,17 @@ impl BitAnd<u64> for Bitboard {
     #[inline]
     fn bitand(self, rhs: u64) -> Self::Output {
         Self(self.0 & rhs)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn print_file_bbs() {
+        for i in 0..=7 {
+            print!("{:?}", Bitboard::file(i))
+        }
     }
 }
