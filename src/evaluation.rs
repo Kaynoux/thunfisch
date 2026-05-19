@@ -210,9 +210,11 @@ impl Board {
             let mut bb = self.figure_bb_by_index(i);
 
             // mobility - only needs to be done once per figure type
-            let figure_mobility = self.calculate_piece_mobility(i, &mut figure_movements);
-            mg[i & 1] += MOBILITY_COEFFICIENTS[0][i >> 1] * figure_mobility;
-            eg[i & 1] += MOBILITY_COEFFICIENTS[1][i >> 1] * figure_mobility;
+            if settings::MOBILITY {
+                let figure_mobility = self.calculate_piece_mobility(i, &mut figure_movements);
+                mg[i & 1] += MOBILITY_COEFFICIENTS[0][i >> 1] * figure_mobility;
+                eg[i & 1] += MOBILITY_COEFFICIENTS[1][i >> 1] * figure_mobility;
+            }
 
             for bit in bb.iter_mut() {
                 if open_files.is_position_set(bit) {
