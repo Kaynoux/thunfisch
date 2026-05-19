@@ -229,10 +229,11 @@ impl Board {
         mg_score += i32::from(mg_pawn_structure[white] - mg_pawn_structure[black]);
         eg_score += i32::from(eg_pawn_structure[white] - eg_pawn_structure[black]);
 
-        let (mg_bishop_pair, eg_bishop_pair) = self.bishop_pair_boni();
-        mg_score += i32::from(mg_bishop_pair[white] - mg_bishop_pair[black]);
-        eg_score += i32::from(eg_bishop_pair[white] - eg_bishop_pair[black]);
-
+        if settings::BISHOP_PAIR {
+            let (mg_bishop_pair, eg_bishop_pair) = self.bishop_pair_boni();
+            mg_score += i32::from(mg_bishop_pair[white] - mg_bishop_pair[black]);
+            eg_score += i32::from(eg_bishop_pair[white] - eg_bishop_pair[black]);
+        }
 
         let current_color_multiplier = match self.current_color() {
             White => 1,
