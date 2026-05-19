@@ -1,4 +1,4 @@
-use crate::{prelude::*, settings};
+use crate::{move_generator::masks, prelude::*, settings};
 
 pub const MATE_SCORE: i32 = 30_000;
 
@@ -38,7 +38,7 @@ const ISOLATED_PAWN_PENALTY: [i16; 2] = [-23, -13];
 // Personally I'm indifferent to the bishop pair but it's an easy implementation and may gain a little bit
 const BISHOP_PAIR_BONUS: [i16; 2] = [15, 25];
 
-const MOBILITY_COEFFICIENTS :[[i32; 5]; 2] = [[0, 5, 3, 2, 1], [0, 5, 3, 4, 1]];
+pub const MOBILITY_COEFFICIENTS: [[i32; 6]; 2] = [[0, 5, 3, 2, 1, 0], [0, 5, 3, 4, 1, 0]];
 
 // Flips square index to flip rows but keep columns the same
 // e.g. a1 becomes a8; e4 -> e5
@@ -201,15 +201,19 @@ impl Board {
         let mut eg = [0i32; 2];
 
         // cache the movement bitboards so this information can be used for both king safety and mobility
-        let mut piece_movements = [[Bitboard::EMPTY; 5]; 2];
-        let mut mg_mobility = [0i32; 2];
-        let mut eg_mobility = [0i32; 2];
+        let mut figure_movements = [Bitboard::EMPTY; 12];
 
         let open_files = self.open_files();
 
         let mut phase = TOTAL;
         for i in 0..=11 {
             let mut bb = self.figure_bb_by_index(i);
+
+            // mobility - only needs to be done once per figure type
+            let figure_mobility = self.calculate_piece_mobility(i, &mut figure_movements);
+            mg[i & 1] += MOBILITY_COEFFICIENTS[0][i >> 1] * figure_mobility;
+            eg[i & 1] += MOBILITY_COEFFICIENTS[1][i >> 1] * figure_mobility;
+
             for bit in bb.iter_mut() {
                 if open_files.is_position_set(bit) {
                     // rooks on open files
@@ -226,10 +230,7 @@ impl Board {
                 let square = bit.to_square();
                 mg[i & 1] += MG_TABLE[i][square];
                 eg[i & 1] += EG_TABLE[i][square];
-                // TODO actually calculate mobility here haha
-                let piece_movements = 0;
-                mg_mobility[i & 1] += MOBILITY_COEFFICIENTS[0][i >> 1] * piece_movements;
-                eg_mobility[i & 1] += MOBILITY_COEFFICIENTS[1][i >> 1] * piece_movements;
+
                 phase -= GAMEPHASE_INC[i];
             }
         }
@@ -359,10 +360,18 @@ impl Board {
         penalties
     }
 
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+    fn calculate_piece_mobility(&self, figure: usize, piece_movements: &mut [Bitboard; 12]) -> i32 {
+        let attackmask = masks::calculate_attackmask_by_figure(self, self.occupied(), figure, None);
+        piece_movements[figure] = attackmask;
+        attackmask.get_count() as i32
+    }
+
     /// return Format:
     /// (mg: [white, black], eg: [white, black])
     #[inline]
-    fn bishop_pair_boni(&self) -> ([i16; 2], [i16; 2]) {
+    #[allow(clippy::cast_possible_truncation)]
+    const fn bishop_pair_boni(&self) -> ([i16; 2], [i16; 2]) {
         let white_bishops = self.figure_bb(Color::White, Piece::Bishop).get_count();
         let black_bishops = self.figure_bb(Color::Black, Piece::Bishop).get_count();
 
