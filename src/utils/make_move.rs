@@ -125,8 +125,8 @@ impl Board {
         self.push_unmake_info_stack(null_move, Figure::Empty);
         self.push_repetition_stack();
 
+        self.update_ep(self.current_color(), &null_move.decode());
         self.toggle_current_color();
-        self.set_ep_target(None);
         self.increase_halfmove_clock();
         self.set_total_halfmove_counter(self.total_halfmove_counter() + 1);
         self.set_attackmask(Bitboard::UNSET_ATTACK_MASK);

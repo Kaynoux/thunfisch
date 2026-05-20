@@ -139,6 +139,7 @@ impl Board {
         self.set_attackmask(prev.attackmask);
         self.set_checkmask(prev.checkmask, prev.check_counter);
         self.set_pinmasks(prev.hv_pinmask, prev.diag_pinmask);
+        self.set_hash(prev.hash);
     }
 }
 
@@ -156,5 +157,41 @@ mod tests {
         board.toggle_current_color();
         board.unmake_move();
         assert_eq!(board.hash(), before);
+    }
+
+    #[test]
+    fn test_null_move_hash_consistency() {
+        // Position with en passant target (after 1. e4)
+        let mut board = Board::new("rnbqkbnr/pppppppp/8/8/4P3/8/PPPP1PPP/RNBQKBNR b KQkq e3 0 1");
+        let initial_hash = board.hash();
+
+        // Make null move
+        board.make_null_move();
+
+        // Ensure hash changed (at least color and ep target removal should change it)
+        assert_ne!(
+            board.hash(),
+            initial_hash,
+            "Hash must change after null move (color toggle + ep removal)"
+        );
+        assert_eq!(
+            board.ep_target(),
+            None,
+            "EP target must be cleared after null move"
+        );
+
+        // Unmake null move
+        board.unmake_null_move();
+
+        // Verify state is restored
+        assert_eq!(
+            board.hash(),
+            initial_hash,
+            "Hash must be restored after unmaking null move"
+        );
+        assert!(
+            board.ep_target().is_some(),
+            "EP target must be restored after unmaking null move"
+        );
     }
 }
