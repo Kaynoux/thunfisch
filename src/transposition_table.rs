@@ -200,11 +200,10 @@ impl TranspositionTable {
         let record_priority = i32::from(previous.depth) + record_flag_bonus;
 
         // replace the entry if:
-        // 1. the entry is for a different position
-        // 2. it's an exact entry and the old entry is not exact
-        // 3. the new entry is of higher priority than the old entry
-        if previous.key != key
-            || bound == Bound::Exact && previous.info.bound() != Bound::Exact
+        // 1. it's an exact entry and the old entry is not exact or
+        // 2. the new entry is of higher priority than the old entry
+        // Previously we also copied the condition to check if previous.key != key but this basically caused a always replace strategy because we dont have buckets like other engines
+        if bound == Bound::Exact && previous.info.bound() != Bound::Exact
             || insert_priority * 3 >= record_priority * 2
         {
             // normalise mate  scores:
