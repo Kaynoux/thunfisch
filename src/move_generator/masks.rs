@@ -4,7 +4,7 @@ use crate::{
         normal_targets::{KING_TARGETS, KNIGHT_TARGETS, PAWN_ATTACK_TARGETS},
         sliding_targets::{get_bishop_targets, get_rook_targets},
     },
-    prelude::*, types::piece,
+    prelude::*,
 };
 
 /// NOTE: is all ones when there are no checks
@@ -84,11 +84,15 @@ pub fn calculate_attackmask(
     attacks
 }
 
-
 /// Note: unlike the regular attackmask, if a piece can take a piece of its own colour, this is NOT counted as an attack
 /// it would yield incorrect results for mobility evaluation (which this is used for)
 /// For the generic attackmask this makes sense however, as an occupied square is still dangerous for the king
-pub fn calculate_attackmask_by_figure(board: &Board, occupied: Bitboard, figure: usize, removed_pawn: Option<Bit>) -> Bitboard {
+pub fn calculate_attackmask_by_figure(
+    board: &Board,
+    occupied: Bitboard,
+    figure: usize,
+    removed_pawn: Option<Bit>,
+) -> Bitboard {
     let mut attacks = Bitboard::EMPTY;
 
     let color = Color::from_usize(figure & 1);
@@ -134,8 +138,33 @@ pub fn calculate_attackmask_by_figure(board: &Board, occupied: Bitboard, figure:
             let king = board.king(color);
             attacks |= KING_TARGETS[king.to_square()];
         }
-        _ => unreachable!()
+        _ => unreachable!(),
     }
 
     attacks & !board.color_bbs(color)
+}
+
+// TODO: not pass entire board
+/// i'm not entirely sure whether this type of mask actually is what CPW means
+/// I think it's a bit too narrow, maybe I should try giving it one more file towards the center as well and then compare the results
+/// but that seems like a lot of effort given i'd likely have to tune both
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+pub fn king_safety_mask(board: &Board, color: Color) -> Bitboard {
+    // let mut mask = board.figure_bb(color, Piece::King);
+    let king = board.king(color);
+    let (x, y) = (king.to_x() as i16, king.to_y() as u16);
+    let mut mask = Bitboard::EMPTY;
+    let file_template = Bitboard(0xff)
+        & (Bitboard::file(x) | Bitboard::file((x - 1).max(0)) | Bitboard::file((x + 1).min(7)));
+    mask |= file_template << (8 * y);
+    mask |= file_template << (8 * (y.saturating_sub(1)));
+    mask |= file_template << (8 * (y + 1).min(7));
+    // duplicate the created mask 2 ranks toward the center
+    mask |= match y {
+        0..=3 => mask << 8,
+        4..=7 => mask >> 8,
+        _ => unreachable!(),
+    };
+
+    mask
 }

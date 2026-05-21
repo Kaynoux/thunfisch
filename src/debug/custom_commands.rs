@@ -2,7 +2,7 @@ use crate::{
     communication::handle_go,
     debug::{perft, visualize},
     evaluation::{GAMEPHASE_INC, MOBILITY_COEFFICIENTS},
-    move_generator::{masks, pinmask},
+    move_generator::{masks::{self, king_safety_mask}, pinmask},
     move_picker::MoveList,
     move_scoring::{mvv_lva, score_quiets},
     prelude::*,
@@ -138,6 +138,15 @@ pub fn handle_custom_commands(board: &mut Board, command: &str, args: &[&str]) {
             };
             let passed_pawn_mask = Bitboard::passed_pawn_mask(bit, color);
             println!("{passed_pawn_mask:?}");
+        }
+         "kingmask" => {
+            let color_str = args[0];
+            let color = match color_str {
+                "white" | "w" => Color::White,
+                "black" | "b" => Color::Black,
+                _ => panic!("illegal color"),
+            };
+            println!("{:?}", king_safety_mask(board, color) ^ board.figure_bb(color, Piece::King));
         }
         "hash" => {
             println!("{:?}", board.hash());

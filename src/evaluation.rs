@@ -1,4 +1,8 @@
-use crate::{move_generator::masks, prelude::*, settings};
+use crate::{
+    move_generator::masks::{self, king_safety_mask},
+    prelude::*,
+    settings,
+};
 
 pub const MATE_SCORE: i32 = 30_000;
 
@@ -39,6 +43,9 @@ const ISOLATED_PAWN_PENALTY: [i16; 2] = [-23, -13];
 const BISHOP_PAIR_BONUS: [i16; 2] = [15, 25];
 
 pub const MOBILITY_COEFFICIENTS: [[i32; 6]; 2] = [[0, 5, 3, 2, 1, 0], [0, 5, 3, 4, 1, 0]];
+
+pub const PIECE_ATTACK_VALUES: [[i16; 6]; 2] = [[0, 2, 2, 3, 5, 0], [0, 1, 2, 4, 6, 0]];
+pub const PIECE_DEFEND_VALUES: [[i16; 6]; 2] = [[0, 1, 1, 2, 4, 0], [0, 1, 1, 3, 5, 0]];
 
 // Flips square index to flip rows but keep columns the same
 // e.g. a1 becomes a8; e4 -> e5
@@ -99,6 +106,21 @@ pub const EG_PASSED_PAWN_TABLE: [i16; 64] = [
         30,   25,   20,   10,   10,   20,   25,   30,
         25,   20,   15,    5,    5,   15,   20,   25,
          0,    0,    0,    0,    0,    0,    0,    0,
+];
+
+pub const MG_KING_SAFETY_TABLE: [i32; 100] = [
+    0, 0, 1, 2, 3, 5, 7, 9, 12, 15, 18, 22, 26, 30, 35, 39, 44, 50, 56, 62, 68, 75, 82, 85, 89, 97,
+    105, 113, 122, 131, 140, 150, 169, 180, 191, 202, 213, 225, 237, 248, 260, 272, 283, 295, 307,
+    319, 330, 342, 354, 366, 377, 389, 401, 412, 424, 436, 448, 459, 471, 483, 494, 500, 500, 500,
+    500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500,
+    500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500,
+];
+pub const EG_KING_SAFETY_TABLE: [i32; 100] = [
+    0, 0, 0, 1, 2, 3, 4, 6, 8, 10, 12, 14, 17, 20, 23, 26, 29, 33, 37, 41, 45, 50, 54, 56, 59, 64,
+    70, 75, 81, 87, 93, 100, 112, 120, 127, 134, 142, 150, 158, 165, 173, 181, 188, 196, 204, 212,
+    220, 228, 236, 244, 251, 259, 267, 274, 282, 290, 298, 306, 314, 322, 329, 333, 333, 333, 333,
+    333, 333, 333, 333, 333, 333, 333, 333, 333, 333, 333, 333, 333, 333, 333, 333, 333, 333, 333,
+    333, 333, 333, 333, 333, 333, 333, 333, 333, 333, 333, 333, 333, 333, 333, 333,
 ];
 
 /// Middlegame-Piece-Square Tables Base Values used for calculation of the real eval values
@@ -214,6 +236,10 @@ impl Board {
                 let figure_mobility = self.calculate_piece_mobility(i, &mut figure_movements);
                 mg[i & 1] += MOBILITY_COEFFICIENTS[0][i >> 1] * figure_mobility;
                 eg[i & 1] += MOBILITY_COEFFICIENTS[1][i >> 1] * figure_mobility;
+                // for correctness, mobility calculation removes all pieces of the same color (we can't take our own piece)
+                // however for safety calculation we would like to also count a piece as "reaching the king zone" if it is physically in the zone
+                // So we re-add only the figure to the movement mask
+                figure_movements[i] |= bb;
             }
 
             for bit in bb.iter_mut() {
@@ -363,9 +389,13 @@ impl Board {
     }
 
     #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-    fn calculate_piece_mobility(&self, figure: usize, piece_movements: &mut [Bitboard; 12]) -> i32 {
+    fn calculate_piece_mobility(
+        &self,
+        figure: usize,
+        figure_movements: &mut [Bitboard; 12],
+    ) -> i32 {
         let attackmask = masks::calculate_attackmask_by_figure(self, self.occupied(), figure, None);
-        piece_movements[figure] = attackmask;
+        figure_movements[figure] = attackmask;
         attackmask.get_count() as i32
     }
 
@@ -401,5 +431,43 @@ impl Board {
             }
         }
         open_files
+    }
+
+    /// Calculates the King Safety Score
+    /// WARNING: Technically computes DANGER; i.e. the higher the value for a side, the worse off that side is
+    /// return Format:
+    /// (mg: [white, black], eg: [white, black])
+    #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap, clippy::similar_names)]
+    pub fn king_safety(&self, figure_movements: &[Bitboard; 12]) -> ([i16; 2], [i16; 2]) {
+        let mut mg_danger = [0i16; 2];
+        let mut eg_danger = [0i16; 2];
+
+        let king_zones = [
+            king_safety_mask(self, Color::White),
+            king_safety_mask(self, Color::Black),
+        ];
+
+        for i in 0..=11 {
+            let friend = i & 1;
+            let opp = friend ^ 1;
+            let attacker_mg = PIECE_ATTACK_VALUES[0][i >> 1];
+            let attacker_eg = PIECE_ATTACK_VALUES[1][i >> 1];
+            let defender_mg = PIECE_DEFEND_VALUES[0][i >> 1];
+            let defender_eg = PIECE_DEFEND_VALUES[1][i >> 1];
+
+            // decrease friendly danger score for friendly piece in friendly king zone
+            mg_danger[friend] -=
+                (king_zones[friend] & figure_movements[i]).get_count() as i16 * defender_mg;
+            eg_danger[friend] -=
+                (king_zones[friend] & figure_movements[i]).get_count() as i16 * defender_eg;
+
+            // increase opponent's score for friendly piece in opponents king zone
+            mg_danger[opp] +=
+                (king_zones[opp] & figure_movements[i]).get_count() as i16 * attacker_mg;
+            eg_danger[opp] +=
+                (king_zones[opp] & figure_movements[i]).get_count() as i16 * attacker_eg;
+
+        }
+        (mg_danger, eg_danger)
     }
 }

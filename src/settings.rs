@@ -17,7 +17,8 @@ pub const PASSED_PAWNS: bool = false;
 pub const ISOLATED_PAWNS: bool = false;
 pub const KINGS_OPEN_FILES: bool = false;
 pub const BISHOP_PAIR: bool = false;
-pub const MOBILITY: bool = true;
+pub const MOBILITY: bool = false;
+pub const KING_SAFETY: bool = true;
 
 // These can be tweaked, have an effect on elo
 pub const QS_CHECK_EVASION_LIMIT: usize = 2;
