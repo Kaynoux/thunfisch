@@ -47,6 +47,10 @@ pub const MOBILITY_COEFFICIENTS: [[i32; 6]; 2] = [[0, 5, 3, 2, 1, 0], [0, 5, 3, 
 pub const PIECE_ATTACK_VALUES: [[i16; 6]; 2] = [[0, 2, 3, 4, 6, 0], [0, 2, 2, 5, 7, 0]];
 pub const PIECE_DEFEND_VALUES: [[i16; 6]; 2] = [[0, 1, 1, 2, 4, 0], [0, 1, 1, 3, 5, 0]];
 
+
+// bonus for the side to move
+pub const INITIATIVE: i32 = 20;
+
 // Flips square index to flip rows but keep columns the same
 // e.g. a1 becomes a8; e4 -> e5
 const fn flip(sq: usize) -> usize {
@@ -292,6 +296,11 @@ impl Board {
             White => 1,
             Black => -1,
         };
+
+        if settings::INITIATIVE {
+            mg_score += current_color_multiplier * INITIATIVE;
+            eg_score += current_color_multiplier * INITIATIVE;
+        }
 
         // Final aggregation of scoring aspects
         let mut score = (mg_score * (256 - gamephase) + eg_score * gamephase) >> 8;

@@ -19,6 +19,7 @@ pub const KINGS_OPEN_FILES: bool = false;
 pub const BISHOP_PAIR: bool = false;
 pub const MOBILITY: bool = false;
 pub const KING_SAFETY: bool = true;
+pub const INITIATIVE: bool = true;
 
 // These can be tweaked, have an effect on elo
 pub const QS_CHECK_EVASION_LIMIT: usize = 2;
