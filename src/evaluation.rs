@@ -44,9 +44,8 @@ const BISHOP_PAIR_BONUS: [i16; 2] = [15, 25];
 
 pub const MOBILITY_COEFFICIENTS: [[i32; 6]; 2] = [[0, 5, 3, 2, 1, 0], [0, 5, 3, 4, 1, 0]];
 
-pub const PIECE_ATTACK_VALUES: [[i16; 6]; 2] = [[0, 2, 2, 3, 5, 0], [0, 2, 2, 4, 6, 0]];
-pub const PIECE_DEFEND_VALUES: [[i16; 6]; 2] = [[0, 1, 1, 2, 4, 0], [0, 1, 1, 3, 5, 0]];
-
+pub const PIECE_ATTACK_VALUES: [[i16; 6]; 2] = [[0, 2, 2, 3, 5, 0], [0, 1, 1, 2, 4, 0]];
+// pub const PIECE_DEFEND_VALUES: [[i16; 6]; 2] = [[0, 1, 1, 2, 4, 0], [0, 1, 1, 2, 3, 0]];
 
 // bonus for the side to move
 pub const INITIATIVE: i32 = 15;
@@ -473,8 +472,8 @@ impl Board {
             let opp = friend ^ 1;
             let attacker_mg = PIECE_ATTACK_VALUES[0][i >> 1];
             let attacker_eg = PIECE_ATTACK_VALUES[1][i >> 1];
-            let defender_mg = PIECE_DEFEND_VALUES[0][i >> 1];
-            let defender_eg = PIECE_DEFEND_VALUES[1][i >> 1];
+            // let defender_mg = PIECE_DEFEND_VALUES[0][i >> 1];
+            // let defender_eg = PIECE_DEFEND_VALUES[1][i >> 1];
 
             // println!("{:?}", Figure::from_idx(i));
             // println!(
@@ -489,12 +488,11 @@ impl Board {
             // );
 
             // decrease friendly danger score for friendly piece in friendly king zone
-            mg_safety[friend] +=
-                (king_zones[friend] & figure_movements[i]).get_count() as i16 * defender_mg;
-            eg_safety[friend] +=
-                (king_zones[friend] & figure_movements[i]).get_count() as i16 * defender_eg;
+            // mg_safety[friend] -=
+            //     (king_zones[friend] & figure_movements[i]).get_count() as i16 * defender_mg;
+            // eg_safety[friend] -=
+            //     (king_zones[friend] & figure_movements[i]).get_count() as i16 * defender_eg;
 
-            // increase opponent's danger score for friendly piece in opponents king zone
             mg_safety[opp] -=
                 (king_zones[opp] & figure_movements[i]).get_count() as i16 * attacker_mg;
             eg_safety[opp] -=
@@ -511,9 +509,9 @@ impl Board {
             ],
             [
                 eg_safety[0].signum()
-                    * EG_KING_SAFETY_TABLE[mg_safety[0].abs().clamp(0, 99) as usize],
+                    * EG_KING_SAFETY_TABLE[eg_safety[0].abs().clamp(0, 99) as usize],
                 eg_safety[1].signum()
-                    * EG_KING_SAFETY_TABLE[mg_safety[1].abs().clamp(0, 99) as usize],
+                    * EG_KING_SAFETY_TABLE[eg_safety[1].abs().clamp(0, 99) as usize],
             ],
         )
     }

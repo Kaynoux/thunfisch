@@ -46,7 +46,7 @@ pub fn handle_custom_commands(board: &mut Board, command: &str, args: &[&str]) {
         }
         "eval" => {
             println!("Depth 0 Board Evaluation: {}\n", board.evaluate());
-            #[cfg(debug_assertions)]
+            // #[cfg(debug_assertions)]
             print_debug_eval_info(board);
         }
         "do" => {
