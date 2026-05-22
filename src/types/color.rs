@@ -18,11 +18,11 @@ impl Color {
     }
 
 
-    #[inline(always)]
+    #[inline]
     pub fn from_usize(val: usize) -> Self {
         match val {
-            0 => Color::White,
-            1 => Color::Black,
+            0 => Self::White,
+            1 => Self::Black,
             _ => unreachable!(),
         }
     }

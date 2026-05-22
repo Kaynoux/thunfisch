@@ -84,9 +84,8 @@ pub fn calculate_attackmask(
     attacks
 }
 
-/// Note: unlike the regular attackmask, if a piece can take a piece of its own colour, this is NOT counted as an attack
-/// it would yield incorrect results for mobility evaluation (which this is used for)
-/// For the generic attackmask this makes sense however, as an occupied square is still dangerous for the king
+/// Note: unlike the regular attackmask, if a piece can take a piece of its own colour, this IS generated here
+/// the reason for this is that it is very important for correct king safety calculations
 pub fn calculate_attackmask_by_figure(
     board: &Board,
     occupied: Bitboard,
@@ -141,7 +140,7 @@ pub fn calculate_attackmask_by_figure(
         _ => unreachable!(),
     }
 
-    attacks & !board.color_bbs(color)
+    attacks
 }
 
 // TODO: not pass entire board

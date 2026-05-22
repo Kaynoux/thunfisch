@@ -249,7 +249,7 @@ mod tests {
     #[test]
     fn print_file_bbs() {
         for i in 0..=7 {
-            print!("{:?}", Bitboard::file(i))
+            print!("{:?}", Bitboard::file(i));
         }
     }
 }

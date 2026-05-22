@@ -2,7 +2,10 @@ use crate::{
     communication::handle_go,
     debug::{perft, visualize},
     evaluation::{GAMEPHASE_INC, MOBILITY_COEFFICIENTS},
-    move_generator::{masks::{self, king_safety_mask}, pinmask},
+    move_generator::{
+        masks::{self, king_safety_mask},
+        pinmask,
+    },
     move_picker::MoveList,
     move_scoring::{mvv_lva, score_quiets},
     prelude::*,
@@ -85,12 +88,9 @@ pub fn handle_custom_commands(board: &mut Board, command: &str, args: &[&str]) {
                     }
                 };
 
-                let piece = match Piece::from_char(piece_char) {
-                    Some(p) => p,
-                    None => {
-                        println!("info invalid piece: {}", args[1]);
-                        return;
-                    }
+                let Some(piece) = Piece::from_char(piece_char) else {
+                    println!("info invalid piece: {}", args[1]);
+                    return;
                 };
 
                 let figure_idx = piece as usize * 2 + color as usize;
@@ -139,14 +139,17 @@ pub fn handle_custom_commands(board: &mut Board, command: &str, args: &[&str]) {
             let passed_pawn_mask = Bitboard::passed_pawn_mask(bit, color);
             println!("{passed_pawn_mask:?}");
         }
-         "kingmask" => {
+        "kingmask" => {
             let color_str = args[0];
             let color = match color_str {
                 "white" | "w" => Color::White,
                 "black" | "b" => Color::Black,
                 _ => panic!("illegal color"),
             };
-            println!("{:?}", king_safety_mask(board, color) ^ board.figure_bb(color, Piece::King));
+            println!(
+                "{:?}",
+                king_safety_mask(board, color) ^ board.figure_bb(color, Piece::King)
+            );
         }
         "hash" => {
             println!("{:?}", board.hash());
@@ -193,7 +196,14 @@ fn perft(board: &mut Board, args: &[&str]) {
 
 /// Yes this is ugly af
 /// I'm inlining a lot of stuff in the eval for caching optimizations and better readability there
-/// so we just accept that this is a lot of duplicated code and kinda ugly, this is only part of the debug utils anyway after all
+/// so we just accept that this is a lot of duplicated code and kinda ugly, this is only part of the debug utils anyway after all'
+/// WARNING: THIS IS EXCLUSIVELY VIBE-CODED SLOP, FOR YOUR OWN SANITY DO NOT ATTEMPT TO WORK ON THIS WITHOUT AI
+#[allow(
+    clippy::needless_range_loop,
+    clippy::cast_possible_truncation,
+    clippy::cast_possible_wrap,
+    clippy::similar_names
+)]
 fn print_debug_eval_info(board: &Board) {
     if settings::DOUBLED_PAWNS {
         // Doubled pawns
@@ -208,18 +218,10 @@ fn print_debug_eval_info(board: &Board) {
 
     // Pawn structure
     let (mg_pawn, eg_pawn) = board.pawn_structure();
-    println!(
-        "Pawn Structure (passed, isolated):\n  White: MG {}, EG {}\n  Black: MG {}, EG {}",
-        mg_pawn[0], eg_pawn[0], mg_pawn[1], eg_pawn[1]
-    );
 
     // Calculate game phase
     let mut phase = 32;
-    #[allow(
-        clippy::needless_range_loop,
-        clippy::cast_possible_truncation,
-        clippy::cast_possible_wrap
-    )]
+
     for i in 0..=11 {
         let mut bb = board.figure_bb_by_index(i);
         let count = bb.iter_mut().count() as i32;
@@ -232,35 +234,66 @@ fn print_debug_eval_info(board: &Board) {
     let black_blended =
         (i32::from(mg_pawn[1]) * (256 - gamephase) + i32::from(eg_pawn[1]) * gamephase) >> 8;
 
-    println!("Blended Passed Pawn eval:\n  White: {white_blended}\n  Black: {black_blended}",);
+    if settings::PASSED_PAWNS || settings::ISOLATED_PAWNS {
+        println!(
+            "Pawn Structure (passed, isolated):\n  White: MG {}, EG {}\n  Black: MG {}, EG {}",
+            mg_pawn[0], eg_pawn[0], mg_pawn[1], eg_pawn[1]
+        );
+        println!("Blended Passed Pawn eval:\n  White: {white_blended}\n  Black: {black_blended}",);
+    }
 
     // Mobility evaluation
     let mut mg_mobility = [0i32; 2];
     let mut eg_mobility = [0i32; 2];
-
-    #[allow(
-        clippy::needless_range_loop,
-        clippy::cast_possible_truncation,
-        clippy::cast_possible_wrap
-    )]
+    let mut figure_movements = [Bitboard::EMPTY; 12];
     for i in 0..=11 {
-        let attackmask = masks::calculate_attackmask_by_figure(board, board.occupied(), i, None);
-        let mobility = attackmask.get_count() as i32;
+        let mobility = board.calculate_piece_mobility(i, &mut figure_movements);
+        // println!("mobility {:?}, {mobility}", Figure::from_idx(i));
         mg_mobility[i & 1] += MOBILITY_COEFFICIENTS[0][i >> 1] * mobility;
         eg_mobility[i & 1] += MOBILITY_COEFFICIENTS[1][i >> 1] * mobility;
     }
 
-    println!(
-        "Mobility scores:\n  White: MG {}, EG {}\n  Black: MG {}, EG {}",
-        mg_mobility[0], eg_mobility[0], mg_mobility[1], eg_mobility[1]
-    );
+    if settings::MOBILITY {
+        println!(
+            "Mobility scores:\n  White: MG {}, EG {}\n  Black: MG {}, EG {}",
+            mg_mobility[0], eg_mobility[0], mg_mobility[1], eg_mobility[1]
+        );
 
-    let mg_mobility_diff = mg_mobility[0] - mg_mobility[1];
-    let eg_mobility_diff = eg_mobility[0] - eg_mobility[1];
-    let blended_mobility =
-        (mg_mobility_diff * (256 - gamephase) + eg_mobility_diff * gamephase) >> 8;
+        let mg_mobility_diff = mg_mobility[0] - mg_mobility[1];
+        let eg_mobility_diff = eg_mobility[0] - eg_mobility[1];
+        let blended_mobility =
+            (mg_mobility_diff * (256 - gamephase) + eg_mobility_diff * gamephase) >> 8;
 
-    println!(
-        "Mobility blended (White - Black): MG {mg_mobility_diff}, EG {eg_mobility_diff} -> Blended: {blended_mobility}",
-    );
+        println!(
+            "Mobility blended (White - Black): MG {mg_mobility_diff}, EG {eg_mobility_diff} -> Blended: {blended_mobility}",
+        );
+    }
+
+    if settings::KING_SAFETY {
+        // King safety evaluation
+        for i in 0..=11 {
+            if figure_movements[i].is_empty() {
+                // Ensure movement masks are populated if they were not filled by mobility evaluation.
+                figure_movements[i] =
+                    masks::calculate_attackmask_by_figure(board, board.occupied(), i, None);
+            }
+            figure_movements[i] |= board.figure_bb_by_index(i);
+        }
+
+        let (mg_king_safety, eg_king_safety) = board.king_safety(&figure_movements);
+        println!(
+            "King Safety table scores:\n  White: MG {}, EG {}\n  Black: MG {}, EG {}",
+            mg_king_safety[0], eg_king_safety[0], mg_king_safety[1], eg_king_safety[1]
+        );
+
+        let mg_king_safety_diff = mg_king_safety[0] - mg_king_safety[1];
+        let eg_king_safety_diff = eg_king_safety[0] - eg_king_safety[1];
+        let blended_king_safety = (i32::from(mg_king_safety_diff) * (256 - gamephase)
+            + i32::from(eg_king_safety_diff) * gamephase)
+            >> 8;
+
+        println!(
+            "King Safety blended (White - Black): MG {mg_king_safety_diff}, EG {eg_king_safety_diff} -> Blended: {blended_king_safety}",
+        );
+    }
 }
