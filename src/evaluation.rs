@@ -44,12 +44,12 @@ const BISHOP_PAIR_BONUS: [i16; 2] = [15, 25];
 
 pub const MOBILITY_COEFFICIENTS: [[i32; 6]; 2] = [[0, 5, 3, 2, 1, 0], [0, 5, 3, 4, 1, 0]];
 
-pub const PIECE_ATTACK_VALUES: [[i16; 6]; 2] = [[0, 2, 3, 4, 6, 0], [0, 2, 2, 5, 7, 0]];
+pub const PIECE_ATTACK_VALUES: [[i16; 6]; 2] = [[0, 2, 2, 3, 5, 0], [0, 2, 2, 4, 6, 0]];
 pub const PIECE_DEFEND_VALUES: [[i16; 6]; 2] = [[0, 1, 1, 2, 4, 0], [0, 1, 1, 3, 5, 0]];
 
 
 // bonus for the side to move
-pub const INITIATIVE: i32 = 20;
+pub const INITIATIVE: i32 = 15;
 
 // Flips square index to flip rows but keep columns the same
 // e.g. a1 becomes a8; e4 -> e5
