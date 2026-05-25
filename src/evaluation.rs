@@ -476,7 +476,6 @@ impl Board {
         ];
         // pawn shields
         for i in 0..=1 {
-            println!("{:?}", pawn_shield_zones[i] & self.figure_bb_by_index(i));
             mg_safety[i] -= (pawn_shield_zones[i] & self.figure_bb_by_index(i)).get_count() as i16
                 * PAWN_SHIELD_BONUS[0];
             eg_safety[i] -= (pawn_shield_zones[i] & self.figure_bb_by_index(i)).get_count() as i16
