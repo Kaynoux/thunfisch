@@ -21,6 +21,6 @@ run_sprt() {
         -rounds 5000 \
         -log append=false engine=true file=sprt.log \
         -sprt elo0=0 elo1=10 alpha=0.05 beta=0.05 \
-        | tee "sprt_summary_\$(date +%Y-%m-%d_%H-%M).txt"
+        | tee "sprt_summary_$(date +%Y-%m-%d_%H-%M).txt"
 }
 run_sprt $@

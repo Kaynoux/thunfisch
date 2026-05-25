@@ -95,7 +95,15 @@ For example, say you want *only* Quiescence Search, Alpha Beta and MVV-LVA move 
 ```bash
 cargo build --no-default-features --features "ab,qs,mvv-lva"
 ```
-
+### Flamegraph profile
+To create a flamegraph of an exemplary search, use the flamegraph cargo profile:
+```bash
+cargo build --profile flamegraph
+```
+Then use:
+```
+samply record ./target/flamegraph/thunfisch --flamegraph
+```
 
 ## Documentation
 ### Architecture

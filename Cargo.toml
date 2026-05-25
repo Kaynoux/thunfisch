@@ -53,7 +53,7 @@ panic = "abort"
 strip = true
 debug = false
 
-[profile.profiling]
+[profile.flamegraph]
 inherits = "release"
 debug = true      # Keep debug info for flamegraphs
 strip = false     # Don't strip symbols
