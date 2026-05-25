@@ -149,7 +149,6 @@ pub fn calculate_attackmask_by_figure(
 /// but that seems like a lot of effort given i'd likely have to tune both
 #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
 pub fn king_safety_mask(board: &Board, color: Color) -> Bitboard {
-    // let mut mask = board.figure_bb(color, Piece::King);
     let king = board.king(color);
     let (x, y) = (king.to_x() as i16, king.to_y() as u16);
     let mut mask = Bitboard::EMPTY;

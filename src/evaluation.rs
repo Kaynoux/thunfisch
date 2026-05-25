@@ -47,6 +47,9 @@ pub const MOBILITY_COEFFICIENTS: [[i32; 6]; 2] = [[0, 5, 3, 2, 1, 0], [0, 5, 3, 
 pub const PIECE_ATTACK_VALUES: [[i16; 6]; 2] = [[0, 2, 2, 3, 5, 0], [0, 2, 2, 3, 5, 0]];
 pub const PIECE_DEFEND_VALUES: [[i16; 6]; 2] = [[0, 1, 1, 2, 4, 0], [0, 1, 1, 2, 3, 0]];
 
+// danger points for every pawn in the pawn shield in front of the king
+pub const PAWN_SHIELD_BONUS: [i16; 2] = [2, 0];
+
 // bonus for the side to move
 pub const INITIATIVE: i32 = 15;
 
@@ -467,6 +470,18 @@ impl Board {
             king_safety_mask(self, Color::White),
             king_safety_mask(self, Color::Black),
         ];
+        let pawn_shield_zones = [
+            king_zones[0] & ((Bitboard(0xff) << (8 * self.king(Color::White).to_xy().1)) << 8),
+            king_zones[1] & ((Bitboard(0xff) << (8 * self.king(Color::Black).to_xy().1)) >> 8),
+        ];
+        // pawn shields
+        for i in 0..=1 {
+            println!("{:?}", pawn_shield_zones[i] & self.figure_bb_by_index(i));
+            mg_safety[i] -= (pawn_shield_zones[i] & self.figure_bb_by_index(i)).get_count() as i16
+                * PAWN_SHIELD_BONUS[0];
+            eg_safety[i] -= (pawn_shield_zones[i] & self.figure_bb_by_index(i)).get_count() as i16
+                * PAWN_SHIELD_BONUS[1];
+        }
 
         // skip pawns and kings in the evaluation
         for i in 2..=9 {
@@ -500,6 +515,7 @@ impl Board {
             eg_safety[opp] +=
                 (king_zones[opp] & figure_movements[i]).get_count() as i16 * attacker_eg;
         }
+
         // println!("mg score: {mg_safety:?}");
         #[allow(clippy::cast_sign_loss)]
         (
