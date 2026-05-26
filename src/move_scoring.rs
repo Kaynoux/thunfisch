@@ -141,7 +141,7 @@ const MAX_HISTORY_VALUE: i32 = i16::MAX as i32;
 pub struct HistoryTable([[AtomicI32; 64]; 64], [[AtomicI32; 64]; 64]);
 
 impl HistoryTable {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self(
             std::array::from_fn(|_| std::array::from_fn(|_| AtomicI32::new(0))),
             std::array::from_fn(|_| std::array::from_fn(|_| AtomicI32::new(0))),
@@ -151,7 +151,7 @@ impl HistoryTable {
     /// Update the history value for `mv` at `depth` for `color` by `bonus`.
     /// The bonus should be calculated by either `history_bonus` for bonuses, and
     /// `history_maluse` for history maluse punishments.
-    pub fn update_history(&self, color: Color, mv: DecodedMove, bonus: i32) {
+    pub(crate) fn update_history(&self, color: Color, mv: DecodedMove, bonus: i32) {
         let fro = mv.from.0;
         let to = mv.to.0;
         match color {
@@ -168,7 +168,7 @@ impl HistoryTable {
         }
     }
 
-    pub fn get_score(&self, mv: DecodedMove, color: Color) -> i32 {
+    pub(crate) fn get_score(&self, mv: DecodedMove, color: Color) -> i32 {
         let fro = mv.from.0;
         let to = mv.to.0;
         match color {
@@ -180,7 +180,7 @@ impl HistoryTable {
     /// Age history values between search iterations
     /// I have no idea why this is useful, but the Relative History Paper (Winands et. al.) suggests it
     /// and apparently Histories lose ELO without it
-    pub fn age(&self) {
+    pub(crate) fn age(&self) {
         for inner in &self.0 {
             for h in inner {
                 let old = h.load(Ordering::Relaxed);
@@ -195,7 +195,7 @@ impl HistoryTable {
         }
     }
 
-    pub fn clear(&self) {
+    pub(crate) fn clear(&self) {
         for inner in &self.0 {
             for h in inner {
                 h.store(0, Ordering::Relaxed);

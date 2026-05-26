@@ -20,22 +20,22 @@ enum GenerationState {
 
 #[repr(C)]
 pub struct MoveListMove {
-    pub score: i32,
-    pub mv: EncodedMove,
+    pub(crate) score: i32,
+    pub(crate) mv: EncodedMove,
 }
 
 pub struct MoveList {
-    pub list: ArrayVec<MoveListMove, MAX_MOVES_COUNT>,
+    pub(crate) list: ArrayVec<MoveListMove, MAX_MOVES_COUNT>,
 }
 
 impl MoveList {
-    pub fn new() -> Self {
+    pub(crate) fn new() -> Self {
         Self {
             list: ArrayVec::<MoveListMove, MAX_MOVES_COUNT>::new(),
         }
     }
 
-    pub fn push(&mut self, mv: EncodedMove) {
+    pub(crate) fn push(&mut self, mv: EncodedMove) {
         self.list.push(MoveListMove { score: 0, mv });
     }
 }
@@ -69,7 +69,7 @@ pub struct MovePicker {
 }
 
 impl MovePicker {
-    pub fn new(
+    pub(crate) fn new(
         tt_move: Option<EncodedMove>,
         killer_mv: Option<EncodedMove>,
         skip_quiets: bool,
@@ -83,7 +83,7 @@ impl MovePicker {
             skip_quiets,
         }
     }
-    pub fn next(&mut self, board: &mut Board) -> Option<EncodedMove> {
+    pub(crate) fn next(&mut self, board: &mut Board) -> Option<EncodedMove> {
         match self.state {
             GenerationState::TTMove => {
                 self.state = GenerationState::Captures;
@@ -146,7 +146,7 @@ impl MovePicker {
         }
     }
 
-    pub fn yield_next_best_move(&mut self) -> Option<EncodedMove> {
+    pub(crate) fn yield_next_best_move(&mut self) -> Option<EncodedMove> {
         loop {
             let remaining = &mut self.move_list.list[self.move_index..];
 

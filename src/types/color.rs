@@ -10,7 +10,7 @@ pub enum Color {
 impl Color {
     /// My color number representation uses opposite values as in the polyglot values so I need to this method
     /// to lazy to change this now
-    pub const fn to_polyglot(self) -> usize {
+    pub(crate) const fn to_polyglot(self) -> usize {
         match self {
             Black => 0,
             White => 1,
@@ -19,7 +19,7 @@ impl Color {
 
 
     #[inline]
-    pub fn from_usize(val: usize) -> Self {
+    pub(crate) fn from_usize(val: usize) -> Self {
         match val {
             0 => Self::White,
             1 => Self::Black,

@@ -81,19 +81,19 @@ pub struct DecodedTTEntry {
     info: TTInfo,
 }
 impl DecodedTTEntry {
-    pub fn depth(&self) -> i32 {
+    pub(crate) fn depth(&self) -> i32 {
         i32::from(self.depth)
     }
 
-    pub const fn bound(&self) -> Bound {
+    pub(crate) const fn bound(&self) -> Bound {
         self.info.bound()
     }
 
-    pub fn score(&self) -> i32 {
+    pub(crate) fn score(&self) -> i32 {
         i32::from(self.score)
     }
 
-    pub const fn best_move(&self) -> Option<EncodedMove> {
+    pub(crate) const fn best_move(&self) -> Option<EncodedMove> {
         if self.best_move.0 == 0 {
             return None;
         }
@@ -103,7 +103,7 @@ impl DecodedTTEntry {
 
     // pass by value should be faster but idk
     #[allow(clippy::needless_pass_by_value)]
-    pub fn from_internal(atom: EncodedHashEntry) -> Self {
+    pub(crate) fn from_internal(atom: EncodedHashEntry) -> Self {
         // SAFETY: DecodedTTEntry is #[repr(C)] and has a total size of 8 bytes (64 bits),
         // matching the size of the u64 loaded from the atomic storage.
         unsafe { std::mem::transmute(atom.data.load(Ordering::Relaxed)) }
@@ -111,7 +111,7 @@ impl DecodedTTEntry {
 
     // pass by value should be faster but idk
     #[allow(clippy::needless_pass_by_value)]
-    pub fn convert_to_u64(self) -> u64 {
+    pub(crate) fn convert_to_u64(self) -> u64 {
         // SAFETY: DecodedTTEntry is #[repr(C)] and exactly 8 bytes wide.
         // Transmuting it to u64 is safe as all bit patterns are valid for u64.
         unsafe { std::mem::transmute(self) }
@@ -125,7 +125,7 @@ pub struct TranspositionTable {
 }
 
 impl TranspositionTable {
-    pub fn new(mb: usize) -> Self {
+    pub(crate) fn new(mb: usize) -> Self {
         let bytes = mb * 1024 * 1024;
         let entry_size = size_of::<EncodedHashEntry>();
 
@@ -151,18 +151,18 @@ impl TranspositionTable {
 
     // Adds one but limits age to 63
     #[allow(clippy::cast_possible_truncation)] // Age mask will never cause truncation
-    pub fn increase_age(&self) {
+    pub(crate) fn increase_age(&self) {
         self.age
             .store((self.get_age() + 1) & (AGE_MASK as u8), Ordering::Relaxed);
     }
 
-    pub fn get_age(&self) -> u8 {
+    pub(crate) fn get_age(&self) -> u8 {
         self.age.load(Ordering::Relaxed)
     }
 
     /// For the most part taken from Viridithas
     #[allow(clippy::too_many_arguments, clippy::cast_possible_truncation)]
-    pub fn store(
+    pub(crate) fn store(
         &self,
         hash: u64,
         mut best_move: Option<EncodedMove>,
@@ -233,7 +233,7 @@ impl TranspositionTable {
     }
 
     #[allow(clippy::cast_possible_truncation)]
-    pub fn probe(&self, hash: u64, ply: i32) -> Option<DecodedTTEntry> {
+    pub(crate) fn probe(&self, hash: u64, ply: i32) -> Option<DecodedTTEntry> {
         let idx = (hash as usize) & (self.entries.len() - 1);
         let mut entry = DecodedTTEntry::from_internal(self.entries[idx].clone());
 
@@ -250,7 +250,7 @@ impl TranspositionTable {
         Some(entry)
     }
 
-    pub fn info(&self) -> (usize, usize, f64, usize) {
+    pub(crate) fn info(&self) -> (usize, usize, f64, usize) {
         // Sample up to 1000 entries to estimate fill percentage (standard UCI behavior)
         let sample_size = self.entries.len().min(1000);
         let mut filled_sample = 0;
@@ -286,14 +286,14 @@ impl TranspositionTable {
     }
 
     /// Clears the transposition table by resetting all entries and the age to 0.
-    pub fn clear(&self) {
+    pub(crate) fn clear(&self) {
         for entry in &self.entries {
             entry.data.store(0, Ordering::Relaxed);
         }
         self.age.store(0, Ordering::Relaxed);
     }
 
-    pub fn handle_debug(&self, args: &[&str], hash: u64) -> Result<String, String> {
+    pub(crate) fn handle_debug(&self, args: &[&str], hash: u64) -> Result<String, String> {
         match args.first() {
             Some(&"help") => Ok("usage: tt [fill | clear | probe]".to_owned()),
             Some(&"clear") => {

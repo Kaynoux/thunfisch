@@ -19,7 +19,7 @@ pub enum Figure {
 }
 
 impl Figure {
-    pub const fn to_polyglot(self) -> usize {
+    pub(crate) const fn to_polyglot(self) -> usize {
         match self {
             Self::BlackPawn => 0,
             Self::WhitePawn => 1,
@@ -37,7 +37,7 @@ impl Figure {
         }
     }
 
-    pub const fn from_idx(idx: usize) -> Self {
+    pub(crate) const fn from_idx(idx: usize) -> Self {
         match idx {
             0 => Self::WhitePawn,
             1 => Self::BlackPawn,
@@ -55,7 +55,7 @@ impl Figure {
         }
     }
 
-    pub const fn piece_and_color(self) -> (Piece, Color) {
+    pub(crate) const fn piece_and_color(self) -> (Piece, Color) {
         match self {
             Self::WhitePawn => (Pawn, White),
             Self::BlackPawn => (Pawn, Black),
@@ -73,7 +73,7 @@ impl Figure {
         }
     }
 
-    pub const fn piece(self) -> Piece {
+    pub(crate) const fn piece(self) -> Piece {
         match self {
             Self::WhitePawn | Self::BlackPawn => Pawn,
             Self::WhiteKnight | Self::BlackKnight => Knight,
@@ -85,7 +85,7 @@ impl Figure {
         }
     }
 
-    pub const fn from_piece_and_color(piece: Piece, color: Color) -> Self {
+    pub(crate) const fn from_piece_and_color(piece: Piece, color: Color) -> Self {
         match (piece, color) {
             (Pawn, White) => Self::WhitePawn,
             (Pawn, Black) => Self::BlackPawn,

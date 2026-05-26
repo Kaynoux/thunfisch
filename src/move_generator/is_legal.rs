@@ -20,7 +20,7 @@ pub enum MoveDirection {
 impl DecodedMove {
     /// Identifies the `MoveDirection` of the move based on where the squares lie relative to
     /// each other on the chess board.
-    pub const fn move_direction(&self) -> MoveDirection {
+    pub(crate) const fn move_direction(&self) -> MoveDirection {
         match (
             self.to.x().abs_diff(self.from.x()),
             self.to.y().abs_diff(self.from.y()),
@@ -38,7 +38,7 @@ impl Board {
     /// Assumption: Our move generation generates only legal moves but these moves can be now illegal
     /// Does not handle castles at all atm, they are completly handled in `is_legal`
     #[inline]
-    pub fn is_pseudo_legal(&self, mv: &DecodedMove) -> bool {
+    pub(crate) fn is_pseudo_legal(&self, mv: &DecodedMove) -> bool {
         let mv_direction = mv.move_direction();
         let current_color = self.current_color();
         let mv_type = mv.mv_type;
@@ -92,7 +92,7 @@ impl Board {
     }
     /// Checks whether `mv` is legal on `self`.
     #[allow(clippy::too_many_lines)]
-    pub fn is_legal(&mut self, mv: &DecodedMove) -> bool {
+    pub(crate) fn is_legal(&mut self, mv: &DecodedMove) -> bool {
         if !self.is_pseudo_legal(mv) {
             return false;
         }

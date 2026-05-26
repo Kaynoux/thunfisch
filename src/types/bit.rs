@@ -5,7 +5,7 @@ use std::{
 };
 
 #[derive(Copy, Clone, PartialEq, Eq)]
-pub struct Bit(pub u64);
+pub struct Bit(pub(crate) u64);
 
 impl fmt::Debug for Bit {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -46,44 +46,44 @@ pub const POSITION_Y: [usize; 64] = {
 
 impl Bit {
     #[inline]
-    pub const fn to_square(self) -> Square {
+    pub(crate) const fn to_square(self) -> Square {
         Square(self.0.trailing_zeros() as usize)
     }
 
     #[inline]
-    pub const fn to_xy(self) -> (usize, usize) {
+    pub(crate) const fn to_xy(self) -> (usize, usize) {
         POSITION_XY[self.to_square().0]
     }
 
     #[inline]
-    pub const fn to_x(self) -> usize {
+    pub(crate) const fn to_x(self) -> usize {
         POSITION_X[self.to_square().0]
     }
 
     #[inline]
-    pub const fn to_y(self) -> usize {
+    pub(crate) const fn to_y(self) -> usize {
         POSITION_Y[self.to_square().0]
     }
 
     #[inline]
-    pub fn is_position_empty(self, board: &Board) -> bool {
+    pub(crate) fn is_position_empty(self, board: &Board) -> bool {
         board.empty().is_position_set(self)
     }
 
     #[inline]
-    pub fn is_friendly(self, board: &Board, color: Color) -> bool {
+    pub(crate) fn is_friendly(self, board: &Board, color: Color) -> bool {
         (color == Black && board.color_bbs(Black).is_position_set(self))
             || (color == White && board.color_bbs(White).is_position_set(self))
     }
 
     #[inline]
-    pub fn is_enemy(self, board: &Board, color: Color) -> bool {
+    pub(crate) fn is_enemy(self, board: &Board, color: Color) -> bool {
         (color == White && board.color_bbs(Black).is_position_set(self))
             || (color == Black && board.color_bbs(White).is_position_set(self))
     }
 
     #[inline]
-    pub const fn get_offset_pos(self, dx: isize, dy: isize) -> Self {
+    pub(crate) const fn get_offset_pos(self, dx: isize, dy: isize) -> Self {
         let pos_idx = self.to_square().0.cast_signed();
         let new_x: isize = pos_idx % 8 + dx;
         let new_y: isize = pos_idx / 8 + dy;
@@ -95,7 +95,7 @@ impl Bit {
     }
 
     #[inline]
-    pub fn get_first_two_string_chars(s: &str) -> Option<(char, char)> {
+    pub(crate) fn get_first_two_string_chars(s: &str) -> Option<(char, char)> {
         let mut iter = s.chars();
         match (iter.next(), iter.next()) {
             (Some(c1), Some(c2)) => Some((c1, c2)),
@@ -104,13 +104,13 @@ impl Bit {
     }
 
     #[inline]
-    pub fn from_coords(coords: &str) -> Option<Self> {
+    pub(crate) fn from_coords(coords: &str) -> Option<Self> {
         Square::from_coords(coords).map(Square::to_bit)
     }
 
     #[inline]
     #[allow(clippy::cast_possible_truncation)]
-    pub fn to_coords(self) -> String {
+    pub(crate) fn to_coords(self) -> String {
         let (x, y) = self.to_xy();
         let file = (b'a' + x as u8) as char;
         let rank = (b'1' + y as u8) as char;
@@ -118,12 +118,12 @@ impl Bit {
     }
 
     #[inline]
-    pub const fn from_xy(x: isize, y: isize) -> Self {
+    pub(crate) const fn from_xy(x: isize, y: isize) -> Self {
         Square((x + (y * 8)).cast_unsigned()).to_bit()
     }
 
     #[inline]
-    pub const fn to_bb(self) -> Bitboard {
+    pub(crate) const fn to_bb(self) -> Bitboard {
         Bitboard(self.0)
     }
 }

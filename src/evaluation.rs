@@ -222,7 +222,7 @@ pub const EG_BASE_POSITION_TABLE: [[i32; 64]; 6] = [
 /// !! Return type is relativized for the current player for negamax search
 /// Unit = Centipawns, 100 Centipawns => 1 Pawn
 impl Board {
-    pub fn evaluate(&self) -> i32 {
+    pub(crate) fn evaluate(&self) -> i32 {
         let white = 0usize;
         let black = 1usize;
         let mut mg = [0i32; 2];
@@ -318,7 +318,7 @@ impl Board {
 
     /// Format:
     /// (mg: [white, black], eg: [white, black])
-    pub fn pawn_structure(&self) -> ([i16; 2], [i16; 2]) {
+    pub(crate) fn pawn_structure(&self) -> ([i16; 2], [i16; 2]) {
         // [white, black]
         let mut mg_pawn_offset = [0i16; 2];
         let mut eg_pawn_offset = [0i16; 2];
@@ -384,7 +384,7 @@ impl Board {
     /// Note: penalties are negative for both sides
     /// TODO: this can probably be improved by weighing it against the remaining pawns (the less pawns are on the board, the worse it is if they're doubled)
     #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
-    pub fn doubled_pawn_penalties(&self) -> [i32; 2] {
+    pub(crate) fn doubled_pawn_penalties(&self) -> [i32; 2] {
         let white_pawns = self.figure_bb_by_index(0);
         let black_pawns = self.figure_bb_by_index(1);
         // [white, black]
@@ -407,7 +407,7 @@ impl Board {
     }
 
     #[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
-    pub fn calculate_piece_mobility(
+    pub(crate) fn calculate_piece_mobility(
         &self,
         figure: usize,
         figure_movements: &mut [Bitboard; 12],
@@ -440,7 +440,7 @@ impl Board {
     }
 
     /// Calculate a bitboard marking open files (files without any pawns on them)
-    pub fn open_files(&self) -> Bitboard {
+    pub(crate) fn open_files(&self) -> Bitboard {
         let pawn_structure =
             self.figure_bb(Color::White, Piece::Pawn) | self.figure_bb(Color::Black, Piece::Pawn);
         let mut open_files = Bitboard::EMPTY;
@@ -462,7 +462,7 @@ impl Board {
         clippy::cast_possible_wrap,
         clippy::similar_names
     )]
-    pub fn king_safety(&self, figure_movements: &[Bitboard; 12]) -> ([i16; 2], [i16; 2]) {
+    pub(crate) fn king_safety(&self, figure_movements: &[Bitboard; 12]) -> ([i16; 2], [i16; 2]) {
         let mut mg_safety = [0i16; 2];
         let mut eg_safety = [0i16; 2];
 

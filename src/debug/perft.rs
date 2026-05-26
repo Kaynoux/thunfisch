@@ -199,7 +199,7 @@ pub fn r_perft_rayon(board: &mut Board, depth: usize) -> usize {
 }
 
 #[cfg(test)]
-pub fn hash_test_perft(board: &mut Board, depth: usize) -> usize {
+pub(crate) fn hash_test_perft(board: &mut Board, depth: usize) -> usize {
     if depth == 0 {
         return 1;
     }

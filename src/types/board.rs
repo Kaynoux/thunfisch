@@ -46,14 +46,14 @@ pub struct Board {
 }
 
 impl Board {
-    pub fn new(fen: &str) -> Self {
+    pub(crate) fn new(fen: &str) -> Self {
         generate_board(fen)
     }
-    pub fn fen(&self) -> String {
+    pub(crate) fn fen(&self) -> String {
         generate_fen(self)
     }
     /// WARNING: This does not set the hash correctly
-    pub const EMPTY: Self = Self {
+    pub(crate) const EMPTY: Self = Self {
         color_bbs: [Bitboard::EMPTY; 2],
         occupied: Bitboard::EMPTY,
         figure_bbs: [
@@ -91,94 +91,94 @@ impl Board {
     };
 
     #[inline]
-    pub const fn color_bbs(&self, color: Color) -> Bitboard {
+    pub(crate) const fn color_bbs(&self, color: Color) -> Bitboard {
         self.color_bbs[color as usize]
     }
 
     #[inline]
-    pub fn color_bbs_without_king(&self, color: Color) -> Bitboard {
+    pub(crate) fn color_bbs_without_king(&self, color: Color) -> Bitboard {
         self.color_bbs(color) & !self.king(color)
     }
 
     #[inline]
-    pub const fn empty(&self) -> Bitboard {
+    pub(crate) const fn empty(&self) -> Bitboard {
         self.figure_bbs[Figure::Empty as usize]
     }
 
-    pub const fn occupied(&self) -> Bitboard {
+    pub(crate) const fn occupied(&self) -> Bitboard {
         self.occupied
     }
 
-    pub const fn current_color(&self) -> Color {
+    pub(crate) const fn current_color(&self) -> Color {
         self.current_color
     }
 
-    pub const fn figures(&self, square: Square) -> Figure {
+    pub(crate) const fn figures(&self, square: Square) -> Figure {
         self.figures[square.i()]
     }
 
-    pub const fn all_figures(&self) -> [Figure; 64] {
+    pub(crate) const fn all_figures(&self) -> [Figure; 64] {
         self.figures
     }
 
-    pub const fn ep_target(&self) -> Option<Bit> {
+    pub(crate) const fn ep_target(&self) -> Option<Bit> {
         self.ep_target
     }
 
-    pub const fn white_queen_castle(&self) -> bool {
+    pub(crate) const fn white_queen_castle(&self) -> bool {
         self.white_queen_castle
     }
 
-    pub const fn white_king_castle(&self) -> bool {
+    pub(crate) const fn white_king_castle(&self) -> bool {
         self.white_king_castle
     }
 
-    pub const fn black_queen_castle(&self) -> bool {
+    pub(crate) const fn black_queen_castle(&self) -> bool {
         self.black_queen_castle
     }
 
-    pub const fn black_king_castle(&self) -> bool {
+    pub(crate) const fn black_king_castle(&self) -> bool {
         self.black_king_castle
     }
 
-    pub const fn halfmove_clock(&self) -> usize {
+    pub(crate) const fn halfmove_clock(&self) -> usize {
         self.halfmove_clock
     }
 
-    pub const fn total_halfmove_counter(&self) -> usize {
+    pub(crate) const fn total_halfmove_counter(&self) -> usize {
         self.total_halfmove_counter
     }
 
-    pub const fn set_halfmove_clock(&mut self, clock: usize) {
+    pub(crate) const fn set_halfmove_clock(&mut self, clock: usize) {
         self.halfmove_clock = clock;
     }
 
-    pub const fn increase_halfmove_clock(&mut self) {
+    pub(crate) const fn increase_halfmove_clock(&mut self) {
         self.halfmove_clock += 1;
     }
 
-    pub const fn is_50_move_rule(&self) -> bool {
+    pub(crate) const fn is_50_move_rule(&self) -> bool {
         // 50 move rule refers to moves, but the halfmove clock counts ply
         self.halfmove_clock() >= 100
     }
 
-    pub const fn set_total_halfmove_counter(&mut self, counter: usize) {
+    pub(crate) const fn set_total_halfmove_counter(&mut self, counter: usize) {
         self.total_halfmove_counter = counter;
     }
 
     /// Attention: Does not update hash
-    pub const fn set_ep_target(&mut self, target: Option<Bit>) {
+    pub(crate) const fn set_ep_target(&mut self, target: Option<Bit>) {
         self.ep_target = target;
     }
 
     /// Attention: Does not update hash
-    pub const fn set_current_color(&mut self, color: Color) {
+    pub(crate) const fn set_current_color(&mut self, color: Color) {
         self.current_color = color;
     }
 
     /// Attention: Does not update hash
     #[allow(clippy::fn_params_excessive_bools)]
-    pub const fn set_castling_rights(
+    pub(crate) const fn set_castling_rights(
         &mut self,
         white_queen: bool,
         white_king: bool,
@@ -192,12 +192,12 @@ impl Board {
     }
 
     #[inline]
-    pub fn piece_and_color_at_position(&self, pos: Bit) -> (Piece, Color) {
+    pub(crate) fn piece_and_color_at_position(&self, pos: Bit) -> (Piece, Color) {
         self.figures[pos.to_square()].piece_and_color()
     }
 
     #[inline]
-    pub const fn piece_at_position(&self, pos: Square) -> Piece {
+    pub(crate) const fn piece_at_position(&self, pos: Square) -> Piece {
         match self.figures[pos.0] {
             Figure::Empty => Empty,
             Figure::WhitePawn | Figure::BlackPawn => Pawn,
@@ -210,18 +210,18 @@ impl Board {
     }
 
     #[inline]
-    pub const fn figure_bb(&self, color: Color, piece: Piece) -> Bitboard {
+    pub(crate) const fn figure_bb(&self, color: Color, piece: Piece) -> Bitboard {
         self.figure_bbs[Figure::from_piece_and_color(piece, color) as usize]
     }
 
     #[inline]
-    pub const fn figure_bb_by_index(&self, idx: usize) -> Bitboard {
+    pub(crate) const fn figure_bb_by_index(&self, idx: usize) -> Bitboard {
         self.figure_bbs[idx]
     }
 
     /// Determines whether there are only Kings and Pawns left on the board.
     /// This is used to avoid null move pruning in Zugzwang positions in a King-Pawn endgame.
-    pub fn is_king_pawn_endgame(&self) -> bool {
+    pub(crate) fn is_king_pawn_endgame(&self) -> bool {
         vec![Knight, Bishop, Rook, Queen]
             .into_iter()
             .map(|piece| self.figure_bb(Color::White, piece) ^ self.figure_bb(Color::Black, piece))
@@ -230,19 +230,19 @@ impl Board {
     }
 
     #[inline]
-    pub const fn king(&self, color: Color) -> Bit {
+    pub(crate) const fn king(&self, color: Color) -> Bit {
         match color {
             Black => Bit(self.figure_bbs[Figure::BlackKing as usize].0),
             White => Bit(self.figure_bbs[Figure::WhiteKing as usize].0),
         }
     }
 
-    pub fn toggle_current_color(&mut self) {
+    pub(crate) fn toggle_current_color(&mut self) {
         self.current_color = !self.current_color;
         self.hash ^= zobrist::white_move_key();
     }
 
-    pub const fn toggle(&mut self, color: Color, figure: Figure, square: Square) {
+    pub(crate) const fn toggle(&mut self, color: Color, figure: Figure, square: Square) {
         self.color_bbs[color as usize].toggle(square);
         self.figure_bbs[Figure::Empty as usize].toggle(square);
         self.figure_bbs[figure as usize].toggle(square);
@@ -255,7 +255,7 @@ impl Board {
         self.hash ^= zobrist::figure_key(figure, square);
     }
 
-    pub fn push_unmake_info_stack(&mut self, mv: EncodedMove, to_figure: Figure) {
+    pub(crate) fn push_unmake_info_stack(&mut self, mv: EncodedMove, to_figure: Figure) {
         let attackmask = self.get_attackmask();
         let checkmask = self.get_checkmask();
         let check_counter = self.get_check_counter();
@@ -282,29 +282,29 @@ impl Board {
         // always restores the to position so this is correct
     }
 
-    pub fn pop_unmake_info_stack(&mut self) -> Option<UnmakeInfo> {
+    pub(crate) fn pop_unmake_info_stack(&mut self) -> Option<UnmakeInfo> {
         self.unmake_info_stack.pop()
     }
 
-    pub fn push_repetition_stack(&mut self) {
+    pub(crate) fn push_repetition_stack(&mut self) {
         self.repetition_stack.push(self.hash);
     }
 
-    pub fn pop_repetition_stack(&mut self) {
+    pub(crate) fn pop_repetition_stack(&mut self) {
         self.repetition_stack.pop();
     }
 
-    pub const fn repetition_stack(&self) -> &Vec<u64> {
+    pub(crate) const fn repetition_stack(&self) -> &Vec<u64> {
         &self.repetition_stack
     }
 
-    pub fn is_threefold_repetition(&self) -> bool {
+    pub(crate) fn is_threefold_repetition(&self) -> bool {
         self.count_repetitions() >= 2
     }
 
     /// extracted from `is_threefold_repetition` for visualization purposes
     /// Counts how often the current position appears in the stack in the past.
-    pub fn count_repetitions(&self) -> usize {
+    pub(crate) fn count_repetitions(&self) -> usize {
         self.repetition_stack
             .iter()
             .rev()
@@ -319,7 +319,7 @@ impl Board {
     /// - Rook on the relevant side has moved
     /// - King has moved
     /// - Rook on the relevant side was captured
-    pub fn update_castling(
+    pub(crate) fn update_castling(
         &mut self,
         friendly: Color,
         from: Piece,
@@ -371,7 +371,7 @@ impl Board {
         self.hash ^= zobrist::generate_castling_hash(self); // add new castling hash
     }
 
-    pub fn update_ep(&mut self, friendly: Color, mv: &DecodedMove) {
+    pub(crate) fn update_ep(&mut self, friendly: Color, mv: &DecodedMove) {
         if let Some(ep) = self.ep_target {
             self.hash ^= zobrist::ep_key(ep.to_square()); // Remove old ep
         }
@@ -387,17 +387,17 @@ impl Board {
         }
     }
 
-    pub const fn set_hash(&mut self, hash: u64) {
+    pub(crate) const fn set_hash(&mut self, hash: u64) {
         self.hash = hash;
     }
 
-    pub const fn hash(&self) -> u64 {
+    pub(crate) const fn hash(&self) -> u64 {
         self.hash
     }
 
     /// generates the hash from scratch is used when parsing a fen
     /// should not be used when doing an board update
-    pub fn generate_hash(&self) -> u64 {
+    pub(crate) fn generate_hash(&self) -> u64 {
         let mut hash = 0;
         for (idx, figure) in self.all_figures().iter().enumerate() {
             if *figure == Figure::Empty {
@@ -418,21 +418,21 @@ impl Board {
         hash
     }
 
-    pub const fn set_attackmask(&mut self, attackmask: Bitboard) {
+    pub(crate) const fn set_attackmask(&mut self, attackmask: Bitboard) {
         self.attackmask = attackmask;
     }
 
-    pub const fn set_checkmask(&mut self, checkmask: Bitboard, check_counter: usize) {
+    pub(crate) const fn set_checkmask(&mut self, checkmask: Bitboard, check_counter: usize) {
         self.checkmask = checkmask;
         self.check_counter = check_counter;
     }
 
-    pub const fn set_pinmasks(&mut self, hv_pinmask: Bitboard, diag_pinmask: Bitboard) {
+    pub(crate) const fn set_pinmasks(&mut self, hv_pinmask: Bitboard, diag_pinmask: Bitboard) {
         self.hv_pinmask = hv_pinmask;
         self.diag_pinmask = diag_pinmask;
     }
 
-    pub fn get_attackmask(&mut self) -> Bitboard {
+    pub(crate) fn get_attackmask(&mut self) -> Bitboard {
         if self.attackmask == Bitboard::UNSET_ATTACK_MASK {
             let attackmask =
                 masks::calculate_attackmask(self, self.occupied(), !self.current_color(), None);
@@ -441,7 +441,7 @@ impl Board {
         self.attackmask
     }
 
-    pub fn get_checkmask(&mut self) -> Bitboard {
+    pub(crate) fn get_checkmask(&mut self) -> Bitboard {
         if self.check_counter == UNSET_CHECK_COUNTER {
             let (checkmask, check_counter) = masks::calc_check_mask(self);
             self.set_checkmask(checkmask, check_counter);
@@ -449,7 +449,7 @@ impl Board {
         self.checkmask
     }
 
-    pub fn get_check_counter(&mut self) -> usize {
+    pub(crate) fn get_check_counter(&mut self) -> usize {
         if self.check_counter == UNSET_CHECK_COUNTER {
             let (checkmask, check_counter) = masks::calc_check_mask(self);
             self.set_checkmask(checkmask, check_counter);
@@ -457,7 +457,7 @@ impl Board {
         self.check_counter
     }
 
-    pub fn get_pinmasks(&mut self) -> (Bitboard, Bitboard) {
+    pub(crate) fn get_pinmasks(&mut self) -> (Bitboard, Bitboard) {
         if self.hv_pinmask == Bitboard::UNSET_PINMASK {
             let (hv_pinmask, diag_pinmask) = pinmask::generate_pin_masks(self);
             self.set_pinmasks(hv_pinmask, diag_pinmask);
@@ -465,19 +465,19 @@ impl Board {
         (self.hv_pinmask, self.diag_pinmask)
     }
 
-    pub const fn get_attackmask_without_gen(&self) -> Bitboard {
+    pub(crate) const fn get_attackmask_without_gen(&self) -> Bitboard {
         self.attackmask
     }
 
-    pub const fn get_checkmask_without_gen(&self) -> Bitboard {
+    pub(crate) const fn get_checkmask_without_gen(&self) -> Bitboard {
         self.checkmask
     }
 
-    pub const fn get_check_counter_without_gen(&self) -> usize {
+    pub(crate) const fn get_check_counter_without_gen(&self) -> usize {
         self.check_counter
     }
 
-    pub const fn get_pinmasks_without_gen(&self) -> (Bitboard, Bitboard) {
+    pub(crate) const fn get_pinmasks_without_gen(&self) -> (Bitboard, Bitboard) {
         (self.hv_pinmask, self.diag_pinmask)
     }
 }
