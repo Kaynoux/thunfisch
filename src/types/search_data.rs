@@ -11,26 +11,26 @@ use crate::{prelude::*, settings::MAX_AB_DEPTH};
 ///
 /// WARNING: this currently does NOT guarantee thread-safety as we're currently not threading the search.
 pub struct SharedSearchData<'sd> {
-    pub(crate) board: &'sd mut Board,
-    pub(crate) stop: &'sd Arc<AtomicBool>,
-    pub(crate) local_seldepth: &'sd mut usize,
-    pub(crate) killers: &'sd mut [EncodedMove; MAX_AB_DEPTH + 1],
-    pub(crate) ab_ply: usize,
+    pub board: &'sd mut Board,
+    pub stop: &'sd Arc<AtomicBool>,
+    pub local_seldepth: &'sd mut usize,
+    pub killers: &'sd mut [EncodedMove; MAX_AB_DEPTH + 1],
+    pub ab_ply: usize,
 
     // From here these are only used for additional info collection
-    pub(crate) total_alpha_beta_nodes: AtomicUsize,
-    pub(crate) total_qs_nodes: AtomicUsize,
-    pub(crate) total_eval_nodes: AtomicUsize,
-    pub(crate) total_tt_hits: AtomicUsize,
-    pub(crate) total_lmr_researches: AtomicUsize,
-    pub(crate) total_pvs_researches: AtomicUsize,
+    pub total_alpha_beta_nodes: AtomicUsize,
+    pub total_qs_nodes: AtomicUsize,
+    pub total_eval_nodes: AtomicUsize,
+    pub total_tt_hits: AtomicUsize,
+    pub total_lmr_researches: AtomicUsize,
+    pub total_pvs_researches: AtomicUsize,
     // stores whether the current search got cancelled due to timeout
     // TODO find out whether this can be eliminated in favor of using only `stop`
-    pub(crate) timeout_occurred: AtomicBool,
+    pub timeout_occurred: AtomicBool,
 }
 
 impl<'sd> SharedSearchData<'sd> {
-    pub(crate) const fn new(
+    pub const fn new(
         board: &'sd mut Board,
         stop: &'sd Arc<AtomicBool>,
         local_seldepth: &'sd mut usize,

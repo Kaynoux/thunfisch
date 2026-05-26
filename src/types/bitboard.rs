@@ -7,7 +7,7 @@ use std::{
 /// the bits the are set represent a position on the board with the bit being the index of the chess position
 /// Counting begins bottom left
 #[derive(Copy, Clone, Eq, PartialEq)]
-pub struct Bitboard(pub(crate) u64);
+pub struct Bitboard(pub u64);
 
 impl<T> std::ops::Shl<T> for Bitboard
 where
@@ -65,24 +65,24 @@ impl fmt::Debug for Bitboard {
 }
 
 impl Bitboard {
-    pub(crate) const EMPTY: Self = Self(0);
-    pub(crate) const FULL: Self = Self(u64::MAX);
-    pub(crate) const UNSET_CHECK_MASK: Self = Self(0);
-    pub(crate) const UNSET_ATTACK_MASK: Self = Self(u64::MAX);
-    pub(crate) const UNSET_PINMASK: Self = Self(u64::MAX);
+    pub const EMPTY: Self = Self(0);
+    pub const FULL: Self = Self(u64::MAX);
+    pub const UNSET_CHECK_MASK: Self = Self(0);
+    pub const UNSET_ATTACK_MASK: Self = Self(u64::MAX);
+    pub const UNSET_PINMASK: Self = Self(u64::MAX);
 
     #[inline]
-    pub(crate) fn is_position_set(self, position: Bit) -> bool {
+    pub fn is_position_set(self, position: Bit) -> bool {
         (self & position) != Self(0)
     }
 
-    pub(crate) const fn toggle(&mut self, square: Square) {
+    pub const fn toggle(&mut self, square: Square) {
         self.0 ^= 1 << square.i();
     }
 
     #[allow(clippy::unreadable_literal)]
     #[inline]
-    pub(crate) const fn file(file_idx: i16) -> Self {
+    pub const fn file(file_idx: i16) -> Self {
         debug_assert!(file_idx <= 7);
         // 0x0101010101010101 is the A file
         // shift it to get other files
@@ -91,7 +91,7 @@ impl Bitboard {
 
     #[inline]
     #[allow(clippy::cast_possible_wrap, clippy::cast_possible_truncation)]
-    pub(crate) fn passed_pawn_mask(bit: Bit, friendly: Color) -> Self {
+    pub fn passed_pawn_mask(bit: Bit, friendly: Color) -> Self {
         let (x, y) = (bit.to_x() as i16, bit.to_y() as u16);
 
         let relevant_files =
@@ -106,7 +106,7 @@ impl Bitboard {
     }
 
     #[inline]
-    pub(crate) fn pop_lsb_position(&mut self) -> Option<Bit> {
+    pub fn pop_lsb_position(&mut self) -> Option<Bit> {
         if *self == Self(0) {
             None
         } else {
@@ -117,18 +117,18 @@ impl Bitboard {
     }
 
     #[inline]
-    pub(crate) const fn get_count(self) -> u32 {
+    pub const fn get_count(self) -> u32 {
         self.0.count_ones()
     }
 
     /// Iterator for Bitboard, uses pop lsb to always return
     /// Yields only the bits that are set
-    pub(crate) fn iter_mut(&mut self) -> impl Iterator<Item = Bit> + '_ {
+    pub fn iter_mut(&mut self) -> impl Iterator<Item = Bit> + '_ {
         std::iter::from_fn(move || self.pop_lsb_position())
     }
 
     #[inline]
-    pub(crate) const fn from_idx<const N: usize>(indexes: [usize; N]) -> Self {
+    pub const fn from_idx<const N: usize>(indexes: [usize; N]) -> Self {
         let mut bitboard = Self(0);
         let mut i = 0;
         while i < N {
@@ -138,7 +138,7 @@ impl Bitboard {
         bitboard
     }
 
-    pub(crate) const fn is_empty(self) -> bool {
+    pub const fn is_empty(self) -> bool {
         self.0 == 0
     }
 }

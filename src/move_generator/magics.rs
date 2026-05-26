@@ -4,9 +4,9 @@
 /// These are used to index the sliding target lookup table
 #[derive(Copy, Clone)]
 pub struct Magic {
-    pub(crate) mask: u64,
-    pub(crate) factor: u64,
-    pub(crate) offset: usize,
+    pub mask: u64,
+    pub factor: u64,
+    pub offset: usize,
 }
 
 pub const ROOK_MAGICS: [Magic; 64] = [

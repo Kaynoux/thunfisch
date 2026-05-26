@@ -2,12 +2,12 @@ use crate::prelude::*;
 
 #[repr(transparent)]
 #[derive(Copy, Clone, PartialEq, Hash, Eq)]
-pub struct EncodedMove(pub(crate) u16);
+pub struct EncodedMove(pub u16);
 
 /// contains all information about a move in a u16
 /// Format: `[type | to | from]`
 impl EncodedMove {
-    pub(crate) const fn decode(self) -> DecodedMove {
+    pub const fn decode(self) -> DecodedMove {
         let from = Square((self.0 & 0b0000_0000_0011_1111) as usize);
         let to = Square(((self.0 & 0b0000_1111_1100_0000) >> 6) as usize);
         let mv_type = MoveType::from_u16(self.0 & 0b1111_0000_0000_0000);
@@ -15,7 +15,7 @@ impl EncodedMove {
     }
 
     #[allow(clippy::cast_possible_truncation)]
-    pub(crate) const fn encode(from: Square, to: Square, mv_type: MoveType) -> Self {
+    pub const fn encode(from: Square, to: Square, mv_type: MoveType) -> Self {
         let from_idx = from.0 as u16;
         let to_idx = to.0 as u16;
         Self(from_idx | (to_idx) << 6 | (mv_type as u16))

@@ -2,45 +2,45 @@ use crate::prelude::{Bit, Bitboard};
 use std::ops::Index;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug)]
-pub struct Square(pub(crate) usize);
+pub struct Square(pub usize);
 
 impl Square {
     #[inline]
-    pub(crate) const fn to_bit(self) -> Bit {
+    pub const fn to_bit(self) -> Bit {
         Bit(1u64 << self.0)
     }
 
     #[inline]
-    pub(crate) const fn to_bitboard(self) -> Bitboard {
+    pub const fn to_bitboard(self) -> Bitboard {
         Bitboard(1u64 << self.0)
     }
 
     #[inline]
-    pub(crate) const fn next(&mut self) {
+    pub const fn next(&mut self) {
         self.0 += 1;
     }
 
     /// Quick way to access array index by Square
     #[inline]
-    pub(crate) const fn i(self) -> usize {
+    pub const fn i(self) -> usize {
         self.0
     }
 
-    pub(crate) const fn from_xy(x: usize, y: usize) -> Self {
+    pub const fn from_xy(x: usize, y: usize) -> Self {
         Self(y * 8 + x)
     }
 
-    pub(crate) const fn y(self) -> usize {
+    pub const fn y(self) -> usize {
         self.0 / 8
     }
 
-    pub(crate) const fn x(self) -> usize {
+    pub const fn x(self) -> usize {
         self.0 & 7 // equivalent to % 8 for positiv numbers
     }
 
     /// Converts UCI notation to square
     #[inline]
-    pub(crate) fn from_coords(coords: &str) -> Option<Self> {
+    pub fn from_coords(coords: &str) -> Option<Self> {
         let (c1, c2) = Bit::get_first_two_string_chars(coords)?;
 
         let x: usize = match c1 {

@@ -4,7 +4,7 @@ impl Board {
     /// Unmakes the last move by using unmake info from the stack
     /// <https://www.chessprogramming.org/Unmake_Move>
     #[allow(clippy::too_many_lines)]
-    pub(crate) fn unmake_move(&mut self) {
+    pub fn unmake_move(&mut self) {
         let prev = self
             .pop_unmake_info_stack()
             .expect("unmake_move called on empty unmake info stack");
@@ -126,7 +126,7 @@ impl Board {
         self.set_pinmasks(prev.hv_pinmask, prev.diag_pinmask);
     }
 
-    pub(crate) fn unmake_null_move(&mut self) {
+    pub fn unmake_null_move(&mut self) {
         let prev = self
             .pop_unmake_info_stack()
             .expect("unmake_move called on empty unmake info stack while unmaking a null move");

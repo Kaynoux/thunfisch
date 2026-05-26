@@ -2,13 +2,13 @@ use crate::prelude::*;
 
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub struct DecodedMove {
-    pub(crate) from: Square,
-    pub(crate) to: Square,
-    pub(crate) mv_type: MoveType,
+    pub from: Square,
+    pub to: Square,
+    pub mv_type: MoveType,
 }
 
 impl DecodedMove {
-    pub(crate) fn to_coords(self) -> String {
+    pub fn to_coords(self) -> String {
         let from = self.from.to_bit().to_coords();
         let to = self.to.to_bit().to_coords();
 
@@ -18,11 +18,11 @@ impl DecodedMove {
         )
     }
 
-    pub(crate) fn is_quiet(&self) -> bool {
+    pub fn is_quiet(&self) -> bool {
         self.mv_type == MoveType::Quiet
     }
 
-    pub(crate) fn from_coords(move_str: &str, board: &Board) -> Self {
+    pub fn from_coords(move_str: &str, board: &Board) -> Self {
         // 4 or 5 character string are valid (5 because of promotion)
         assert!(
             move_str.len() == 4 || move_str.len() == 5,
@@ -106,7 +106,7 @@ impl DecodedMove {
     }
 
     #[allow(clippy::cast_possible_truncation)]
-    pub(crate) const fn encode(self) -> EncodedMove {
+    pub const fn encode(self) -> EncodedMove {
         let from_idx = self.from.0 as u16;
         let to_idx = self.to.0 as u16;
         EncodedMove(from_idx | (to_idx) << 6 | (self.mv_type as u16))

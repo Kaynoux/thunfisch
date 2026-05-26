@@ -4,7 +4,7 @@ use crate::{move_generator::moves, move_picker::MoveList, prelude::*};
 pub const MAX_MOVES_COUNT: usize = 218;
 
 impl Board {
-    pub(crate) fn generate_moves<const QUIETS: bool>(&mut self, moves: &mut MoveList) {
+    pub fn generate_moves<const QUIETS: bool>(&mut self, moves: &mut MoveList) {
         let friendly = self.current_color();
 
         let (hv_pinmask, diag_pinmask) = self.get_pinmasks();
@@ -70,7 +70,7 @@ impl Board {
     }
 
     /// Generates all possible moves, should only be used for tests and perft and not in the actual search, because it does not seperate between quiets and not
-    pub(crate) fn generate_all_moves(&mut self) -> MoveList {
+    pub fn generate_all_moves(&mut self) -> MoveList {
         let mut moves = MoveList::new();
         let friendly = self.current_color();
 
@@ -168,7 +168,7 @@ impl Board {
         moves
     }
 
-    pub(crate) fn is_in_check(&mut self) -> bool {
+    pub fn is_in_check(&mut self) -> bool {
         if self.get_check_counter() == 0 {
             return false;
         }

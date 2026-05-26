@@ -1,0 +1,9 @@
+[package]
+name = "tuning"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+rayon = "1.11.0"
+arrayvec = "0.7.6"
+thunfisch = { path = ".." }

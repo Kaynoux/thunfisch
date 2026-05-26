@@ -28,7 +28,7 @@ pub enum MoveType {
 }
 
 impl MoveType {
-    pub(crate) const fn to_promotion_piece(self) -> Option<Piece> {
+    pub const fn to_promotion_piece(self) -> Option<Piece> {
         match self {
             Self::KnightPromo | Self::KnightPromoCapture => Some(Knight),
             Self::BishopPromo | Self::BishopPromoCapture => Some(Bishop),
@@ -38,7 +38,7 @@ impl MoveType {
         }
     }
 
-    pub(crate) const fn to_promotion_color_piece(self, color: Color) -> Option<Figure> {
+    pub const fn to_promotion_color_piece(self, color: Color) -> Option<Figure> {
         match (self, color) {
             (Self::KnightPromo | Self::KnightPromoCapture, White) => Some(Figure::WhiteKnight),
             (Self::BishopPromo | Self::BishopPromoCapture, White) => Some(Figure::WhiteBishop),
@@ -52,15 +52,15 @@ impl MoveType {
         }
     }
 
-    pub(crate) const fn is_promotion(self) -> bool {
+    pub const fn is_promotion(self) -> bool {
         (self as u16) & 0b1000_0000_0000_0000 != 0
     }
 
-    pub(crate) const fn is_capture(self) -> bool {
+    pub const fn is_capture(self) -> bool {
         (self as u16) & 0b0100_0000_0000_0000 != 0
     }
 
-    pub(crate) const fn from_u16(value: u16) -> Self {
+    pub const fn from_u16(value: u16) -> Self {
         match value {
             0b0000_0000_0000_0000 => Self::Quiet,
             0b0001_0000_0000_0000 => Self::DoubleMove,

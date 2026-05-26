@@ -4,7 +4,7 @@ impl Board {
     /// Executes a given move on the board
     /// <https://www.chessprogramming.org/Make_Move>
     #[allow(clippy::too_many_lines)]
-    pub(crate) fn make_move(&mut self, encoded_move: EncodedMove) {
+    pub fn make_move(&mut self, encoded_move: EncodedMove) {
         let mv = encoded_move.decode();
         let mv_type = mv.mv_type;
         let friendly = self.current_color();
@@ -119,7 +119,7 @@ impl Board {
             }
         }
     }
-    pub(crate) fn make_null_move(&mut self) {
+    pub fn make_null_move(&mut self) {
         let null_move = EncodedMove(0);
 
         self.push_unmake_info_stack(null_move, Figure::Empty);
