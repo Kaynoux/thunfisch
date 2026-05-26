@@ -45,7 +45,14 @@ pub fn handle_custom_commands(board: &mut Board, command: &str, args: &[&str]) {
             println!("Captures: {captures:?}");
         }
         "eval" => {
-            println!("Depth 0 Board Evaluation: {}\n", board.evaluate());
+            let color_multiplier = match board.current_color() {
+                White => 1,
+                Black => -1,
+            };
+            println!(
+                "Depth 0 Board Evaluation: {}\n",
+                board.evaluate() * color_multiplier
+            );
             // #[cfg(debug_assertions)]
             print_debug_eval_info(board);
         }
