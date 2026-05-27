@@ -7,18 +7,15 @@
 use std::time::Instant;
 
 use crate::{
-    adam::optimize_k,
-    preparation::handle_prepare,
-    training_data::{GameResult, TrainingSample},
+    adam::optimize_k, preparation::handle_prepare, training_data::TrainingSample,
     tunable_params::TunableParams,
 };
 
-mod eval;
 mod adam;
+mod eval;
 mod preparation;
 mod training_data;
 mod tunable_params;
-
 
 /// Program entrypoint.
 /// Matches over the first command to identify what to do.
@@ -33,7 +30,6 @@ mod tunable_params;
 fn main() -> std::io::Result<()> {
     let mut args: Vec<_> = std::env::args().collect();
     args.remove(0);
-    println!("{args:?}");
     match &args.first().map(|s| s.as_str()) {
         Some("prepare") => handle_prepare(&args[1..])?,
         Some("train") => train(&args[1..])?,

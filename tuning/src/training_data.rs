@@ -7,8 +7,6 @@
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::Path;
-use std::result;
-
 
 /// One training position used for Texel tuning.
 ///

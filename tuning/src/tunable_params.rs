@@ -5,35 +5,55 @@
 
 use std::{fs, io, path::Path};
 
+use ngalgebra::SVector;
 use serde::{Deserialize, Serialize};
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////// Weight Counting ///////////////////////////////////////////////////////
+
+const N_PIECES: usize = 6;
+const N_COLORS: usize = 2;
+const N_SQUARES: usize = 8 * 8;
+const N_KING_SAFETY_BUCKETS: usize = 10 * 10;
+pub const N_TOTAL: usize = (N_PIECES * 2)
+    + (N_COLORS * 2)
+    + 1
+    + (N_COLORS * 2)
+    + (N_COLORS * N_PIECES * 3)
+    + N_COLORS
+    + 1
+    + (N_SQUARES * 2)
+    + (N_KING_SAFETY_BUCKETS * 2)
+    + (N_PIECES * N_SQUARES * 2);
+pub type WeightVector = SVector<f64, N_TOTAL>;
 
 /// A runtime-configurable parameter set for the evaluator.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TunableParams {
-    pub mg_piece_values: [i32; 6],
-    pub eg_piece_values: [i32; 6],
+    pub mg_piece_values: [i32; N_PIECES],
+    pub eg_piece_values: [i32; N_PIECES],
 
-    pub rook_open_file_bonus: [i32; 2],
-    pub king_open_file_penalty: [i32; 2],
+    pub rook_open_file_bonus: [i32; N_COLORS],
+    pub king_open_file_penalty: [i32; N_COLORS],
 
     pub doubled_pawn_penalty: i32,
-    pub isolated_pawn_penalty: [i16; 2],
-    pub bishop_pair_bonus: [i16; 2],
+    pub isolated_pawn_penalty: [i16; N_COLORS],
+    pub bishop_pair_bonus: [i16; N_COLORS],
 
-    pub mobility_coefficients: [[i32; 6]; 2],
-    pub piece_attack_values: [[i16; 6]; 2],
-    pub piece_defend_values: [[i16; 6]; 2],
-    pub pawn_shield_bonus: [i16; 2],
+    pub mobility_coefficients: [[i32; N_PIECES]; N_COLORS],
+    pub piece_attack_values: [[i16; N_PIECES]; N_COLORS],
+    pub piece_defend_values: [[i16; N_PIECES]; N_COLORS],
+    pub pawn_shield_bonus: [i16; N_COLORS],
 
     pub initiative: i32,
 
-    pub mg_passed_pawn_table: [i16; 64],
-    pub eg_passed_pawn_table: [i16; 64],
-    pub mg_king_safety_table: [i16; 100],
-    pub eg_king_safety_table: [i16; 100],
+    pub mg_passed_pawn_table: [i16; N_SQUARES],
+    pub eg_passed_pawn_table: [i16; N_SQUARES],
+    pub mg_king_safety_table: [i16; N_KING_SAFETY_BUCKETS],
+    pub eg_king_safety_table: [i16; N_KING_SAFETY_BUCKETS],
 
-    pub mg_base_position_table: [[i32; 64]; 6],
-    pub eg_base_position_table: [[i32; 64]; 6],
+    pub mg_base_position_table: [[i32; N_SQUARES]; N_PIECES],
+    pub eg_base_position_table: [[i32; N_SQUARES]; N_PIECES],
 }
 
 impl Default for TunableParams {
@@ -76,6 +96,129 @@ impl TunableParams {
             .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
         fs::write(path, json)
     }
+
+    /// Convert the parameters into the optimizer's fixed-size vector.
+    pub fn to_weight_vector(&self) -> WeightVector {
+        self.into()
+    }
+
+    /// Reconstruct parameters from the optimizer's fixed-size vector.
+    pub fn from_weight_vector(values: WeightVector) -> Self {
+        values.into()
+    }
+}
+
+impl From<&TunableParams> for WeightVector {
+    fn from(params: &TunableParams) -> Self {
+        let mut values = Vec::with_capacity(N_TOTAL);
+
+        values.extend(params.mg_piece_values.iter().copied().map(f64::from));
+        values.extend(params.eg_piece_values.iter().copied().map(f64::from));
+
+        values.extend(params.rook_open_file_bonus.iter().copied().map(f64::from));
+        values.extend(params.king_open_file_penalty.iter().copied().map(f64::from));
+
+        values.push(f64::from(params.doubled_pawn_penalty));
+        values.extend(params.isolated_pawn_penalty.iter().copied().map(f64::from));
+        values.extend(params.bishop_pair_bonus.iter().copied().map(f64::from));
+
+        for row in params.mobility_coefficients {
+            values.extend(row.iter().copied().map(f64::from));
+        }
+        for row in params.piece_attack_values {
+            values.extend(row.iter().copied().map(f64::from));
+        }
+        for row in params.piece_defend_values {
+            values.extend(row.iter().copied().map(f64::from));
+        }
+
+        values.extend(params.pawn_shield_bonus.iter().copied().map(f64::from));
+        values.push(f64::from(params.initiative));
+
+        values.extend(params.mg_passed_pawn_table.iter().copied().map(f64::from));
+        values.extend(params.eg_passed_pawn_table.iter().copied().map(f64::from));
+        values.extend(params.mg_king_safety_table.iter().copied().map(f64::from));
+        values.extend(params.eg_king_safety_table.iter().copied().map(f64::from));
+
+        for row in params.mg_base_position_table {
+            values.extend(row.iter().copied().map(f64::from));
+        }
+        for row in params.eg_base_position_table {
+            values.extend(row.iter().copied().map(f64::from));
+        }
+
+        SVector::from_row_slice(&values)
+    }
+}
+
+impl From<TunableParams> for WeightVector {
+    fn from(params: TunableParams) -> Self {
+        SVector::from(&params)
+    }
+}
+
+impl From<WeightVector> for TunableParams {
+    fn from(values: WeightVector) -> Self {
+        let values = values.as_slice();
+        let mut index = 0;
+
+        fn read_f64(values: &[f64], index: &mut usize) -> f64 {
+            let value = values[*index];
+            *index += 1;
+            value
+        }
+
+        fn read_i32(values: &[f64], index: &mut usize) -> i32 {
+            read_f64(values, index) as i32
+        }
+
+        fn read_i16(values: &[f64], index: &mut usize) -> i16 {
+            read_f64(values, index) as i16
+        }
+
+        fn read_i32_array<const N: usize>(values: &[f64], index: &mut usize) -> [i32; N] {
+            std::array::from_fn(|_| read_i32(values, index))
+        }
+
+        fn read_i16_array<const N: usize>(values: &[f64], index: &mut usize) -> [i16; N] {
+            std::array::from_fn(|_| read_i16(values, index))
+        }
+
+        fn read_i32_table<const ROWS: usize, const COLS: usize>(
+            values: &[f64],
+            index: &mut usize,
+        ) -> [[i32; COLS]; ROWS] {
+            std::array::from_fn(|_| read_i32_array::<COLS>(values, index))
+        }
+
+        fn read_i16_table<const ROWS: usize, const COLS: usize>(
+            values: &[f64],
+            index: &mut usize,
+        ) -> [[i16; COLS]; ROWS] {
+            std::array::from_fn(|_| read_i16_array::<COLS>(values, index))
+        }
+
+        Self {
+            mg_piece_values: read_i32_array::<N_PIECES>(values, &mut index),
+            eg_piece_values: read_i32_array::<N_PIECES>(values, &mut index),
+            rook_open_file_bonus: read_i32_array::<N_COLORS>(values, &mut index),
+            king_open_file_penalty: read_i32_array::<N_COLORS>(values, &mut index),
+            doubled_pawn_penalty: read_i32(values, &mut index),
+            isolated_pawn_penalty: read_i16_array::<N_COLORS>(values, &mut index),
+            bishop_pair_bonus: read_i16_array::<N_COLORS>(values, &mut index),
+            mobility_coefficients: read_i32_table::<N_COLORS, N_PIECES>(values, &mut index),
+            piece_attack_values: read_i16_table::<N_COLORS, N_PIECES>(values, &mut index),
+            piece_defend_values: read_i16_table::<N_COLORS, N_PIECES>(values, &mut index),
+            pawn_shield_bonus: read_i16_array::<N_COLORS>(values, &mut index),
+            initiative: read_i32(values, &mut index),
+            mg_passed_pawn_table: read_i16_array::<N_SQUARES>(values, &mut index),
+            eg_passed_pawn_table: read_i16_array::<N_SQUARES>(values, &mut index),
+            mg_king_safety_table: read_i16_array::<N_KING_SAFETY_BUCKETS>(values, &mut index),
+            eg_king_safety_table: read_i16_array::<N_KING_SAFETY_BUCKETS>(values, &mut index),
+            mg_base_position_table: read_i32_table::<N_PIECES, N_SQUARES>(values, &mut index),
+            eg_base_position_table: read_i32_table::<N_PIECES, N_SQUARES>(values, &mut index),
+        }
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -83,20 +226,20 @@ impl TunableParams {
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 struct TunableParamsFile {
-    mg_piece_values: [i32; 6],
-    eg_piece_values: [i32; 6],
+    mg_piece_values: [i32; N_PIECES],
+    eg_piece_values: [i32; N_PIECES],
 
-    rook_open_file_bonus: [i32; 2],
-    king_open_file_penalty: [i32; 2],
+    rook_open_file_bonus: [i32; N_COLORS],
+    king_open_file_penalty: [i32; N_COLORS],
 
     doubled_pawn_penalty: i32,
-    isolated_pawn_penalty: [i16; 2],
-    bishop_pair_bonus: [i16; 2],
+    isolated_pawn_penalty: [i16; N_COLORS],
+    bishop_pair_bonus: [i16; N_COLORS],
 
-    mobility_coefficients: [[i32; 6]; 2],
-    piece_attack_values: [[i16; 6]; 2],
-    piece_defend_values: [[i16; 6]; 2],
-    pawn_shield_bonus: [i16; 2],
+    mobility_coefficients: [[i32; N_PIECES]; N_COLORS],
+    piece_attack_values: [[i16; N_PIECES]; N_COLORS],
+    piece_defend_values: [[i16; N_PIECES]; N_COLORS],
+    pawn_shield_bonus: [i16; N_COLORS],
 
     initiative: i32,
 
@@ -169,25 +312,25 @@ impl TryFrom<TunableParamsFile> for TunableParams {
     }
 }
 
-fn to_array_64(values: Vec<i16>, field_name: &str) -> io::Result<[i16; 64]> {
+fn to_array_64(values: Vec<i16>, field_name: &str) -> io::Result<[i16; N_SQUARES]> {
     values
         .try_into()
-        .map_err(|_| invalid_length(field_name, 64))
+        .map_err(|_| invalid_length(field_name, N_SQUARES))
 }
 
-fn to_array_100(values: Vec<i16>, field_name: &str) -> io::Result<[i16; 100]> {
+fn to_array_100(values: Vec<i16>, field_name: &str) -> io::Result<[i16; N_KING_SAFETY_BUCKETS]> {
     values
         .try_into()
-        .map_err(|_| invalid_length(field_name, 100))
+        .map_err(|_| invalid_length(field_name, N_KING_SAFETY_BUCKETS))
 }
 
-fn to_table_6x64(values: Vec<Vec<i32>>, field_name: &str) -> io::Result<[[i32; 64]; 6]> {
-    let rows: Vec<[i32; 64]> = values
+fn to_table_6x64(values: Vec<Vec<i32>>, field_name: &str) -> io::Result<[[i32; N_SQUARES]; N_PIECES]> {
+    let rows: Vec<[i32; N_SQUARES]> = values
         .into_iter()
-        .map(|row| row.try_into().map_err(|_| invalid_length(field_name, 64)))
+        .map(|row| row.try_into().map_err(|_| invalid_length(field_name, N_SQUARES)))
         .collect::<io::Result<Vec<_>>>()?;
 
-    rows.try_into().map_err(|_| invalid_length(field_name, 6))
+    rows.try_into().map_err(|_| invalid_length(field_name, N_PIECES))
 }
 
 fn invalid_length(field_name: &str, expected: usize) -> io::Error {
@@ -201,14 +344,14 @@ fn invalid_length(field_name: &str, expected: usize) -> io::Error {
 /////////////////////////////////////////////// Default Constants /////////////////////////////////////////////////////
 
 // [pawn, knight, bishop, rook, queen, king]
-pub const MG_PIECE_VALUES: [i32; 6] = [82, 337, 365, 477, 1025, 0];
-pub const EG_PIECE_VALUES: [i32; 6] = [94, 281, 297, 512, 936, 0];
+pub const MG_PIECE_VALUES: [i32; N_PIECES] = [82, 337, 365, 477, 1025, 0];
+pub const EG_PIECE_VALUES: [i32; N_PIECES] = [94, 281, 297, 512, 936, 0];
 
 // rooks on open files are a rather weak positional idea so this should be kept pretty low
 // Additionally, Endgames typically have a lot of open files, so there's no benefit to occupying one (hence 0 EG score)
 // format: [MG, EG]
-pub const ROOK_OPEN_FILE_BONUS: [i32; 2] = [25, 0];
-pub const KING_OPEN_FILE_PENALTY: [i32; 2] = [-25, 0];
+pub const ROOK_OPEN_FILE_BONUS: [i32; N_COLORS] = [25, 0];
+pub const KING_OPEN_FILE_PENALTY: [i32; N_COLORS] = [-25, 0];
 
 // TODO: probably interpolation of these values between MG and EG makes sense
 // a doubled pawn should be worth about half a pawn
@@ -217,19 +360,19 @@ pub const DOUBLED_PAWN_PENALTY: i32 = -10;
 
 // A pawn is isolated if it has no pawns on the file next to it
 // Generally isolated pawns are bad as they require pieces to defend and thus are easy targets
-pub const ISOLATED_PAWN_PENALTY: [i16; 2] = [-23, -13];
+pub const ISOLATED_PAWN_PENALTY: [i16; N_COLORS] = [-23, -13];
 
 // Some say having the bishop pair is a slight advantage because having only one bishop essentially makes half the board unreachable
 // Personally I'm indifferent to the bishop pair but it's an easy implementation and may gain a little bit
-pub const BISHOP_PAIR_BONUS: [i16; 2] = [15, 25];
+pub const BISHOP_PAIR_BONUS: [i16; N_COLORS] = [15, 25];
 
-pub const MOBILITY_COEFFICIENTS: [[i32; 6]; 2] = [[0, 5, 3, 2, 1, 0], [0, 5, 3, 4, 1, 0]];
+pub const MOBILITY_COEFFICIENTS: [[i32; N_PIECES]; N_COLORS] = [[0, 5, 3, 2, 1, 0], [0, 5, 3, 4, 1, 0]];
 
-pub const PIECE_ATTACK_VALUES: [[i16; 6]; 2] = [[0, 2, 2, 3, 5, 0], [0, 2, 2, 3, 5, 0]];
-pub const PIECE_DEFEND_VALUES: [[i16; 6]; 2] = [[0, 1, 1, 2, 4, 0], [0, 1, 1, 2, 3, 0]];
+pub const PIECE_ATTACK_VALUES: [[i16; N_PIECES]; N_COLORS] = [[0, 2, 2, 3, 5, 0], [0, 2, 2, 3, 5, 0]];
+pub const PIECE_DEFEND_VALUES: [[i16; N_PIECES]; N_COLORS] = [[0, 1, 1, 2, 4, 0], [0, 1, 1, 2, 3, 0]];
 
 // danger points for every pawn in the pawn shield in front of the king
-pub const PAWN_SHIELD_BONUS: [i16; 2] = [2, 0];
+pub const PAWN_SHIELD_BONUS: [i16; N_COLORS] = [2, 0];
 
 // bonus for the side to move
 pub const INITIATIVE: i32 = 15;
@@ -240,7 +383,7 @@ pub const INITIATIVE: i32 = 15;
 /// However I've changed them to only give bonusses and never subtract from the eval
 /// let's see how this does haha
 #[rustfmt::skip]
-pub const MG_PASSED_PAWN_TABLE: [i16; 64] = [
+pub const MG_PASSED_PAWN_TABLE: [i16; N_SQUARES] = [
          0,    0,    0,    0,    0,    0,    0,    0,
          0,    0,    0,    0,    0,    0,    0,    0,
         15,   20,   20,   10,   10,   20,   20,   15,
@@ -252,7 +395,7 @@ pub const MG_PASSED_PAWN_TABLE: [i16; 64] = [
 ];
 
 #[rustfmt::skip]
-pub const EG_PASSED_PAWN_TABLE: [i16; 64] = [
+pub const EG_PASSED_PAWN_TABLE: [i16; N_SQUARES] = [
          0,    0,    0,    0,    0,    0,    0,    0,
          0,    0,    0,    0,    0,    0,    0,    0,
         90,   85,   80,   70,   70,   80,   85,   90,
@@ -263,14 +406,14 @@ pub const EG_PASSED_PAWN_TABLE: [i16; 64] = [
          0,    0,    0,    0,    0,    0,    0,    0,
 ];
 
-pub const MG_KING_SAFETY_TABLE: [i16; 100] = [
+pub const MG_KING_SAFETY_TABLE: [i16; N_KING_SAFETY_BUCKETS] = [
     0, 0, 1, 2, 3, 5, 7, 9, 12, 15, 18, 22, 26, 30, 35, 39, 44, 50, 56, 62, 68, 75, 82, 85, 89, 97,
     105, 113, 122, 131, 140, 150, 169, 180, 191, 202, 213, 225, 237, 248, 260, 272, 283, 295, 307,
     319, 330, 342, 354, 366, 377, 389, 401, 412, 424, 436, 448, 459, 471, 483, 494, 500, 500, 500,
     500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500,
     500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500, 500,
 ];
-pub const EG_KING_SAFETY_TABLE: [i16; 100] = [
+pub const EG_KING_SAFETY_TABLE: [i16; N_KING_SAFETY_BUCKETS] = [
     0, 0, 0, 1, 2, 3, 4, 6, 8, 10, 12, 14, 17, 20, 23, 26, 29, 33, 37, 41, 45, 50, 54, 56, 59, 64,
     70, 75, 81, 87, 93, 100, 112, 120, 127, 134, 142, 150, 158, 165, 173, 181, 188, 196, 204, 212,
     220, 228, 236, 244, 251, 259, 267, 274, 282, 290, 298, 306, 314, 322, 329, 333, 333, 333, 333,
@@ -279,7 +422,7 @@ pub const EG_KING_SAFETY_TABLE: [i16; 100] = [
 ];
 
 /// Middlegame-Piece-Square Tables Base Values used for calculation of the real eval values
-pub const MG_BASE_POSITION_TABLE: [[i32; 64]; 6] = [
+pub const MG_BASE_POSITION_TABLE: [[i32; N_SQUARES]; N_PIECES] = [
     // 0: Pawn
     [
         0, 0, 0, 0, 0, 0, 0, 0, 98, 134, 61, 95, 68, 126, 34, -11, -6, 7, 26, 31, 65, 56, 25, -20,
@@ -321,7 +464,7 @@ pub const MG_BASE_POSITION_TABLE: [[i32; 64]; 6] = [
 ];
 
 /// Endgame-Piece-Square Tables Base Values used for calculation of the real eval values
-pub const EG_BASE_POSITION_TABLE: [[i32; 64]; 6] = [
+pub const EG_BASE_POSITION_TABLE: [[i32; N_SQUARES]; N_PIECES] = [
     // 0: Pawn
     [
         0, 0, 0, 0, 0, 0, 0, 0, 178, 173, 158, 134, 147, 132, 165, 187, 94, 100, 85, 67, 56, 53,
@@ -362,13 +505,59 @@ pub const EG_BASE_POSITION_TABLE: [[i32; 64]; 6] = [
 ];
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////// TESTS /////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////// TESTS & INFO PRINTS ///////////////////////////////////////////
 
 
 #[cfg(test)]
 mod tests {
-    use super::TunableParams;
-    use std::{fs, time::{SystemTime, UNIX_EPOCH}};
+    use super::*;
+    use crate::{eval::evaluation::evaluate, training_data::TrainingSample};
+    use std::{fs, path::Path, time::{Instant, SystemTime, UNIX_EPOCH}};
+    use thunfisch::types::board::Board;
+
+    fn next_u64(state: &mut u64) -> u64 {
+        *state = state.wrapping_mul(6364136223846793005).wrapping_add(1);
+        *state
+    }
+
+    fn random_i32(state: &mut u64, magnitude: i32) -> i32 {
+        (next_u64(state) % (2 * magnitude as u64 + 1)) as i32 - magnitude
+    }
+
+    fn random_i16(state: &mut u64, magnitude: i16) -> i16 {
+        (next_u64(state) % (2 * magnitude as u64 + 1)) as i16 - magnitude
+    }
+
+    fn random_i32_array<const N: usize>(state: &mut u64, magnitude: i32) -> [i32; N] {
+        std::array::from_fn(|_| random_i32(state, magnitude))
+    }
+
+    fn random_i16_array<const N: usize>(state: &mut u64, magnitude: i16) -> [i16; N] {
+        std::array::from_fn(|_| random_i16(state, magnitude))
+    }
+
+    fn random_params(state: &mut u64) -> TunableParams {
+        TunableParams {
+            mg_piece_values: random_i32_array::<N_PIECES>(state, 100_000),
+            eg_piece_values: random_i32_array::<N_PIECES>(state, 100_000),
+            rook_open_file_bonus: random_i32_array::<N_COLORS>(state, 5_000),
+            king_open_file_penalty: random_i32_array::<N_COLORS>(state, 5_000),
+            doubled_pawn_penalty: random_i32(state, 5_000),
+            isolated_pawn_penalty: random_i16_array::<N_COLORS>(state, 5_000),
+            bishop_pair_bonus: random_i16_array::<N_COLORS>(state, 5_000),
+            mobility_coefficients: std::array::from_fn(|_| random_i32_array::<N_PIECES>(state, 100)),
+            piece_attack_values: std::array::from_fn(|_| random_i16_array::<N_PIECES>(state, 100)),
+            piece_defend_values: std::array::from_fn(|_| random_i16_array::<N_PIECES>(state, 100)),
+            pawn_shield_bonus: random_i16_array::<N_COLORS>(state, 100),
+            initiative: random_i32(state, 5_000),
+            mg_passed_pawn_table: random_i16_array::<N_SQUARES>(state, 200),
+            eg_passed_pawn_table: random_i16_array::<N_SQUARES>(state, 200),
+            mg_king_safety_table: random_i16_array::<N_KING_SAFETY_BUCKETS>(state, 500),
+            eg_king_safety_table: random_i16_array::<N_KING_SAFETY_BUCKETS>(state, 500),
+            mg_base_position_table: std::array::from_fn(|_| random_i32_array::<N_SQUARES>(state, 2_000)),
+            eg_base_position_table: std::array::from_fn(|_| random_i32_array::<N_SQUARES>(state, 2_000)),
+        }
+    }
 
     #[test]
     fn default_params_round_trip_json() {
@@ -389,5 +578,53 @@ mod tests {
         assert_eq!(params, reloaded);
 
         fs::remove_file(&path).expect("temporary tunable params file should be removable");
+    }
+
+    #[test]
+    fn svector_round_trip_is_isomorph() {
+        let mut state = 0x5eede67_u64;
+        let params = random_params(&mut state);
+
+        let vector = params.to_weight_vector();
+        let reconstructed = TunableParams::from(vector);
+
+        assert_eq!(params, reconstructed);
+        assert_eq!(vector, reconstructed.to_weight_vector());
+    }
+
+    #[test]
+    fn svector_round_trip_preserves_evaluation() {
+        let params = TunableParams::default();
+        let round_tripped = TunableParams::from(params.to_weight_vector());
+
+        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("_zurichess_short.epd");
+        let training_data = TrainingSample::read_epd_file(&path)
+            .expect("training positions should be readable");
+
+        for sample in training_data.iter().take(10) {
+            let board = Board::new(&sample.fen);
+            let before = evaluate(&board, &params);
+            let after = evaluate(&board, &round_tripped);
+
+            assert_eq!(before, after, "evaluation changed for FEN {}", sample.fen);
+        }
+    }
+
+    #[test]
+    fn benchmark_conversion() {
+        use std::hint::black_box;
+        let mut state = 0x5eede67_u64;
+        let params = (0..10_000).map(|_| random_params(&mut state));
+
+        let start = Instant::now();
+        for p in params {
+            black_box(p.to_weight_vector());
+        }
+        println!("time: {:?}", start.elapsed() / 10_000);
+    }
+
+    #[test]
+    fn print_n_total() {
+        println!("{N_TOTAL}");
     }
 }
