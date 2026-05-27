@@ -18,7 +18,6 @@ pub const GAMEPHASE_INC: [i32; 12] = [
     0, 0, KNIGHT, KNIGHT, BISHOP, BISHOP, ROOK, ROOK, QUEEN, QUEEN, 0, 0,
 ];
 
-
 // Flips square index to flip rows but keep columns the same
 // e.g. a1 becomes a8; e4 -> e5
 const fn flip(sq: usize) -> usize {
@@ -81,21 +80,21 @@ pub fn evaluate(board: &Board, params: &TunableParams) -> i32 {
         let mut bb = board.figure_bb_by_index(i);
 
         // mobility - only needs to be done once per figure type
-            let figure_mobility = board.calculate_piece_mobility(i, &mut figure_movements);
-                mg[i & 1] += params.mobility_coefficients[0][i >> 1] * figure_mobility;
-                eg[i & 1] += params.mobility_coefficients[1][i >> 1] * figure_mobility;
-            // for correctness, mobility calculation removes all pieces of the same color (we can't take our own piece)
-            // however for safety calculation we would like to also count a piece as "reaching the king zone" if it is physically in the zone
-            // So we re-add only the figure to the movement mask
-            figure_movements[i] |= bb;
+        let figure_mobility = board.calculate_piece_mobility(i, &mut figure_movements);
+        mg[i & 1] += params.mobility_coefficients[0][i >> 1] * figure_mobility;
+        eg[i & 1] += params.mobility_coefficients[1][i >> 1] * figure_mobility;
+        // for correctness, mobility calculation removes all pieces of the same color (we can't take our own piece)
+        // however for safety calculation we would like to also count a piece as "reaching the king zone" if it is physically in the zone
+        // So we re-add only the figure to the movement mask
+        figure_movements[i] |= bb;
 
         for bit in bb.iter_mut() {
             if open_files.is_position_set(bit) {
                 // rooks on open files
-                    mg[i & 1] += params.rook_open_file_bonus[0];
-                    eg[i & 1] += params.rook_open_file_bonus[1];
-                    mg[i & 1] += params.king_open_file_penalty[0];
-                    eg[i & 1] += params.king_open_file_penalty[1];
+                mg[i & 1] += params.rook_open_file_bonus[0];
+                eg[i & 1] += params.rook_open_file_bonus[1];
+                mg[i & 1] += params.king_open_file_penalty[0];
+                eg[i & 1] += params.king_open_file_penalty[1];
             }
 
             let square = bit.to_square();
@@ -117,28 +116,28 @@ pub fn evaluate(board: &Board, params: &TunableParams) -> i32 {
     mg_score += i32::from(mg_pawn_structure[white] - mg_pawn_structure[black]);
     eg_score += i32::from(eg_pawn_structure[white] - eg_pawn_structure[black]);
 
-        let (mg_bishop_pair, eg_bishop_pair) = bishop_pair_boni(board, params);
-        mg_score += i32::from(mg_bishop_pair[white] - mg_bishop_pair[black]);
-        eg_score += i32::from(eg_bishop_pair[white] - eg_bishop_pair[black]);
+    let (mg_bishop_pair, eg_bishop_pair) = bishop_pair_boni(board, params);
+    mg_score += i32::from(mg_bishop_pair[white] - mg_bishop_pair[black]);
+    eg_score += i32::from(eg_bishop_pair[white] - eg_bishop_pair[black]);
 
-        let (mg_king_safety, eg_king_safety) = king_safety(board, &figure_movements, params);
-        // println!("mg king safety w/b: {mg_king_safety:?}");
-        mg_score -= i32::from(mg_king_safety[white] - mg_king_safety[black]);
-        eg_score -= i32::from(eg_king_safety[white] - eg_king_safety[black]);
+    let (mg_king_safety, eg_king_safety) = king_safety(board, &figure_movements, params);
+    // println!("mg king safety w/b: {mg_king_safety:?}");
+    mg_score -= i32::from(mg_king_safety[white] - mg_king_safety[black]);
+    eg_score -= i32::from(eg_king_safety[white] - eg_king_safety[black]);
 
     let current_color_multiplier = match board.current_color() {
         White => 1,
         Black => -1,
     };
 
-        mg_score += current_color_multiplier * params.initiative;
-        eg_score += current_color_multiplier * params.initiative;
+    mg_score += current_color_multiplier * params.initiative;
+    eg_score += current_color_multiplier * params.initiative;
 
     // Final aggregation of scoring aspects
     let mut score = (mg_score * (256 - gamephase) + eg_score * gamephase) >> 8;
 
-        let doubled_pawns = doubled_pawn_penalties(board, params);
-        score += doubled_pawns[white] - doubled_pawns[black];
+    let doubled_pawns = doubled_pawn_penalties(board, params);
+    score += doubled_pawns[white] - doubled_pawns[black];
 
     score
 }
@@ -153,12 +152,12 @@ pub fn pawn_structure(board: &Board, params: &TunableParams) -> ([i16; 2], [i16;
     for i in 0..=1 {
         let color = Color::from_usize(i);
         for pawn in board.figure_bb_by_index(i).iter_mut() {
-                let bonus = passed_pawn_bonus(board, pawn, color, params);
-                mg_pawn_offset[i] += bonus[0];
-                eg_pawn_offset[i] += bonus[1];
-                let penalty = isolated_pawn_penalty(board, pawn, color, params);
-                mg_pawn_offset[i] += penalty[0];
-                eg_pawn_offset[i] += penalty[1];
+            let bonus = passed_pawn_bonus(board, pawn, color, params);
+            mg_pawn_offset[i] += bonus[0];
+            eg_pawn_offset[i] += bonus[1];
+            let penalty = isolated_pawn_penalty(board, pawn, color, params);
+            mg_pawn_offset[i] += penalty[0];
+            eg_pawn_offset[i] += penalty[1];
         }
     }
 
@@ -389,5 +388,5 @@ mod tests {
         // for table in eg_table {
         //     println!("{table:?}");
         // }
-   }
+    }
 }

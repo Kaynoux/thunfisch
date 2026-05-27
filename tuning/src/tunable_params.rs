@@ -25,9 +25,12 @@ pub const N_TOTAL: usize = (N_PIECES * 2)
     + (N_SQUARES * 2)
     + (N_KING_SAFETY_BUCKETS * 2)
     + (N_PIECES * N_SQUARES * 2);
+/// A wrapper type around ngalgebra::SVector with the dimension of all available params.
 pub type WeightVector = SVector<f64, N_TOTAL>;
 
 /// A runtime-configurable parameter set for the evaluator.
+/// Can be (de-)serializes using serde.
+/// I isomorphically mapped to WeightVector.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TunableParams {
     pub mg_piece_values: [i32; N_PIECES],
@@ -57,6 +60,7 @@ pub struct TunableParams {
 }
 
 impl Default for TunableParams {
+    /// Defaults the params to the constants IN THIS FILE.
     fn default() -> Self {
         Self {
             mg_piece_values: MG_PIECE_VALUES,
@@ -151,9 +155,14 @@ impl From<&TunableParams> for WeightVector {
     }
 }
 
-impl From<TunableParams> for WeightVector {
-    fn from(params: TunableParams) -> Self {
-        SVector::from(&params)
+impl From<&mut TunableParams> for WeightVector {
+    fn from(params: &mut TunableParams) -> Self {
+        WeightVector::from(&*params)
+    }
+}
+impl From<&mut WeightVector> for TunableParams {
+    fn from(params: &mut WeightVector) -> Self {
+        TunableParams::from(*params)
     }
 }
 

@@ -1,7 +1,5 @@
 # Thunfisch Tuning
-
-This crate is a small companion binary for preparing training data and running
-the first step of the Thunfisch chess engine's Texel tuning pipeline.
+somehow most of this is NOT vibe coded, and still the fact that the tuning has cubic performance is because of my dumb ass believing claude that "trust me bro numeric derivation is gonna be fine" (and the fact that I'm too dumb to understand both the Ethereal paper on analytical derivation and whatever fatalii does with feature evaluation)
 
 ## Purpose
 
@@ -11,7 +9,7 @@ The tool supports two workflows:
 	quiet position for each entry and writing the resulting positions into a new
 	prepared file
 - running the current training entrypoint, which loads labeled positions and
-	optimizes the sigmoid `k` value used by the Texel loss
+	runs the ADAM optimizer with per-epoch checkpointing
 
 ## Usage
 
@@ -32,10 +30,16 @@ If the output path is omitted, the program writes to
 ### Run training
 
 ```bash
-cargo run -- train <input.epd>
+cargo run -- train <input.epd> [epochs] [restore-checkpoint.json]
 ```
 
 - `<input.epd>`: path to the labeled training data file.
+- `[epochs]`: number of epochs to train in this run, defaults to `1`.
+- `[restore-checkpoint.json]`: optional explicit checkpoint file to resume
+  from. If omitted, training starts from fresh defaults.
+
+Per-epoch checkpoints are written next to the input file with an epoch suffix,
+for example `<input>.epoch-3.adam-checkpoint.json`.
 
 Note that the training data is assumed to be prepared by `prepare`.
 
