@@ -9,6 +9,7 @@ use crate::preparation::handle_prepare;
 mod eval;
 mod training_data;
 mod preparation;
+mod tunable_params;
 
 
 /// Program entrypoint.
