@@ -13,14 +13,20 @@ use thunfisch::types::search_data::SharedSearchData;
 use crate::eval::quiescence_search::quiescence_search;
 use thunfisch::evaluation::MATE_SCORE;
 
-use crate::training_data::TrainingData;
+use crate::training_data::TrainingSample;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+
+/// Evaluation cutoff ove which we discard positions because they could poison the data set
+/// intuition: Assuming the evaluation is even somewhat in the right ballpark, an advantage of 20
+/// means the game is completely won, being almost semantically equivalent to a mated position.
+///
+/// Note that _technically_ this is an optimizable hyperparameter but I think 20 cp is a good ballpark
+const EVALUATION_CUTOFF: i32 = 2000;
 
 /// Prepares the training data
 /// First loads the file into internal structs
 /// Then uses rayon to run QS on the positions in parallel
 pub fn handle_prepare(args: &[String]) -> std::io::Result<()> {
-    println!("{args:?}");
     let (input_path, output_path) = match args {
         [input, output] => (PathBuf::from(input), PathBuf::from(output)),
         [input] => {
@@ -33,16 +39,16 @@ pub fn handle_prepare(args: &[String]) -> std::io::Result<()> {
         }
     };
 
-    let positions = TrainingData::read_epd_file(&input_path)?;
+    let positions = TrainingSample::read_epd_file(&input_path)?;
 
-    let prepared: Vec<TrainingData> = positions
+    let prepared: Vec<TrainingSample> = positions
         .par_iter()
         .map(|position| prepare_quiet_training_position(position.clone()))
         .filter(|result| result.is_some())
         .map(|result| result.unwrap())
         .collect();
 
-    TrainingData::write_epd_file(&output_path, &prepared)?;
+    TrainingSample::write_epd_file(&output_path, &prepared)?;
     println!(
         "Prepared {} positions into {}",
         prepared.len(),
@@ -56,7 +62,7 @@ pub fn handle_prepare(args: &[String]) -> std::io::Result<()> {
 /// The returned `TrainingData` keeps the original game result label, but uses the
 /// best-line FEN from the quiescence search so that the training set only
 /// contains quiet positions.
-pub fn prepare_quiet_training_position(position: TrainingData) -> Option<TrainingData> {
+pub fn prepare_quiet_training_position(position: TrainingSample) -> Option<TrainingSample> {
     let mut board = Board::new(&position.fen);
     let stop = Arc::new(AtomicBool::new(false));
     let mut local_seldepth = 0usize;
@@ -71,13 +77,12 @@ pub fn prepare_quiet_training_position(position: TrainingData) -> Option<Trainin
         &mut search_data,
         0,
     );
-    // filter out positions in which we mated
-    // note that we give the mate score a grace buffer as the searched plies get subtracted from the mate score
-    if search_result.score > (MATE_SCORE - 30) || search_result.score < (-MATE_SCORE + 30) {
+    // filter out positions which we can't use (e.g. mated positions)
+    if search_result.score.abs() > EVALUATION_CUTOFF {
         return None;
     }
 
-    Some(TrainingData {
+    Some(TrainingSample {
         fen: search_result.best_line_fen,
         result: position.result,
     })

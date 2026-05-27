@@ -1,7 +1,6 @@
 use thunfisch::{
     move_generator::masks::{self, king_safety_mask},
     prelude::*,
-    settings,
 };
 
 use crate::tunable_params::TunableParams;
@@ -61,7 +60,7 @@ const fn init_table(
 /// - positive -> advantage for white,
 /// - negative -> advantage for black,
 ///
-/// !! Return type is relativized for the current player for negamax search
+/// !! Return type here is objective for tuning!!!
 /// Unit = Centipawns, 100 Centipawns => 1 Pawn
 pub fn evaluate(board: &Board, params: &TunableParams) -> i32 {
     let white = 0usize;
@@ -141,7 +140,7 @@ pub fn evaluate(board: &Board, params: &TunableParams) -> i32 {
         let doubled_pawns = doubled_pawn_penalties(board, params);
         score += doubled_pawns[white] - doubled_pawns[black];
 
-    score * current_color_multiplier
+    score
 }
 
 /// Format:
@@ -363,8 +362,12 @@ mod tests {
         let thunfisch_eval = board.evaluate();
         let params = TunableParams::default();
         let tuner_eval = evaluate(&board, &params);
+        let color_multiplier = match board.current_color() {
+            White => 1,
+            Black => -1,
+        };
 
-        assert_eq!(thunfisch_eval, tuner_eval)
+        assert_eq!(thunfisch_eval, tuner_eval * color_multiplier)
     }
     #[test]
     fn print_built_psqts() {

@@ -14,7 +14,7 @@ use thunfisch::{
 
 use std::sync::atomic::Ordering;
 
-/// The result of a quiescence search.
+/// The result of a the modified quiescence search.
 ///
 /// `score` is the evaluated centipawn value of the best quiet position and
 /// `best_line_fen` is the FEN of the best line returned by the search.
@@ -23,12 +23,9 @@ pub struct QuiescenceResult {
     pub best_line_fen: String,
 }
 
-/// Perform a quiescence search and return the quietest line's final FEN.
+/// Modified version of thunfisch's quiescence search without TT or histories and returning the quietest line's final FEN.
 ///
-/// The search explores capture sequences and check evasions only, and uses alpha-
-/// beta pruning. The returned FEN is the board state reached at the terminal
-/// leaf of the best quiescence path.
-/// Note that we evaluate here using the main project's evaluation method.
+/// NOTE that we evaluate here using the main project's evaluation method.
 #[allow(clippy::too_many_lines, clippy::too_many_arguments)]
 pub fn quiescence_search(
     depth: usize,

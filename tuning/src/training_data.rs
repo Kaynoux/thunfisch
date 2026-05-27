@@ -7,6 +7,7 @@
 use std::fs::File;
 use std::io::{self, BufRead, BufReader, Write};
 use std::path::Path;
+use std::result;
 
 
 /// One training position used for Texel tuning.
@@ -15,20 +16,30 @@ use std::path::Path;
 /// counters (`0 1`) because the engine needs a complete FEN string for position
 /// reconstruction.
 #[derive(Clone)]
-pub struct TrainingData {
+pub struct TrainingSample {
     pub fen: String,
     pub result: GameResult,
 }
 
 /// The outcome of the game used for supervised tuning labels.
-#[derive(Clone)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub enum GameResult {
     WhiteWin,
     Draw,
     BlackWin,
 }
 
-impl TrainingData {
+impl From<GameResult> for f64 {
+    fn from(value: GameResult) -> Self {
+        match value {
+            GameResult::WhiteWin => 1.0,
+            GameResult::Draw => 0.5,
+            GameResult::BlackWin => 0.0,
+        }
+    }
+}
+
+impl TrainingSample {
     /// Reads an EPD-style training data file and returns all valid positions.
     ///
     /// Blank lines and comment lines starting with `#` are ignored.
@@ -115,7 +126,7 @@ impl GameResult {
     fn parse(text: &str) -> Result<Self, String> {
         match text {
             "1-0" => Ok(GameResult::WhiteWin),
-            "1/2-1/2" | "1⁄2-1⁄2" => Ok(GameResult::Draw),
+            "1/2-1/2" => Ok(GameResult::Draw),
             "0-1" => Ok(GameResult::BlackWin),
             _ => Err(format!("unsupported game result '{}'", text)),
         }
@@ -144,7 +155,7 @@ mod tests {
     #[test]
     fn parse_valid_epd_line() {
         let line = r#"r2qkr2/p1pp1ppp/1pn1pn2/2P5/3Pb3/2N1P3/PP3PPP/R1B1KB1R b KQq - c9 "0-1";"#;
-        let result = TrainingData::parse_epd_line(line).expect("should parse line").unwrap();
+        let result = TrainingSample::parse_epd_line(line).expect("should parse line").unwrap();
 
         assert_eq!(result.fen, "r2qkr2/p1pp1ppp/1pn1pn2/2P5/3Pb3/2N1P3/PP3PPP/R1B1KB1R b KQq - 0 1");
         matches!(result.result, GameResult::BlackWin);
