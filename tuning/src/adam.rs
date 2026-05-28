@@ -133,6 +133,7 @@ pub fn adam(
     let beta_2 = adam_params.beta_2;
     let delta = adam_params.delta;
     let epoch_start_index = adam_params.epoch;
+    const LOG_EVERY: usize = 30;
 
     // core adam loop
     for epoch in epoch_start_index..(epoch_start_index + epochs) {
@@ -165,11 +166,14 @@ pub fn adam(
             *weights = weights.zip_zip_map(&v_corrected, &m_corrected, |w, v, m| {
                 w - adam_params.learning_rate / (v.sqrt() + adam_params.epsilon) * m
             });
-            println!(
-                "Batch {i} of {training_batch_count} ({:?}, total {:?})",
-                batch_start.elapsed(),
-                epoch_start.elapsed()
-            )
+
+            if i.is_multiple_of(LOG_EVERY) {
+                println!(
+                    "Batch {i} of {training_batch_count} ({:?}, total {:?})",
+                    batch_start.elapsed(),
+                    epoch_start.elapsed()
+                )
+            }
         }
 
         let params: TunableParams = weights.into();
