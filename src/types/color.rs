@@ -17,7 +17,6 @@ impl Color {
         }
     }
 
-
     #[inline]
     pub const fn from_usize(val: usize) -> Self {
         match val {

@@ -102,7 +102,6 @@ impl Bitboard {
             White => relevant_files << (((y + 1) * 8) & 63),
             Black => relevant_files >> ((8u16.saturating_sub(y) * 8) & 63),
         }
-
     }
 
     #[inline]
