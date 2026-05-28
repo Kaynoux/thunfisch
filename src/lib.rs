@@ -9,6 +9,7 @@ mod iterative_deepening;
 mod time_management;
 
 pub mod evaluation;
+pub mod evaluation_constants;
 pub mod move_generator;
 pub mod move_picker;
 pub mod move_scoring;

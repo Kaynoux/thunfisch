@@ -13,6 +13,7 @@ use thunfisch::types::board::Board;
 
 use crate::{
     eval::evaluation::evaluate,
+    output_paths,
     training_data::TrainingSample,
     tunable_params::{TunableParams, WeightVector},
 };
@@ -74,6 +75,7 @@ impl AdamCheckpoint {
     pub fn write_to_file(&self, path: impl AsRef<Path>) -> io::Result<()> {
         let json = serde_json::to_string_pretty(self)
             .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+        output_paths::ensure_parent_directory(&path)?;
         fs::write(path, json)
     }
 
@@ -83,15 +85,14 @@ impl AdamCheckpoint {
     }
 
     /// Build the checkpoint filename for a specific epoch.
-    pub fn epoch_path(training_data_path: impl AsRef<Path>, epoch: usize) -> std::path::PathBuf {
+    pub fn epoch_path(training_data_path: impl AsRef<Path>, epoch: usize) -> io::Result<std::path::PathBuf> {
         let training_data_path = training_data_path.as_ref();
-        let parent = training_data_path.parent().unwrap_or_else(|| Path::new(""));
         let stem = training_data_path
             .file_stem()
             .and_then(|value| value.to_str())
             .unwrap_or("checkpoint");
 
-        parent.join(format!("{stem}.epoch-{epoch}.adam-checkpoint.json"))
+        output_paths::in_tuning_data(format!("{stem}.epoch-{epoch}.adam-checkpoint.json"))
     }
 }
 impl Default for AdamParams {
@@ -133,7 +134,6 @@ pub fn adam(
     let beta_2 = adam_params.beta_2;
     let delta = adam_params.delta;
     let epoch_start_index = adam_params.epoch;
-    const LOG_EVERY: usize = 30;
 
     // core adam loop
     for epoch in epoch_start_index..(epoch_start_index + epochs) {
@@ -147,8 +147,7 @@ pub fn adam(
 
         assert!(training_batch_count < mini_batches.len());
 
-        for (i, batch) in mini_batches.clone().take(training_batch_count).enumerate() {
-            let batch_start = Instant::now();
+        for batch in mini_batches.clone().take(training_batch_count) {
             t += 1;
 
             let mut gradient = WeightVector::zeros();
@@ -166,14 +165,6 @@ pub fn adam(
             *weights = weights.zip_zip_map(&v_corrected, &m_corrected, |w, v, m| {
                 w - adam_params.learning_rate / (v.sqrt() + adam_params.epsilon) * m
             });
-
-            if i.is_multiple_of(LOG_EVERY) {
-                println!(
-                    "Batch {i} of {training_batch_count} ({:?}, total {:?})",
-                    batch_start.elapsed(),
-                    epoch_start.elapsed()
-                )
-            }
         }
 
         let params: TunableParams = weights.into();
@@ -210,7 +201,7 @@ pub fn adam(
             k,
             Some(validation_error),
         );
-        let checkpoint_path = AdamCheckpoint::epoch_path(&training_data_path, epoch + 1);
+        let checkpoint_path = AdamCheckpoint::epoch_path(&training_data_path, epoch + 1)?;
         checkpoint.write_to_file(&checkpoint_path)?;
     }
 

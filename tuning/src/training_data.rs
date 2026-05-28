@@ -73,6 +73,9 @@ impl TrainingSample {
     ///
     /// The output format preserves the FEN and the original result label.
     pub fn write_epd_file<P: AsRef<Path>>(path: P, positions: &[Self]) -> io::Result<()> {
+        if let Some(parent) = path.as_ref().parent() {
+            std::fs::create_dir_all(parent)?;
+        }
         let mut file = File::create(path)?;
 
         for position in positions {

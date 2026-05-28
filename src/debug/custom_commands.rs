@@ -1,7 +1,8 @@
 use crate::{
     communication::handle_go,
     debug::{perft, visualize},
-    evaluation::{GAMEPHASE_INC, MOBILITY_COEFFICIENTS},
+    evaluation::GAMEPHASE_INC,
+    evaluation_constants::MOBILITY_COEFFICIENTS,
     move_generator::{
         masks::{self, king_safety_mask},
         pinmask,

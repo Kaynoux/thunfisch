@@ -3,10 +3,12 @@
 //! All constants that affect evaluation are collected here so the engine can
 //! pass a runtime parameter set into the evaluation logic.
 
-use std::{fs, io, path::Path};
+use std::{fmt::Write as _, fs, io, path::Path};
 
 use ngalgebra::SVector;
 use serde::{Deserialize, Serialize};
+
+use crate::output_paths;
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////// Weight Counting ///////////////////////////////////////////////////////
@@ -98,6 +100,7 @@ impl TunableParams {
     pub fn write_to_file(&self, path: impl AsRef<Path>) -> io::Result<()> {
         let json = serde_json::to_string(&TunableParamsFile::from(self))
             .map_err(|error| io::Error::new(io::ErrorKind::InvalidData, error))?;
+        output_paths::ensure_parent_directory(&path)?;
         fs::write(path, json)
     }
 
@@ -109,6 +112,59 @@ impl TunableParams {
     /// Reconstruct parameters from the optimizer's fixed-size vector.
     pub fn from_weight_vector(values: WeightVector) -> Self {
         values.into()
+    }
+
+    /// Write the tunable parameters as a Rust source file containing hard-coded constants.
+    pub fn write_constants_file(&self, path: impl AsRef<Path>) -> io::Result<()> {
+        output_paths::ensure_parent_directory(&path)?;
+        fs::write(path, self.to_rust_constants_source())
+    }
+
+    /// Render the tunable parameters as a Rust source file containing hard-coded constants.
+    pub fn to_rust_constants_source(&self) -> String {
+        let mut source = String::new();
+
+        source.push_str("//! Auto-generated tunable parameter constants.\n");
+        source.push_str("//! Generated from a checkpoint export.\n\n");
+
+        writeln!(source, "pub const MG_PIECE_VALUES: [i32; 6] = {:?};", self.mg_piece_values)
+            .expect("writing to string should never fail");
+        writeln!(source, "pub const EG_PIECE_VALUES: [i32; 6] = {:?};", self.eg_piece_values)
+            .expect("writing to string should never fail");
+        writeln!(source, "pub const ROOK_OPEN_FILE_BONUS: [i32; 2] = {:?};", self.rook_open_file_bonus)
+            .expect("writing to string should never fail");
+        writeln!(source, "pub const KING_OPEN_FILE_PENALTY: [i32; 2] = {:?};", self.king_open_file_penalty)
+            .expect("writing to string should never fail");
+        writeln!(source, "pub const DOUBLED_PAWN_PENALTY: i32 = {:?};", self.doubled_pawn_penalty)
+            .expect("writing to string should never fail");
+        writeln!(source, "pub const ISOLATED_PAWN_PENALTY: [i16; 2] = {:?};", self.isolated_pawn_penalty)
+            .expect("writing to string should never fail");
+        writeln!(source, "pub const BISHOP_PAIR_BONUS: [i16; 2] = {:?};", self.bishop_pair_bonus)
+            .expect("writing to string should never fail");
+        writeln!(source, "pub const MOBILITY_COEFFICIENTS: [[i32; 6]; 2] = {:?};", self.mobility_coefficients)
+            .expect("writing to string should never fail");
+        writeln!(source, "pub const PIECE_ATTACK_VALUES: [[i16; 6]; 2] = {:?};", self.piece_attack_values)
+            .expect("writing to string should never fail");
+        writeln!(source, "pub const PIECE_DEFEND_VALUES: [[i16; 6]; 2] = {:?};", self.piece_defend_values)
+            .expect("writing to string should never fail");
+        writeln!(source, "pub const PAWN_SHIELD_BONUS: [i16; 2] = {:?};", self.pawn_shield_bonus)
+            .expect("writing to string should never fail");
+        writeln!(source, "pub const INITIATIVE: i32 = {:?};", self.initiative)
+            .expect("writing to string should never fail");
+        writeln!(source, "pub const MG_PASSED_PAWN_TABLE: [i16; 64] = {:?};", self.mg_passed_pawn_table)
+            .expect("writing to string should never fail");
+        writeln!(source, "pub const EG_PASSED_PAWN_TABLE: [i16; 64] = {:?};", self.eg_passed_pawn_table)
+            .expect("writing to string should never fail");
+        writeln!(source, "pub const MG_KING_SAFETY_TABLE: [i16; 100] = {:?};", self.mg_king_safety_table)
+            .expect("writing to string should never fail");
+        writeln!(source, "pub const EG_KING_SAFETY_TABLE: [i16; 100] = {:?};", self.eg_king_safety_table)
+            .expect("writing to string should never fail");
+        writeln!(source, "pub const MG_BASE_POSITION_TABLE: [[i32; 64]; 6] = {:?};", self.mg_base_position_table)
+            .expect("writing to string should never fail");
+        writeln!(source, "pub const EG_BASE_POSITION_TABLE: [[i32; 64]; 6] = {:?};", self.eg_base_position_table)
+            .expect("writing to string should never fail");
+
+        source
     }
 }
 

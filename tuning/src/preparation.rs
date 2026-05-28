@@ -13,6 +13,7 @@ use thunfisch::types::search_data::SharedSearchData;
 use crate::eval::quiescence_search::quiescence_search;
 use thunfisch::evaluation::MATE_SCORE;
 
+use crate::output_paths;
 use crate::training_data::TrainingSample;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
@@ -48,6 +49,8 @@ pub fn handle_prepare(args: &[String]) -> std::io::Result<()> {
         .map(|result| result.unwrap())
         .collect();
 
+    let output_file_name = output_path.file_name().unwrap_or(output_path.as_os_str());
+    let output_path = output_paths::in_tuning_data(output_file_name)?;
     TrainingSample::write_epd_file(&output_path, &prepared)?;
     println!(
         "Prepared {} positions into {}",

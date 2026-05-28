@@ -4,7 +4,7 @@
 //! each position, and writes a new file where every FEN corresponds to the
 //! best quiet position found by the engine.
 
-use std::{io, time::Instant};
+use std::{io, path::{Path, PathBuf}, time::Instant};
 
 use crate::{
     adam::{adam, mse, optimize_k, sigmoid, AdamCheckpoint, AdamParams},
@@ -17,6 +17,7 @@ use crate::{
 mod adam;
 mod eval;
 mod preparation;
+mod output_paths;
 mod training_data;
 mod tunable_params;
 
@@ -27,6 +28,7 @@ mod tunable_params;
 /// Supported subcommands:
 /// - `prepare <input.epd> [output.epd]`
 /// - `train <input.epd> [epochs] [restore-checkpoint.json]`
+/// - `export <checkpoint.json>`
 ///
 /// If the output path is omitted, the prepared file is written as
 /// `<input>.prepared.epd`.
@@ -36,8 +38,9 @@ fn main() -> std::io::Result<()> {
     match &args.first().map(|s| s.as_str()) {
         Some("prepare") => handle_prepare(&args[1..])?,
         Some("train") => train(&args[1..])?,
+        Some("export") => export(&args[1..])?,
         None | Some(_) => {
-            eprintln!("Usage: tuning [prepare|train]");
+            eprintln!("Usage: tuning [prepare|train|export]");
             std::process::exit(1);
         }
     }
@@ -112,4 +115,31 @@ fn train(args: &[String]) -> std::io::Result<()> {
 
     println!("Training took: {:?}", optimization_start.elapsed());
     Ok(())
+}
+
+/// Export a checkpoint as a Rust constants file.
+fn export(args: &[String]) -> std::io::Result<()> {
+    let [checkpoint_path] = args else {
+        eprintln!("Usage: tuning export <checkpoint.json>");
+        std::process::exit(1);
+    };
+
+    let checkpoint_path = PathBuf::from(checkpoint_path);
+    let checkpoint = AdamCheckpoint::read_from_file(&checkpoint_path)?;
+    let params: TunableParams = checkpoint.weights.into();
+    let export_path = export_path_for_checkpoint(&checkpoint_path)?;
+
+    params.write_constants_file(&export_path)?;
+    println!("Exported tunable constants to {}", export_path.display());
+    Ok(())
+}
+
+fn export_path_for_checkpoint(checkpoint_path: impl AsRef<Path>) -> std::io::Result<PathBuf> {
+    let checkpoint_path = checkpoint_path.as_ref();
+    let file_name = checkpoint_path
+        .file_name()
+        .and_then(|value| value.to_str())
+        .unwrap_or("checkpoint.json");
+
+    output_paths::in_tuning_data(format!("export-{file_name}.rs"))
 }

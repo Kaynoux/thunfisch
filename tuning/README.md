@@ -15,6 +15,9 @@ cargo run -- prepare <input.epd> [output.epd]
 - `<input.epd>`: path to the original training data file.
 - `[output.epd]`: optional path for the prepared file.
 
+All generated files are written into the `tuning_data` subdirectory in the
+current working directory.
+
 If the output path is omitted, the program writes to
 `<input>.prepared.epd`.
 
@@ -29,10 +32,23 @@ cargo run -- train <input.epd> [epochs] [restore-checkpoint.json]
 - `[restore-checkpoint.json]`: optional explicit checkpoint file to resume
   from. If omitted, training starts from fresh defaults.
 
-Per-epoch checkpoints are written next to the input file with an epoch suffix,
-for example `<input>.epoch-3.adam-checkpoint.json`.
+Per-epoch checkpoints are written into `tuning_data` with an epoch suffix,
+for example `tuning_data/<input>.epoch-3.adam-checkpoint.json`.
 
 Note that the training data is assumed to be prepared by `prepare`.
+
+### 3. Export constants from a checkpoint
+
+```bash
+cargo run -- export <checkpoint.json>
+```
+
+- `<checkpoint.json>`: explicit checkpoint to export.
+
+This writes `tuning_data/export-<checkpoint filename>.rs`, containing the
+current tunable values as hard-coded Rust constants.
+
+**This export is exactly compatible with the `tunable_constants.rs` file of the main project.** You can simply copy your export to this file and should be good to go with your new weights.
 
 ## Example
 
@@ -41,7 +57,7 @@ cargo run -- prepare zurichess_quiet-labeled.v7.epd zurichess_quiet-labeled.prep
 ```
 
 ## EPD File format
-
+(in case you want to build your own training data)
 The parser supports lines containing a FEN prefix followed by a quoted game
 result, for example:
 
