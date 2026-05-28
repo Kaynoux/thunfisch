@@ -194,7 +194,7 @@ pub fn adam(
         assert!(!scored_samples.is_empty());
         let validation_error = mse(&scored_samples);
         println!(
-            "Epoch {epoch}: validation error: {validation_error}, took: {:?}",
+            "Epoch {epoch} of {epochs}: validation error: {validation_error}, took: {:?}",
             epoch_start.elapsed()
         );
 
