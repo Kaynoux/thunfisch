@@ -16,6 +16,15 @@ impl Color {
             White => 1,
         }
     }
+
+    #[inline]
+    pub const fn from_usize(val: usize) -> Self {
+        match val {
+            0 => Self::White,
+            1 => Self::Black,
+            _ => unreachable!(),
+        }
+    }
 }
 
 impl Not for Color {

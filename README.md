@@ -95,7 +95,15 @@ For example, say you want *only* Quiescence Search, Alpha Beta and MVV-LVA move 
 ```bash
 cargo build --no-default-features --features "ab,qs,mvv-lva"
 ```
-
+### Flamegraph profile
+To create a flamegraph of an exemplary search, use the flamegraph cargo profile:
+```bash
+cargo build --profile flamegraph
+```
+Then use:
+```
+samply record ./target/flamegraph/thunfisch --flamegraph
+```
 
 ## Documentation
 ### Architecture
@@ -106,11 +114,13 @@ cargo build --no-default-features --features "ab,qs,mvv-lva"
 - Thanks to the awesome community from the [Engine Programming](https://discord.gg/q7mnHQNe) Discord server
 - Thanks to [Perftree](https://github.com/agausmann/perftree) for debugging the move generation
 - Thanks to [Fastchess](https://github.com/Disservin/fastchess) for allowing the testing of changes with SPRT tests
-- Thanks to all other open source engines but especially these ones in no particular order:
+- Thanks to all other open source engines for helpful inspiration, especially the following (in no particular order):
   - [Viridithas](https://github.com/cosmobobak/viridithas)
   - [Stockfish](https://github.com/official-stockfish/Stockfish)
+  - [smol.cs](https://github.com/GediminasMasaitis/Chess-Challenge-Submission/tree/submission)
   - [Akimbo](https://github.com/jw1912/akimbo)
   - [Princhess](https://github.com/princesslana/princhess)
+  - [Fatalii](https://github.com/FitzOReilly/fatalii.git)
 
 
 ## License
