@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::{
     debug::custom_commands::handle_custom_commands,
     iterative_deepening::{self, iterative_deepening},
