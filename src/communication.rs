@@ -81,6 +81,7 @@ fn handle_uci_commands(board: &mut Board, command: &str, args: &[&str]) -> bool 
         }
         "ucinewgame" => {
             *board = Board::new(START_POS);
+            TT.clear();
             HISTORY_TABLE.clear();
         }
         "position" => {
