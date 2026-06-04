@@ -200,11 +200,10 @@ impl TranspositionTable {
         let record_priority = i32::from(previous.depth) + record_flag_bonus;
 
         // replace the entry if:
-        // 1. the entry is for a different position
-        // 2. it's an exact entry and the old entry is not exact
-        // 3. the new entry is of higher priority than the old entry
-        if previous.key != key
-            || bound == Bound::Exact && previous.info.bound() != Bound::Exact
+        // 1. it's an exact entry and the old entry is not exact or
+        // 2. the new entry is of higher priority than the old entry
+        // Previously we also copied the condition to check if previous.key != key but this basically caused a always replace strategy because we dont have buckets like other engines
+        if bound == Bound::Exact && previous.info.bound() != Bound::Exact
             || insert_priority * 3 >= record_priority * 2
         {
             // normalise mate  scores:
@@ -502,7 +501,7 @@ mod test_tt_encodings {
 
     #[test]
     #[allow(clippy::cast_possible_truncation)]
-    fn test_different_position_always_replaced() {
+    fn test_different_position_not_always_replaced() {
         let tt = TranspositionTable::new(1);
         // Two hashes that map to the same index but have different keys
         let hash1 = 0x1234_5678_90AB_CDEF_u64;
@@ -515,12 +514,16 @@ mod test_tt_encodings {
         // Store deep entry for position 1
         tt.store(hash1, Some(EncodedMove(1)), 500, 20, 0, Bound::Exact, true);
 
-        // Store shallow entry for different position — should always replace
+        // Store shallow entry for different position — shouldn't replace due to priority
         tt.store(hash2, Some(EncodedMove(2)), 100, 1, 0, Bound::Upper, false);
 
-        let probed = tt.probe(hash2, 0).unwrap();
-        assert_eq!(probed.depth(), 1);
-        assert_eq!(probed.score(), 100);
+        // Probing hash2 should be None since it wasn't stored
+        assert!(tt.probe(hash2, 0).is_none());
+
+        // Probing hash1 should still yield the original entry
+        let probed1 = tt.probe(hash1, 0).unwrap();
+        assert_eq!(probed1.depth(), 20);
+        assert_eq!(probed1.score(), 500);
     }
 
     #[test]
