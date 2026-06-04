@@ -218,7 +218,7 @@ fn handle_setoption(args: &[&str]) {
                 }
             }
             _ => {
-                println!("This option ist not supported, currently supported options: Hash");
+                println!("This option is not supported, currently supported options: Hash");
             }
         }
     }

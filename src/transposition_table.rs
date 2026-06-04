@@ -39,7 +39,7 @@ impl<T> UntrackedCell<T> {
     #[allow(clippy::inline_always)]
     #[inline(always)]
     pub fn get_ref(&self) -> &T {
-        // SAFETY: Reading is save as long as there is no resize at the same time
+        // SAFETY: Reading atomic values is save as long as there is no resize at the same time
         unsafe { &*self.value.get() }
     }
 }
@@ -230,8 +230,7 @@ impl TranspositionTable {
         is_pv: bool,
     ) {
         let key = (hash >> 48) as u16;
-        // SAFETY: Save because we are only modifying indivdual entries of the vec and not the vec itself (so no size change etc.)
-        let entries = unsafe { self.entries.get_mut_unsafe() };
+        let entries = self.entries.get_ref();
         let idx = (hash as usize) & (entries.len() - 1);
         let previous = DecodedTTEntry::from_internal(entries[idx].clone());
         let tt_age = i32::from(self.get_age());
@@ -346,9 +345,7 @@ impl TranspositionTable {
 
     /// Clears the transposition table by resetting all entries and the age to 0.
     pub fn clear(&self) {
-        // SAFETY: Save because we are only modifying indivdual entries of the vec (even though here it is every entry haha) and not the vec itself (so no size change etc.)
-
-        let entries = unsafe { self.entries.get_mut_unsafe() };
+        let entries = self.entries.get_ref();
         for entry in entries {
             entry.data.store(0, Ordering::Relaxed);
         }
