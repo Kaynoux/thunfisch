@@ -132,16 +132,21 @@ pub fn iterative_deepening(
         // TT-Walk to obtain the PV
         let mut b = iteration_search_data.board.clone();
         let mut ply: i32 = 0;
+
         while pv_local.len() < depth
             && let Some(tt_entry) = TT.probe(b.hash(), ply)
             && let Some(tt_mv) = tt_entry.best_move()
             && b.is_legal(&tt_mv.decode())
-            && !b.is_50_move_rule()
-            && !b.is_threefold_repetition()
         {
+            // We add a move even when it leads to a repetition because the move that leads to repetition is still part of pv
             pv_local.push(tt_mv);
             b.make_move(tt_mv);
             ply += 1;
+
+            // If we caused a remis or threefold repition, than cancel
+            if b.is_threefold_repetition() || b.is_50_move_rule() {
+                break;
+            }
         }
 
         best_pv = pv_local;
