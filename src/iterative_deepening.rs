@@ -135,6 +135,7 @@ pub fn iterative_deepening(
         while pv_local.len() < depth
             && let Some(tt_entry) = TT.probe(b.hash(), ply)
             && let Some(tt_mv) = tt_entry.best_move()
+            && b.is_legal(&tt_mv.decode())
             && !b.is_50_move_rule()
             && !b.is_threefold_repetition()
         {
