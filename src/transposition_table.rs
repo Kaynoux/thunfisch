@@ -1,5 +1,8 @@
 use crate::{evaluation::MATE_SCORE, prelude::*};
-use std::sync::atomic::{AtomicU8, AtomicU64, Ordering};
+use std::{
+    cell::UnsafeCell,
+    sync::atomic::{AtomicU8, AtomicU64, Ordering},
+};
 
 const MAX_AGE: i32 = 1 << 5; // needs to match TTInfo layout
 const AGE_MASK: i32 = MAX_AGE - 1;
@@ -7,6 +10,39 @@ const AGE_MASK: i32 = MAX_AGE - 1;
 /// Transposition Table shared between all search threads
 pub static TT: std::sync::LazyLock<TranspositionTable> =
     std::sync::LazyLock::new(|| TranspositionTable::new(512));
+
+/// We use this struct to be able to resize the TT at runtime by basically allowing to mutate tt.entries even though we only got a read only ref to &self
+/// This is because TT is a global static var and only allows access via readonly refs
+pub struct UntrackedCell<T> {
+    value: UnsafeCell<T>,
+}
+
+/// SAFETY: This is not safe. The user must manually guarantee that structural modifications occur only when no other threads are accessing the cell
+unsafe impl<T> Sync for UntrackedCell<T> {}
+
+impl<T> UntrackedCell<T> {
+    pub const fn new(value: T) -> Self {
+        Self {
+            value: UnsafeCell::new(value),
+        }
+    }
+
+    /// # Safety
+    /// Not save. This can only be called when there is no search active
+    #[allow(clippy::mut_from_ref, clippy::inline_always)]
+    #[inline(always)]
+    pub unsafe fn get_mut_unsafe(&self) -> &mut T {
+        // SAFETY: Not save. This can only be called when there is no search active
+        unsafe { &mut *self.value.get() }
+    }
+
+    #[allow(clippy::inline_always)]
+    #[inline(always)]
+    pub fn get_ref(&self) -> &T {
+        // SAFETY: Reading atomic values is save as long as there is no resize at the same time
+        unsafe { &*self.value.get() }
+    }
+}
 
 // Inspired by Viridithas
 /// Holds the age, pv flag, and bound type packed into a single byte.
@@ -120,23 +156,13 @@ impl DecodedTTEntry {
 
 /// <https://www.chessprogramming.org/Transposition_Table>
 pub struct TranspositionTable {
-    entries: Vec<EncodedHashEntry>,
+    entries: UntrackedCell<Vec<EncodedHashEntry>>,
     age: AtomicU8,
 }
 
 impl TranspositionTable {
-    pub fn new(mb: usize) -> Self {
-        let bytes = mb * 1024 * 1024;
-        let entry_size = size_of::<EncodedHashEntry>();
-
-        // Calculate max entries to the next lower power of 2
-        let max_entries = bytes / entry_size;
-        let cap = if max_entries > 0 {
-            1_usize << max_entries.ilog2() // ilog2 gets rounded down next log2
-        } else {
-            1
-        };
-
+    pub fn new(size_in_mib: usize) -> Self {
+        let cap = Self::calc_capacity(size_in_mib);
         let entries = (0..cap)
             .map(|_| EncodedHashEntry {
                 data: AtomicU64::new(0),
@@ -144,8 +170,39 @@ impl TranspositionTable {
             .collect();
 
         Self {
-            entries,
+            entries: UntrackedCell::new(entries),
             age: AtomicU8::new(0),
+        }
+    }
+
+    pub fn resize(&self, size_in_mib: usize) {
+        let cap = Self::calc_capacity(size_in_mib);
+
+        let new_entries = (0..cap)
+            .map(|_| EncodedHashEntry {
+                data: AtomicU64::new(0),
+            })
+            .collect();
+
+        // SAFETY: Not save. This can only be called when there is no search active
+        unsafe {
+            let current_entries_ref = self.entries.get_mut_unsafe();
+            *current_entries_ref = new_entries;
+        }
+
+        self.age.store(0, Ordering::Relaxed);
+    }
+
+    const fn calc_capacity(size_in_mib: usize) -> usize {
+        let bytes = size_in_mib * 1024 * 1024;
+        let entry_size = size_of::<EncodedHashEntry>();
+
+        // Calculate max entries to the next lower power of 2
+        let max_entries = bytes / entry_size;
+        if max_entries > 0 {
+            1_usize << max_entries.ilog2() // ilog2 gets rounded down next log2
+        } else {
+            1
         }
     }
 
@@ -173,8 +230,9 @@ impl TranspositionTable {
         is_pv: bool,
     ) {
         let key = (hash >> 48) as u16;
-        let idx = (hash as usize) & (self.entries.len() - 1);
-        let previous = DecodedTTEntry::from_internal(self.entries[idx].clone());
+        let entries = self.entries.get_ref();
+        let idx = (hash as usize) & (entries.len() - 1);
+        let previous = DecodedTTEntry::from_internal(entries[idx].clone());
         let tt_age = i32::from(self.get_age());
 
         // if we don't have a best move, and the entry is for the same position,
@@ -200,11 +258,10 @@ impl TranspositionTable {
         let record_priority = i32::from(previous.depth) + record_flag_bonus;
 
         // replace the entry if:
-        // 1. the entry is for a different position
-        // 2. it's an exact entry and the old entry is not exact
-        // 3. the new entry is of higher priority than the old entry
-        if previous.key != key
-            || bound == Bound::Exact && previous.info.bound() != Bound::Exact
+        // 1. it's an exact entry and the old entry is not exact or
+        // 2. the new entry is of higher priority than the old entry
+        // Previously we also copied the condition to check if previous.key != key but this basically caused a always replace strategy because we dont have buckets like other engines
+        if bound == Bound::Exact && previous.info.bound() != Bound::Exact
             || insert_priority * 3 >= record_priority * 2
         {
             // normalise mate  scores:
@@ -228,14 +285,15 @@ impl TranspositionTable {
             }
             .convert_to_u64();
 
-            self.entries[idx].data.store(new_entry, Ordering::Relaxed);
+            entries[idx].data.store(new_entry, Ordering::Relaxed);
         }
     }
 
     #[allow(clippy::cast_possible_truncation)]
     pub fn probe(&self, hash: u64, ply: i32) -> Option<DecodedTTEntry> {
-        let idx = (hash as usize) & (self.entries.len() - 1);
-        let mut entry = DecodedTTEntry::from_internal(self.entries[idx].clone());
+        let entries = self.entries.get_ref();
+        let idx = (hash as usize) & (entries.len() - 1);
+        let mut entry = DecodedTTEntry::from_internal(entries[idx].clone());
 
         if entry.key != (hash >> 48) as u16 {
             return None;
@@ -252,42 +310,43 @@ impl TranspositionTable {
 
     pub fn info(&self) -> (usize, usize, f64, usize) {
         // Sample up to 1000 entries to estimate fill percentage (standard UCI behavior)
-        let sample_size = self.entries.len().min(1000);
-        let mut filled_sample = 0;
+        let entries = self.entries.get_ref();
+        let sample_size = entries.len().min(1000);
 
-        for i in 0..sample_size {
-            if self.entries[i].data.load(Ordering::Relaxed) != 0 {
-                filled_sample += 1;
-            }
-        }
+        let filled_sample = entries
+            .iter()
+            .take(sample_size)
+            .filter(|entry| entry.data.load(Ordering::Relaxed) != 0)
+            .count();
 
         #[allow(clippy::cast_precision_loss)]
         let fill_rate = if sample_size > 0 {
-            f64::from(filled_sample) / sample_size as f64
+            filled_sample as f64 / sample_size as f64
         } else {
             0.0
         };
 
-        let total_entries = self.entries.len();
+        let total_entries = entries.len();
         #[allow(
             clippy::cast_possible_truncation,
             clippy::cast_sign_loss,
             clippy::cast_precision_loss
         )]
         let filled_entries = (total_entries as f64 * fill_rate) as usize;
-        let size_in_bytes = total_entries * std::mem::size_of::<EncodedHashEntry>();
+        let size_in_mib = (total_entries * std::mem::size_of::<EncodedHashEntry>()) / (1024 * 1024);
 
         (
             filled_entries,
             total_entries,
             fill_rate * 100.0,
-            size_in_bytes,
+            size_in_mib,
         )
     }
 
     /// Clears the transposition table by resetting all entries and the age to 0.
     pub fn clear(&self) {
-        for entry in &self.entries {
+        let entries = self.entries.get_ref();
+        for entry in entries {
             entry.data.store(0, Ordering::Relaxed);
         }
         self.age.store(0, Ordering::Relaxed);
@@ -502,25 +561,30 @@ mod test_tt_encodings {
 
     #[test]
     #[allow(clippy::cast_possible_truncation)]
-    fn test_different_position_always_replaced() {
+    fn test_different_position_not_always_replaced() {
         let tt = TranspositionTable::new(1);
+        let entries = tt.entries.get_ref();
         // Two hashes that map to the same index but have different keys
         let hash1 = 0x1234_5678_90AB_CDEF_u64;
-        let idx = (hash1 as usize) & (tt.entries.len() - 1);
+        let idx = (hash1 as usize) & (entries.len() - 1);
         // Construct hash2 with same lower bits (same index) but different upper 16 bits (different key)
         let hash2 = (hash1 & !(0xFFFF << 48)) | (0xAAAA_u64 << 48);
-        assert_eq!((hash2 as usize) & (tt.entries.len() - 1), idx);
+        assert_eq!((hash2 as usize) & (entries.len() - 1), idx);
         assert_ne!((hash1 >> 48) as u16, (hash2 >> 48) as u16);
 
         // Store deep entry for position 1
         tt.store(hash1, Some(EncodedMove(1)), 500, 20, 0, Bound::Exact, true);
 
-        // Store shallow entry for different position — should always replace
+        // Store shallow entry for different position — shouldn't replace due to priority
         tt.store(hash2, Some(EncodedMove(2)), 100, 1, 0, Bound::Upper, false);
 
-        let probed = tt.probe(hash2, 0).unwrap();
-        assert_eq!(probed.depth(), 1);
-        assert_eq!(probed.score(), 100);
+        // Probing hash2 should be None since it wasn't stored
+        assert!(tt.probe(hash2, 0).is_none());
+
+        // Probing hash1 should still yield the original entry
+        let probed1 = tt.probe(hash1, 0).unwrap();
+        assert_eq!(probed1.depth(), 20);
+        assert_eq!(probed1.score(), 500);
     }
 
     #[test]

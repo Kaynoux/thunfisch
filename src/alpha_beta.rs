@@ -154,7 +154,7 @@ pub fn alpha_beta<const PV_NODE: bool>(
             // Principal Variation Search
             // We assume that the first move from the move ordering is the PV move;
             // Since the TT move, if existant, is in first place anyway this automatically includes information from shallower search depths
-            eval = -alpha_beta::<true>(depth - 1, -beta, -alpha, sd, ply + 1, true);
+            eval = -alpha_beta::<PV_NODE>(depth - 1, -beta, -alpha, sd, ply + 1, true);
         } else {
             let mut reduction = 1;
 
@@ -270,7 +270,7 @@ pub fn alpha_beta<const PV_NODE: bool>(
         depth as i8,
         ply as i32,
         bound,
-        false,
+        PV_NODE,
     );
 
     best_eval
