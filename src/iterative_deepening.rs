@@ -143,8 +143,8 @@ pub fn iterative_deepening(
             b.make_move(tt_mv);
             ply += 1;
 
-            // If we caused a remis or threefold repition, than cancel
-            if b.is_threefold_repetition() || b.is_50_move_rule() {
+            // If we caused a remis or repition, than cancel
+            if b.is_repetition_in_search() || b.is_50_move_rule() {
                 break;
             }
         }
