@@ -16,7 +16,13 @@ use std::{
     time::Duration,
 };
 
-pub fn handle_communication(board: &mut Board) {
+pub fn handle_communication() {
+    // trigger lazy initialization before we do anything to avoid
+    // paying that cost during a game
+    TT.clear();
+    HISTORY_TABLE.clear();
+    let mut board = Board::new(START_POS);
+
     let stdin = io::stdin();
     let reader = BufReader::with_capacity(65536, stdin.lock());
     let mut stdout = io::stdout();
@@ -24,7 +30,7 @@ pub fn handle_communication(board: &mut Board) {
     let args: Vec<String> = env::args().collect();
     if args.iter().any(|arg| arg.contains("flamegraph")) {
         let best_move = iterative_deepening::iterative_deepening(
-            board,
+            &mut board,
             100,
             Duration::from_millis(10000),
             false,
@@ -45,9 +51,9 @@ pub fn handle_communication(board: &mut Board) {
             let args: Vec<&str> = parts.collect();
 
             // Try to handle UCI commands first
-            if !handle_uci_commands(board, command, &args) {
+            if !handle_uci_commands(&mut board, command, &args) {
                 // If no uci command matched, then try matching a custom command
-                handle_custom_commands(board, command, &args);
+                handle_custom_commands(&mut board, command, &args);
             }
         }
 
@@ -71,10 +77,7 @@ fn handle_uci_commands(board: &mut Board, command: &str, args: &[&str]) -> bool 
             // We are always ready
             println!("readyok");
         }
-        "setoption" => {
-            // TODO: we need to be able to change TT size atleast here
-            println!("info currently no options, use compiletime features instead");
-        }
+        "setoption" => handle_setoption(args),
         "register" => {
             // This is probably a legacy UCI feature
             println!("info register not implemented");
@@ -191,4 +194,32 @@ pub fn handle_go(board: &mut Board, args: &[&str], debug: bool, help: bool) {
     }
 
     TT.increase_age();
+}
+
+fn handle_setoption(args: &[&str]) {
+    let mut iter = args.iter().peekable();
+    iter.next(); // Skips the "name" section of setoption
+    if let Some(&&token) = iter.peek() {
+        match token {
+            "Hash" => {
+                iter.next();
+                if let Some(&next) = iter.next() {
+                    let value_str = if next == "value" {
+                        iter.next().copied()
+                    } else {
+                        Some(next)
+                    };
+
+                    if let Some(val) = value_str
+                        && let Ok(mib_size) = val.parse::<usize>()
+                    {
+                        TT.resize(mib_size);
+                    }
+                }
+            }
+            _ => {
+                println!("This option is not supported, currently supported options: Hash");
+            }
+        }
+    }
 }

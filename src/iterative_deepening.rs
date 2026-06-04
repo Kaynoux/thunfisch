@@ -52,12 +52,12 @@ pub fn iterative_deepening(
         }
         println!("{}", settings::repr());
         println!(
-            "TT: Age={}   {} of {} Entries {} % full  Allocated Size: {}B",
+            "TT Estimates: Age={}   {} of {} Entries {} % full  Allocated Size: {} MiB (estimated)",
             TT.get_age(),
             format_usize(TT.info().0),
             format_usize(TT.info().1),
             format_f64(TT.info().2,),
-            format_usize(TT.info().3)
+            TT.info().3
         );
         println!();
 
