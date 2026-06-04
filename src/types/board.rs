@@ -584,7 +584,6 @@ mod tests {
                 "expected insufficient for case: {desc} (fen={fen})",
             );
         }
-
     }
     #[test]
     fn test_detects_sufficient_material() {
