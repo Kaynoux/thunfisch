@@ -9,7 +9,7 @@ use crate::{
 use std::sync::atomic::Ordering;
 
 /// <https://www.chessprogramming.org/Quiescence_Search>
-/// We dont have a const PV_NODE here because it is not very relevant for qs
+/// We dont have a const `PV_NODE` here because it is not very relevant for qs
 #[allow(clippy::too_many_lines, clippy::too_many_arguments)]
 pub fn quiescence_search(
     depth: usize,
