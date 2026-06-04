@@ -13,6 +13,7 @@ mod alpha_beta;
 mod communication;
 mod debug;
 mod evaluation;
+mod evaluation_constants;
 mod iterative_deepening;
 mod move_generator;
 mod move_picker;

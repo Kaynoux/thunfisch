@@ -9,6 +9,11 @@ Thumbs.db
 # output files of testing scripts
 /testing/config.json
 /testing/sprt.pgn
+/testing/sprt.log
+/testing/sprt_summary*
+/testing/tournament.pgn
 /testing/current
 /testing/previous
 /testing/engines
+
+# **/reference

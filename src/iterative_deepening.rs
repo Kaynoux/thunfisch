@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::{
     alpha_beta::alpha_beta,
     debug::visualize::{format_f64, format_usize},

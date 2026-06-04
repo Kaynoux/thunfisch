@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use crate::{
     debug::custom_commands::handle_custom_commands,
     iterative_deepening::{self, iterative_deepening},
@@ -24,7 +26,7 @@ pub fn handle_communication(board: &mut Board) {
         let best_move = iterative_deepening::iterative_deepening(
             board,
             100,
-            Duration::from_millis(1000),
+            Duration::from_millis(10000),
             false,
             false,
         );
@@ -79,6 +81,7 @@ fn handle_uci_commands(board: &mut Board, command: &str, args: &[&str]) -> bool 
         }
         "ucinewgame" => {
             *board = Board::new(START_POS);
+            TT.clear();
             HISTORY_TABLE.clear();
         }
         "position" => {
@@ -137,7 +140,9 @@ fn set_position(board: &mut Board, args: &[&str]) {
                     "1kr5/6pp/R1P2p2/1N6/8/1P6/P2q1PPP/6K1 w - - 0 1", // 8 - Forced perpetual check (3-fold repetition after 8 ply) to avoid checkmate
                     "r1b1k2r/1pqp1ppp/p2bpnn1/6Q1/2BNP3/2N1B3/PPP2PPP/2KR3R w kq - 8 12", // 9 - Position where including the TT with the QS blunders its queen
                     "8/k7/3p4/p2P1p2/P2P1P2/8/8/K7 w - - 0 1", // 10 - Endgame Position taken from Sebatian Lague forcing a Triangulation (through a1b1 instead of a1b2) to win
-                    "1r5k/8/1Q6/5Pp1/1KB4r/8/8/8 w - g6 2 3",  // 11 - Test islegal with double pin
+                    "1r5k/8/1Q6/5Pp1/1KB4r/8/8/8 w - g6 2 3",  // 11 - Test islegal with double pin,
+                    "2B5/kpp2rqr/pbbp4/8/8/B7/RP3PPP/QRNn2K1 w - - 0 1", // 12 - HORRIBLE king safety for white
+                    "8/kppp1r1r/pbb3q1/4B3/8/1P1n4/R1R2PPP/3N1QKB w - - 0 1", // 12 - more equal king safety
                 ];
 
                 iter.next();

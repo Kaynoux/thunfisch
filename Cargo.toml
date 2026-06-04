@@ -51,4 +51,10 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
-# debug = true      # for flamegraphs
+debug = false
+
+[profile.flamegraph]
+inherits = "release"
+debug = true      # Keep debug info for flamegraphs
+strip = false     # Don't strip symbols
+lto = false       # Disable LTO to keep function names clearer and build times faster

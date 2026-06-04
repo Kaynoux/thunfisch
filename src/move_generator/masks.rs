@@ -42,7 +42,7 @@ pub fn calc_check_mask(board: &Board) -> (Bitboard, usize) {
     (checkmask, check_counter)
 }
 
-/// The captured `removed_pawn` should be Bit(0) by default
+/// The captured `removed_pawn` should be None by default
 /// It is only needed when a pawn should be removed from the enemy pawns to cover an happening ep move
 /// See this edge case here <https://lichess.org/editor/8/8/8/1Ppp3r/RK3p1k/8/4P1P1/8_w>_-_`c6_0_5?color=white`
 pub fn calculate_attackmask(
@@ -82,4 +82,87 @@ pub fn calculate_attackmask(
     attacks |= KING_TARGETS[enemy_king.to_square()];
 
     attacks
+}
+
+/// Note: unlike the regular attackmask, if a piece can take a piece of its own colour, this IS generated here
+/// the reason for this is that it is very important for correct king safety calculations
+pub fn calculate_attackmask_by_figure(
+    board: &Board,
+    occupied: Bitboard,
+    figure: usize,
+    removed_pawn: Option<Bit>,
+) -> Bitboard {
+    let mut attacks = Bitboard::EMPTY;
+
+    let color = Color::from_usize(figure & 1);
+
+    match figure {
+        // pawns
+        0 | 1 => {
+            let mut pawns = board.figure_bb(color, Pawn);
+            if let Some(bit) = removed_pawn {
+                pawns &= !bit;
+            }
+            for pawn in pawns.iter_mut() {
+                attacks |= PAWN_ATTACK_TARGETS[color as usize][pawn.to_square()];
+            }
+        }
+        // knights
+        2 | 3 => {
+            for knight in board.figure_bb(color, Knight).iter_mut() {
+                attacks |= KNIGHT_TARGETS[knight.to_square()];
+            }
+        }
+        // bishops
+        4 | 5 => {
+            for bishop in board.figure_bb(color, Bishop).iter_mut() {
+                attacks |= get_bishop_targets(bishop.to_square(), occupied);
+            }
+        }
+        // rooks
+        6 | 7 => {
+            for rook in board.figure_bb(color, Rook).iter_mut() {
+                attacks |= get_rook_targets(rook.to_square(), occupied);
+            }
+        }
+        // queens
+        8 | 9 => {
+            for queen in board.figure_bb(color, Queen).iter_mut() {
+                attacks |= get_bishop_targets(queen.to_square(), occupied);
+                attacks |= get_rook_targets(queen.to_square(), occupied);
+            }
+        }
+        // kings
+        10 | 11 => {
+            let king = board.king(color);
+            attacks |= KING_TARGETS[king.to_square()];
+        }
+        _ => unreachable!(),
+    }
+
+    attacks
+}
+
+// TODO: not pass entire board
+/// i'm not entirely sure whether this type of mask actually is what CPW means
+/// I think it's a bit too narrow, maybe I should try giving it one more file towards the center as well and then compare the results
+/// but that seems like a lot of effort given i'd likely have to tune both
+#[allow(clippy::cast_possible_truncation, clippy::cast_possible_wrap)]
+pub fn king_safety_mask(board: &Board, color: Color) -> Bitboard {
+    let king = board.king(color);
+    let (x, y) = (king.to_x() as i16, king.to_y() as u16);
+    let mut mask = Bitboard::EMPTY;
+    let file_template = Bitboard(0xff)
+        & (Bitboard::file(x) | Bitboard::file((x - 1).max(0)) | Bitboard::file((x + 1).min(7)));
+    mask |= file_template << (8 * y);
+    mask |= file_template << (8 * (y.saturating_sub(1)));
+    mask |= file_template << (8 * (y + 1).min(7));
+    // duplicate the created mask 2 ranks toward the center
+    mask |= match y {
+        0..=3 => mask << 8,
+        4..=7 => mask >> 8,
+        _ => unreachable!(),
+    };
+
+    mask
 }

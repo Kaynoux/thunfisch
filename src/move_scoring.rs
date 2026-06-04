@@ -210,6 +210,7 @@ impl HistoryTable {
 }
 
 #[inline]
+#[allow(dead_code)]
 fn gravity(val: i32, bonus: i32) -> i32 {
     i32::clamp(
         val + bonus - val * bonus.abs() / MAX_HISTORY_VALUE,
