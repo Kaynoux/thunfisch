@@ -303,18 +303,16 @@ impl Board {
             return false;
         }
 
-        // We go backwards through the stack
-        let walk_limit = self
-            .repetition_stack
-            .len()
-            .saturating_sub(self.halfmove_clock);
-
         // .skip(1) because latest entry is current hash, which we just added
+        let steps_to_search = self
+            .halfmove_clock
+            .min(self.repetition_stack.len().saturating_sub(1));
+
         self.repetition_stack
             .iter()
             .rev()
             .skip(1)
-            .take_while(|_| self.repetition_stack.len() > walk_limit)
+            .take(steps_to_search)
             .any(|&h| h == self.hash)
     }
 
