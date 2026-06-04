@@ -333,6 +333,30 @@ impl Board {
             .count()
     }
 
+    pub const fn is_insufficient_material(&self) -> bool {
+        let is_only_minor_pieces = self.figure_bb(Color::White, Piece::Queen).is_empty()
+            && self.figure_bb(Color::Black, Piece::Queen).is_empty()
+            && self.figure_bb(Color::White, Piece::Rook).is_empty()
+            && self.figure_bb(Color::Black, Piece::Rook).is_empty()
+            && self.figure_bb(Color::White, Piece::Pawn).is_empty()
+            && self.figure_bb(Color::Black, Piece::Pawn).is_empty();
+
+        // NOTE: two knights can _technicall_ mate if the opponent is stupid enough, but not in perfect play
+        // NOTE: we're incorrectly determining a case where white has two bishops of the same square colour as "being able to mate". However this is so rare of a case
+        // that we can accept a wrong judgement here, especially since it doesn't really affect the search (we just search longer)
+
+        let white_knights = self.figure_bb(Color::White, Piece::Knight).get_count();
+        let black_knights = self.figure_bb(Color::Black, Piece::Knight).get_count();
+        let white_bishops = self.figure_bb(Color::White, Piece::Bishop).get_count();
+        let black_bishops = self.figure_bb(Color::Black, Piece::Bishop).get_count();
+        let can_white_mate =
+            white_knights >= 2 || white_bishops >= 2 || (white_knights == 1 && white_bishops == 1);
+        let can_black_mate =
+            black_knights >= 2 || black_bishops >= 2 || (black_knights == 1 && black_bishops == 1);
+
+        is_only_minor_pieces && !can_white_mate && !can_black_mate
+    }
+
     /// Revoke castling rights if
     /// - Rook on the relevant side has moved
     /// - King has moved
@@ -530,5 +554,61 @@ mod tests {
             !board.is_king_pawn_endgame(),
             "King-pawn endgame with a white knight should return false"
         );
+    }
+
+    #[test]
+    fn test_detects_insufficient_material() {
+        // Cases that should be detected as insufficient material (true)
+        let insufficient_cases = vec![
+            ("k7/8/8/8/8/8/8/K7 w - - 0 1", "KvK"),
+            ("k7/8/8/8/8/8/8/KN6 w - - 0 1", "KNvK (white knight)"),
+            ("kn6/8/8/8/8/8/8/K7 w - - 0 1", "KNvK (black knight)"),
+            ("k7/8/8/8/8/8/8/KB6 w - - 0 1", "KBvK (white bishop)"),
+            ("kb6/8/8/8/8/8/8/K7 w - - 0 1", "KBvK (black bishop)"),
+            (
+                "kb6/8/8/8/8/8/8/KN6 w - - 0 1",
+                "KNvKB (white N vs black B)",
+            ),
+            (
+                "kn6/8/8/8/8/8/8/KB6 w - - 0 1",
+                "KNvKB (black N vs white B)",
+            ),
+            ("kn6/8/8/8/8/8/8/KN6 w - - 0 1", "KNvKN"),
+            ("kb6/8/8/8/8/8/8/KB6 w - - 0 1", "KBvKB"),
+        ];
+
+        for (fen, desc) in insufficient_cases {
+            let board = Board::new(fen);
+            assert!(
+                board.is_insufficient_material(),
+                "expected insufficient for case: {desc} (fen={fen})",
+            );
+        }
+
+    }
+    #[test]
+    fn test_detects_sufficient_material() {
+        // Cases that should NOT be considered insufficient (false)
+        // Each of these exercises exactly one of the 'can mate' checks or the "not only minor pieces" guard
+        let sufficient_cases = vec![
+            ("k7/8/8/8/8/8/8/KBB5 w - - 0 1", "White has two bishops"),
+            ("kbb5/8/8/8/8/8/8/K7 w - - 0 1", "Black has two bishops"),
+            ("k7/8/8/8/8/8/8/KNN5 w - - 0 1", "White has two knights"),
+            ("knn5/8/8/8/8/8/8/K7 w - - 0 1", "Black has two knights"),
+            ("k7/8/8/8/8/8/8/KNB5 w - - 0 1", "White has knight+bishop"),
+            ("knb5/8/8/8/8/8/8/K7 w - - 0 1", "Black has knight+bishop"),
+            (
+                "k7/8/8/8/8/8/8/KQ6 w - - 0 1",
+                "White has a queen (non-minor piece)",
+            ),
+        ];
+
+        for (fen, desc) in sufficient_cases {
+            let board = Board::new(fen);
+            assert!(
+                !board.is_insufficient_material(),
+                "expected sufficient for case: {desc} (fen={fen})",
+            );
+        }
     }
 }

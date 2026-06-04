@@ -40,7 +40,7 @@ pub fn alpha_beta<const PV_NODE: bool>(
 
     assert!(depth <= MAX_AB_DEPTH);
 
-    if ply > 0 && (sd.board.is_repetition_in_search() || sd.board.is_50_move_rule()) {
+    if ply > 0 && (sd.board.is_repetition_in_search() || sd.board.is_50_move_rule() || sd.board.is_insufficient_material()) {
         return 0;
     }
 

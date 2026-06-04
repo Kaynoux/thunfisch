@@ -144,7 +144,7 @@ pub fn iterative_deepening(
             ply += 1;
 
             // If we caused a remis or repition, than cancel
-            if b.is_repetition_in_search() || b.is_50_move_rule() {
+            if b.is_repetition_in_search() || b.is_50_move_rule() || b.is_insufficient_material() {
                 break;
             }
         }
