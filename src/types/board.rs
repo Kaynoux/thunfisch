@@ -298,6 +298,26 @@ impl Board {
         &self.repetition_stack
     }
 
+    pub fn is_repetition_in_search(&self) -> bool {
+        if self.halfmove_clock < 2 {
+            return false;
+        }
+
+        // We go backwards through the stack
+        let walk_limit = self
+            .repetition_stack
+            .len()
+            .saturating_sub(self.halfmove_clock);
+
+        // .skip(1) because latest entry is current hash, which we just added
+        self.repetition_stack
+            .iter()
+            .rev()
+            .skip(1)
+            .take_while(|_| self.repetition_stack.len() > walk_limit)
+            .any(|&h| h == self.hash)
+    }
+
     pub fn is_threefold_repetition(&self) -> bool {
         self.count_repetitions() >= 2
     }
