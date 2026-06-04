@@ -102,7 +102,7 @@ impl Board {
                         mg[i & 1] += ROOK_OPEN_FILE_BONUS[0];
                         eg[i & 1] += ROOK_OPEN_FILE_BONUS[1];
                     }
-                    if settings::KINGS_OPEN_FILES && (i == 10 && i == 11) {
+                    if settings::KINGS_OPEN_FILES && (i == 10 || i == 11) {
                         mg[i & 1] += KING_OPEN_FILE_PENALTY[0];
                         eg[i & 1] += KING_OPEN_FILE_PENALTY[1];
                     }
