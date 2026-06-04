@@ -3,22 +3,14 @@ use std::collections::HashMap;
 
 pub fn print_board(board: &Board, moves: Option<&MoveList>) {
     println!(
-        "Current Color: {:?}\nHalfmove Clock: {}\nTotal Halfmove Counter: {}\nEn Passant target:{},\nPrevious occurrences: {}\nHash: {}, Previous (latest first): {:?}",
+        "Current Color: {:?}\nHalfmove Clock: {}\nTotal Halfmove Counter: {}\nEn Passant target:{}\nHash: {}",
         board.current_color(),
         board.halfmove_clock(),
         board.total_halfmove_counter(),
         board
             .ep_target()
             .map_or_else(|| "-".to_owned(), Bit::to_coords),
-        board.count_repetitions(),
         board.hash(),
-        board
-            .repetition_stack()
-            .iter()
-            .rev()
-            .take(10)
-            .map(|&h| h.to_string().chars().take(4).collect())
-            .collect::<Vec<String>>()
     );
     println!("FEN: {}", board.fen());
     // println!("Phase: {}", board.get_game_phase());

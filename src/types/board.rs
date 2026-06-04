@@ -298,6 +298,24 @@ impl Board {
         &self.repetition_stack
     }
 
+    pub fn is_repetition_in_search(&self) -> bool {
+        if self.halfmove_clock < 2 {
+            return false;
+        }
+
+        // .skip(1) because latest entry is current hash, which we just added
+        let steps_to_search = self
+            .halfmove_clock
+            .min(self.repetition_stack.len().saturating_sub(1));
+
+        self.repetition_stack
+            .iter()
+            .rev()
+            .skip(1)
+            .take(steps_to_search)
+            .any(|&h| h == self.hash)
+    }
+
     pub fn is_threefold_repetition(&self) -> bool {
         self.count_repetitions() >= 2
     }
