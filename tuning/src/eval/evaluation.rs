@@ -91,10 +91,14 @@ pub fn evaluate(board: &Board, params: &TunableParams) -> i32 {
         for bit in bb.iter_mut() {
             if open_files.is_position_set(bit) {
                 // rooks on open files
-                mg[i & 1] += params.rook_open_file_bonus[0];
-                eg[i & 1] += params.rook_open_file_bonus[1];
-                mg[i & 1] += params.king_open_file_penalty[0];
-                eg[i & 1] += params.king_open_file_penalty[1];
+                if i == 6 || i == 7 {
+                    mg[i & 1] += params.rook_open_file_bonus[0];
+                    eg[i & 1] += params.rook_open_file_bonus[1];
+                }
+                if i == 10 || i == 11 {
+                    mg[i & 1] += params.king_open_file_penalty[0];
+                    eg[i & 1] += params.king_open_file_penalty[1];
+                }
             }
 
             let square = bit.to_square();
@@ -112,7 +116,7 @@ pub fn evaluate(board: &Board, params: &TunableParams) -> i32 {
     let mut mg_score = mg[white] - mg[black];
     let mut eg_score = eg[white] - eg[black];
 
-    let (mg_pawn_structure, eg_pawn_structure) = board.pawn_structure();
+    let (mg_pawn_structure, eg_pawn_structure) = pawn_structure(board, params);
     mg_score += i32::from(mg_pawn_structure[white] - mg_pawn_structure[black]);
     eg_score += i32::from(eg_pawn_structure[white] - eg_pawn_structure[black]);
 
