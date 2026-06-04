@@ -80,7 +80,7 @@ pub fn evaluate(board: &Board, params: &TunableParams) -> i32 {
         let mut bb = board.figure_bb_by_index(i);
 
         // mobility - only needs to be done once per figure type
-        let figure_mobility = board.calculate_piece_mobility(i, &mut figure_movements);
+        let figure_mobility = calculate_piece_mobility(board, i, &mut figure_movements);
         mg[i & 1] += params.mobility_coefficients[0][i >> 1] * figure_mobility;
         eg[i & 1] += params.mobility_coefficients[1][i >> 1] * figure_mobility;
         // for correctness, mobility calculation removes all pieces of the same color (we can't take our own piece)
@@ -275,20 +275,6 @@ fn bishop_pair_boni(board: &Board, params: &TunableParams) -> ([i16; 2], [i16; 2
     )
 }
 
-/// Calculate a bitboard marking open files (files without any pawns on them)
-pub fn open_files(board: &Board) -> Bitboard {
-    let pawn_structure =
-        board.figure_bb(Color::White, Piece::Pawn) | board.figure_bb(Color::Black, Piece::Pawn);
-    let mut open_files = Bitboard::EMPTY;
-    for i in 0..=7 {
-        let file = Bitboard::file(i);
-        if (file & pawn_structure).is_empty() {
-            open_files += file;
-        }
-    }
-    open_files
-}
-
 /// Calculates the King Safety Score
 /// WARNING: technically computes danger; so the higher the value, the worse the position is.
 /// return Format:
@@ -323,6 +309,7 @@ pub fn king_safety(
     }
 
     // skip pawns and kings in the evaluation
+    #[allow(clippy::needless_range_loop)]
     for i in 2..=9 {
         let friend = i & 1;
         let opp = friend ^ 1;
