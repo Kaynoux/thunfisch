@@ -25,7 +25,10 @@ pub fn quiescence_search(
         return 0;
     }
 
-    if sd.board.is_repetition_in_search() || sd.board.is_50_move_rule() {
+    if sd.board.is_repetition_in_search()
+        || sd.board.is_50_move_rule()
+        || sd.board.is_insufficient_material()
+    {
         return 0;
     }
 

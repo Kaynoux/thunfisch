@@ -36,7 +36,7 @@ pub fn quiescence_search(
 ) -> QuiescenceResult {
     *sd.local_seldepth = (*sd.local_seldepth).max(ply);
 
-    if sd.board.is_threefold_repetition() || sd.board.is_50_move_rule() {
+    if sd.board.is_threefold_repetition() || sd.board.is_50_move_rule() || sd.board.is_insufficient_material() {
         return QuiescenceResult {
             score: 0,
             best_line_fen: sd.board.fen(),
