@@ -17,21 +17,27 @@ Estimated Strength: ~2400 Elo
   - [Alpha Beta Pruning](https://www.chessprogramming.org/Alpha-Beta)
   - [Principal Variation Search](https://www.chessprogramming.org/Principal_Variation_Search) 
   - [Null Move Pruning](https://www.chessprogramming.org/Null_Move_Pruning)
-  - [Transposition Table](https://www.chessprogramming.org/Transposition_Table) for Cuttoffs
   - [Reverse Futility Pruning](https://www.chessprogramming.org/Reverse_Futility_Pruning)
+  - [Transposition Table](https://www.chessprogramming.org/Transposition_Table) for Cuttoffs
+  - [Late Move Reductions](https://www.chessprogramming.org/Late_Move_Reductions)
 - **Move Ordering**:
   - Staged Move Picker with incremental move generation
   - [Transposition Table](https://www.chessprogramming.org/Transposition_Table) for move ordering
-  - [MVV-LVA Move Ordering](https://www.chessprogramming.org/MVV-LVA)
+  - [MVV-LVA](https://www.chessprogramming.org/MVV-LVA)
   - [Killer Heuristic](https://www.chessprogramming.org/Killer_Heuristic)
+  - [History Heuristic](https://www.chessprogramming.org/History_Heuristic)
+- **Evaluation**:
+  - [Piece Square Tables](https://www.chessprogramming.org/Piece-Square_Tables) originally based on [PeSTO](https://www.chessprogramming.org/PeSTO%27s_Evaluation_Function)
+  - [King Safety](https://www.chessprogramming.org/King_Safety)
+  - [Piece Mobility](https://www.chessprogramming.org/Mobility)
+  - superficial [Pawn Structure](https://www.chessprogramming.org/Pawn_Structure)
+  - DIY [Tuning](https://www.chessprogramming.org/Texel%27s_Tuning_Method)
+
 - **Planned**
-  - [Butterfly History Heuristic](https://www.chessprogramming.org/History_Heuristic)
-  - [Late Move Reductions](https://www.chessprogramming.org/Late_Move_Reductions)
-  - [Lazy SMP](https://www.chessprogramming.org/Lazy_SMP)
-
-
-
-
+  - Threading: Lazy SMP
+  - Aspiration Windows
+  - Razoring
+  - SEE
 
 ## How to play against it locally
 Thunfisch is a command-line application that implements the Universal Chess Interface (UCI). To play against it comfortably, you should load the compiled binary into a chess GUI. We recommend [Cutechess](https://github.com/cutechess/cutechess). There are instruction on how to add the bot to the gui [here](https://lczero.org/play/gui/cutechess/).
@@ -78,8 +84,9 @@ perft <depth> [--debug|--perftree|--rayon]  - Perft Test
 search [--help]    - Better formatted go
 draw               - Print board
 moves              - Print legal moves
-eval               - Prints current Evaluation with Depth of 0
+eval               - Prints current Evaluation with Depth 0 along some explanations
 do <move>          - Play move (e.g. do e2e4)
+settings           - Prints the currently active features
 ```
 
 
@@ -121,7 +128,6 @@ samply record ./target/flamegraph/thunfisch --flamegraph
   - [Akimbo](https://github.com/jw1912/akimbo)
   - [Princhess](https://github.com/princesslana/princhess)
   - [Fatalii](https://github.com/FitzOReilly/fatalii.git)
-
 
 ## License
 This project is licensed under the GNU General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
