@@ -24,7 +24,8 @@ all = [
     "pvs",
     "killers",
     "histories",
-    "lmr"
+    "lmr",
+    "advanced-eval"
 ]
 
 ab = []
@@ -40,6 +41,7 @@ pvs = []
 killers = []
 histories = []
 lmr = []
+advanced-eval = []
 
 [dependencies]
 rayon = "1.11.0"
