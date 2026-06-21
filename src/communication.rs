@@ -6,7 +6,7 @@ use crate::{
     move_scoring::HISTORY_TABLE,
     prelude::*,
     time_management::calc_search_time,
-    transposition_table::TT,
+    transposition_table::{DEFAULT_TT_SIZE, MAX_TT_SIZE, TT},
     types::board::START_POS,
 };
 use std::{
@@ -68,6 +68,10 @@ fn handle_uci_commands(board: &mut Board, command: &str, args: &[&str]) -> bool 
         "uci" => {
             println!("id name Thunfisch");
             println!("id author Lukas Piorek (Kaynoux), Emil Schläger (heofthetea)");
+            println!(
+                "option name Hash type spin default {DEFAULT_TT_SIZE} min 1 max {MAX_TT_SIZE}"
+            );
+
             println!("uciok");
         }
         "debug" => {

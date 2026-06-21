@@ -6,10 +6,12 @@ use std::{
 
 const MAX_AGE: i32 = 1 << 5; // needs to match TTInfo layout
 const AGE_MASK: i32 = MAX_AGE - 1;
+pub const DEFAULT_TT_SIZE: usize = 512; // MiB
+pub const MAX_TT_SIZE: usize = 8000; // OCI free tier memlimit - 4 GB (safety margin)
 
 /// Transposition Table shared between all search threads
 pub static TT: std::sync::LazyLock<TranspositionTable> =
-    std::sync::LazyLock::new(|| TranspositionTable::new(512));
+    std::sync::LazyLock::new(|| TranspositionTable::new(DEFAULT_TT_SIZE));
 
 /// We use this struct to be able to resize the TT at runtime by basically allowing to mutate tt.entries even though we only got a read only ref to &self
 /// This is because TT is a global static var and only allows access via readonly refs
